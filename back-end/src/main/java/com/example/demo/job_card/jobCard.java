@@ -7,23 +7,29 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-public class job_card {
-@Id
-@GeneratedValue(strategy = GenerationType.IDENTITY)
-private int jobID;
+public class jobCard {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int jobID;
 
-    @Column(nullable = false)
+   @Column(nullable = false)
     private String customerName;
 
     @Column(nullable = false)
-    private int customerNum;
+    private int customerNo;
 
     @Column(nullable = false)
     private int lapSerialNo;
 
     @Column(nullable = false)
-    private String lapVer;
+    private String lapVertion;
+
+    @Column()
+    private String jobTitle;
+
+    @Column()
+    private String specialNote;
 
     @Column(nullable = false)
-    private String jobTitle;
+    private int Advance;
 }
