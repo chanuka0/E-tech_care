@@ -5,6 +5,7 @@ import com.example.demo.job_card.JobStatus;
 import com.example.demo.laptopBrand.LaptopBrand;
 import com.example.demo.users.User;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -22,15 +23,19 @@ public class JobCard {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Customer name cannot be blank") // Rejects null and ""
     @Column(unique = true, nullable = false)
     private String jobCardNumber;
 
+    @NotBlank(message = "Customer name cannot be blank") // Rejects null and ""
     @Column(nullable = false)
     private String customerName;
 
+    @NotBlank(message = "Customer name cannot be blank") // Rejects null and ""
     @Column(nullable = false)
     private String contactNumber;
 
+    @NotBlank(message = "Customer name cannot be blank") // Rejects null and ""
     @Column(nullable = false, unique = true)
     private String serialNumber;
 

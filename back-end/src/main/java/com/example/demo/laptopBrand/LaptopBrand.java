@@ -2,6 +2,7 @@ package com.example.demo.laptopBrand;
 
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -18,6 +19,7 @@ public class LaptopBrand {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Customer name cannot be blank") // Rejects null and ""
     @Column(unique = true, nullable = false)
     private String brandName;
 

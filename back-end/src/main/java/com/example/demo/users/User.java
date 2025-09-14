@@ -1,6 +1,7 @@
 package com.example.demo.users;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,12 +17,15 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer userId;
 
+    @NotBlank(message = "Customer name cannot be blank") // Rejects null and ""
     @Column(nullable = false)
     private String userName;
 
+    @NotBlank(message = "Customer name cannot be blank") // Rejects null and ""
     @Column(unique = true, nullable = false)
     private String email;
 
+    @NotBlank(message = "Customer name cannot be blank") // Rejects null and ""
     @Column(nullable = false)
     private String password;
 
