@@ -15,6 +15,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @Query("SELECT u FROM User u WHERE LOWER(u.userName) = LOWER(:username)")
     Optional<User> findByUsername(@Param("username") String username);
 
+
     // Find user by email (case-insensitive for better UX)
     @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email)")
     Optional<User> findByEmail(@Param("email") String email);
@@ -32,6 +33,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     // Find users by role (if you need this functionality)
     @Query("SELECT u FROM User u WHERE :role MEMBER OF u.roles")
     List<User> findByRole(@Param("role") String role);
+
 
     // Find active users (if you have an 'active' field)
     // List<User> findByActiveTrue();
