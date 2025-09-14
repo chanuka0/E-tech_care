@@ -36,7 +36,7 @@ public class JobCard {
     private String contactNumber;
 
     @NotBlank(message = "Customer name cannot be blank") // Rejects null and ""
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String serialNumber;
 
     @Column(length = 1000)
