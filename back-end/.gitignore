@@ -4,8 +4,11 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-# Ignore application.properties only
+# Ignore Spring Boot application properties
 src/main/resources/application.properties
+
+# Ignore application.properties only
+!**src/main/resources/application.properties
 
 ### STS ###
 .apt_generated
