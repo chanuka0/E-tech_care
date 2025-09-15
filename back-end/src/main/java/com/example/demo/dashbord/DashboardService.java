@@ -1,8 +1,10 @@
 //package com.example.demo.dashbord;
 //
-//import com.example.demo.dtos.DashboardStatsResponse;
-//import com.example.demo.entities.JobStatus;
-//import com.example.demo.repositories.JobCardRepository;
+////import com.example.demo.dtos.DashboardStatsResponse;
+////import com.example.demo.entities.JobStatus;
+////import com.example.demo.repositories.JobCardRepository;
+//import com.example.demo.job_card.JobCardRepository;
+//import com.example.demo.job_card.JobStatus;
 //import lombok.RequiredArgsConstructor;
 //import org.springframework.stereotype.Service;
 //

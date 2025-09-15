@@ -1,10 +1,12 @@
 package com.example.demo.security;
 
 
+
 import com.example.demo.users.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -27,15 +29,16 @@ import java.util.Arrays;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
+@EnableScheduling
 public class SecurityConfig {
 
-    private final UserService userService;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private UserService userService;
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     public SecurityConfig(@Lazy UserService userService,
-                          @Lazy JwtAuthenticationFilter jwtAuthenticationFilter,
-                          @Lazy JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+                                       @Lazy JwtAuthenticationFilter jwtAuthenticationFilter,
+                                       @Lazy JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
         this.userService = userService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
@@ -64,11 +67,9 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-
                 .authorizeHttpRequests(authz -> authz
                         // Public endpoints
                         .requestMatchers(
@@ -84,11 +85,13 @@ public class SecurityConfig {
 
                         // Admin-only endpoints
                         .requestMatchers(
-//                                "/api/users/register/admin",
                                 "/api/users/all",
-                                "/api/laptop-brands/all",
                                 "/api/laptop-brands",
-                                "/api/laptop-brands/*"
+                                "/api/laptop-brands/*",
+                                "/api/inventory",
+                                "/api/inventory/*",
+                                "/api/inventory/stock/update",
+                                "/api/inventory/alerts/*/resolve"
                         ).hasRole("ADMIN")
 
                         // User endpoints (both admin and user can access)
@@ -97,24 +100,25 @@ public class SecurityConfig {
                                 "/api/laptop-brands/active",
                                 "/api/job-cards",
                                 "/api/job-cards/**",
+                                "/api/inventory/search",
+                                "/api/inventory/categories",
+                                "/api/inventory/low-stock",
+                                "/api/inventory/out-of-stock",
+                                "/api/inventory/alerts",
+                                "/api/invoices",
+                                "/api/invoices/**",
+                                "/api/dashboard/**",
                                 "/api/pdf/**"
                         ).authenticated()
 
                         .anyRequest().authenticated()
                 )
-
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authenticationProvider(authenticationProvider())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 );
 
-//        http.headers(headers -> headers
-//                .frameOptions().sameOrigin()
-//        );
-
-                // Special configuration for H2 console (if using H2 database)
-//        http.headers(headers -> headers.frameOptions().sameOrigin());
         http.headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.sameOrigin())
         );
@@ -128,9 +132,6 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000"
-//                "http://localhost:4200",
-//                "http://localhost:8080",
-//                "http://localhost:5173"
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
@@ -144,6 +145,8 @@ public class SecurityConfig {
     }
 }
 
+
+//
 //import com.example.demo.users.UserService;
 //import org.springframework.context.annotation.Bean;
 //import org.springframework.context.annotation.Configuration;
@@ -166,11 +169,10 @@ public class SecurityConfig {
 //import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 //
 //import java.util.Arrays;
-//import java.util.List;
 //
 //@Configuration
 //@EnableWebSecurity
-//@EnableMethodSecurity(prePostEnabled = true) // Enable @PreAuthorize annotations
+//@EnableMethodSecurity(prePostEnabled = true)
 //public class SecurityConfig {
 //
 //    private final UserService userService;
@@ -192,7 +194,7 @@ public class SecurityConfig {
 //
 //    @Bean
 //    public PasswordEncoder passwordEncoder() {
-//        return new BCryptPasswordEncoder(12); // Increased strength for better security
+//        return new BCryptPasswordEncoder(12);
 //    }
 //
 //    @Bean
@@ -209,48 +211,55 @@ public class SecurityConfig {
 //                .csrf(AbstractHttpConfigurer::disable)
 //                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 //
-//                // Configure session management for JWT
 //                .sessionManagement(session -> session
 //                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 //                )
 //
-//                // Configure authorization rules
 //                .authorizeHttpRequests(authz -> authz
-//                        // Public endpoints - no authentication required
+//                        // Public endpoints
 //                        .requestMatchers(
 //                                "/api/users/register",
 //                                "/api/users/register/admin",
 //                                "/api/users/login",
 //                                "/api/users/login/user",
-//                                "/api/users/test",
-//                                "/h2-console/**",        // If using H2 database
-//                                "/swagger-ui/**",        // If using Swagger
-//                                "/v3/api-docs/**",       // If using Swagger/OpenAPI
-//                                "/actuator/health"       // If using Spring Actuator
+//                                "/h2-console/**",
+//                                "/swagger-ui/**",
+//                                "/v3/api-docs/**",
+//                                "/actuator/health"
 //                        ).permitAll()
 //
 //                        // Admin-only endpoints
-////                        .requestMatchers("/api/users/register/admin", "/api/users/all").hasRole("ADMIN")
+//                        .requestMatchers(
+////                                "/api/users/register/admin",
+//                                "/api/users/all",
+//                                "/api/laptop-brands/all",
+//                                "/api/laptop-brands",
+//                                "/api/laptop-brands/*"
+//                        ).hasRole("ADMIN")
 //
-//                        // Authenticated endpoints
-//                        .requestMatchers("/api/users/profile").authenticated()
+//                        // User endpoints (both admin and user can access)
+//                        .requestMatchers(
+//                                "/api/users/profile",
+//                                "/api/laptop-brands/active",
+//                                "/api/job-cards",
+//                                "/api/job-cards/**",
+//                                "/api/pdf/**"
+//                        ).authenticated()
 //
-//                        // All other requests require authentication
 //                        .anyRequest().authenticated()
 //                )
 //
-//                // Add JWT authentication filter
 //                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-//
-//                // Configure authentication provider
 //                .authenticationProvider(authenticationProvider())
-//
-//                // Configure exception handling
 //                .exceptionHandling(exceptions -> exceptions
 //                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
 //                );
 //
-//        // Special configuration for H2 console (if using H2 database)
+////        http.headers(headers -> headers
+////                .frameOptions().sameOrigin()
+////        );
+//
+//                // Special configuration for H2 console (if using H2 database)
 ////        http.headers(headers -> headers.frameOptions().sameOrigin());
 //        http.headers(headers -> headers
 //                .frameOptions(frameOptions -> frameOptions.sameOrigin())
@@ -263,16 +272,12 @@ public class SecurityConfig {
 //    public CorsConfigurationSource corsConfigurationSource() {
 //        CorsConfiguration configuration = new CorsConfiguration();
 //
-//        // Allow specific origins (update with your frontend URL)
 //        configuration.setAllowedOrigins(Arrays.asList(
-//                "http://localhost:3000"  // React default
-////                "http://localhost:4200",  // Angular default
-////                "http://localhost:8080",  // Vue.js default
-////                "http://localhost:5173"   // Vite default
+//                "http://localhost:3000"
+////                "http://localhost:4200",
+////                "http://localhost:8080",
+////                "http://localhost:5173"
 //        ));
-//
-//        // Or allow all origins (only for development)
-//        // configuration.setAllowedOriginPatterns(Arrays.asList("*"));
 //
 //        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 //        configuration.setAllowedHeaders(Arrays.asList("*"));
@@ -284,3 +289,4 @@ public class SecurityConfig {
 //        return source;
 //    }
 //}
+//

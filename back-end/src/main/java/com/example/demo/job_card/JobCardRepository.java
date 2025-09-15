@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,4 +39,10 @@ public interface JobCardRepository extends JpaRepository<JobCard, Long> {
 
     @Query("SELECT MAX(CAST(SUBSTRING(j.jobCardNumber, 4) AS integer)) FROM JobCard j WHERE j.jobCardNumber LIKE 'JOB%'")
     Integer findMaxJobCardNumber();
+
+    // Add this method to your JobCardRepository
+    @Query("SELECT j FROM JobCard j WHERE j.createdDate BETWEEN :startDate AND :endDate")
+    List<JobCard> findByCreatedDateBetween(@Param("startDate") LocalDateTime startDate,
+                                           @Param("endDate") LocalDateTime endDate);
+//    Arrays findByDateRange(LocalDateTime startOfDay, LocalDateTime endOfDay);
 }

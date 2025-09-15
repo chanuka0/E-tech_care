@@ -5,6 +5,8 @@ package com.example.demo.job_card;
 //import com.example.demo.dtos.*;
 //import com.example.demo.entities.*;
 //import com.example.demo.repositories.*;
+import com.example.demo.inventory.StockMovementRepository;
+import com.example.demo.job_card.dto.JobCardResponse;
 import com.example.demo.laptopBrand.LaptopBrand;
 import com.example.demo.laptopBrand.LaptopBrandRepository;
 import com.example.demo.users.User;
@@ -13,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,7 +44,7 @@ public class JobCardService {
                 .collect(Collectors.toList());
     }
 
-    public JobCardResponse createJobCard(JobCardCreateRequest request) {
+    public JobCardResponse createJobCard(StockMovementRepository.EnhancedJobCardResponse.JobCardCreateRequest request) {
         // Validate serial number uniqueness
         if (jobCardRepository.findBySerialNumberIgnoreCase(request.getSerialNumber()).isPresent()) {
             throw new RuntimeException("Serial number already exists");
