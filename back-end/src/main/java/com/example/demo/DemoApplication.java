@@ -16,7 +16,7 @@ public class DemoApplication {
 //spring.application.name=e-tech_care
 //
 //spring.datasource.url=jdbc:mysql://localhost:3306/e-tech_care
-//
+//npx tailwindcss init -p
 //spring.datasource.username=root
 //spring.datasource.password=phctwa2002
 //spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
