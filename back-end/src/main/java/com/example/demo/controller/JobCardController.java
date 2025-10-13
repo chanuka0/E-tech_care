@@ -1,0 +1,70 @@
+package com.example.demo.controller;
+
+
+import com.example.demo.entity.JobCard;
+import com.example.demo.entity.JobStatus;
+import com.example.demo.services.JobCardService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/jobcards")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
+public class JobCardController {
+    private final JobCardService jobCardService;
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<JobCard> createJobCard(@RequestBody JobCard jobCard) {
+        return ResponseEntity.ok(jobCardService.createJobCard(jobCard));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<JobCard>> getAllJobCards() {
+        return ResponseEntity.ok(jobCardService.getAllJobCards());
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<JobCard> getJobCardById(@PathVariable Long id) {
+        return ResponseEntity.ok(jobCardService.getJobCardById(id));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<JobCard> updateJobCard(@PathVariable Long id, @RequestBody JobCard jobCard) {
+        return ResponseEntity.ok(jobCardService.updateJobCard(id, jobCard));
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<JobCard> cancelJobCard(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> cancelData) {
+        String cancelledBy = (String) cancelData.get("cancelledBy");
+        String reason = (String) cancelData.get("reason");
+        Double fee = cancelData.get("fee") != null ?
+                Double.valueOf(cancelData.get("fee").toString()) : 0.0;
+
+        return ResponseEntity.ok(jobCardService.cancelJobCard(id, cancelledBy, reason, fee));
+    }
+
+    @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<JobCard>> getJobCardsByStatus(@PathVariable JobStatus status) {
+        return ResponseEntity.ok(jobCardService.getJobCardsByStatus(status));
+    }
+
+    @GetMapping("/pending-alerts")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<JobCard>> getPendingAlerts() {
+        return ResponseEntity.ok(jobCardService.getPendingJobsOlderThanDays(2));
+    }
+}
