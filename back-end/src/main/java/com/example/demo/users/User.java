@@ -2,12 +2,11 @@ package com.example.demo.users;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.HashSet;
 import java.util.Set;
-
+@Data
 @Entity
 @Getter
 @Setter
@@ -60,4 +59,5 @@ public class User {
                 ", roles='" + roles + '\'' +
                 '}';
     }
+
 }

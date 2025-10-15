@@ -18,6 +18,7 @@ import java.util.Map;
 @Log4j2
 @RestController
 @RequestMapping("/api/users")
+@CrossOrigin(origins = "http://localhost:5173")
 public class UserController {
 
     @Autowired
@@ -47,7 +48,7 @@ public class UserController {
     }
 
     @PostMapping("/register/admin")
-    @PreAuthorize("hasRole('ROLE_ADMIN')") // ***** should comment this till add first admin
+    //@PreAuthorize("hasRole('ROLE_ADMIN')") // ***** should comment this till add first admin
     public ResponseEntity<?> registerAdmin(@RequestBody User user) {
         try {
             User registeredAdmin = userService.registerAdmin(user);
