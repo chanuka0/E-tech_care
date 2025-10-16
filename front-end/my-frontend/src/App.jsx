@@ -1,148 +1,13 @@
-// // // import { useState } from 'react'
-// // // import reactLogo from './assets/react.svg'
-// // // import viteLogo from '/vite.svg'
-// // import './App.css'
-
-// // function App() {
-
-  
-// // }
-
-// // export default App
-// // Main App Component
-
-// //import React, { useState } from "react";
-
-
-
-
-// // import { useState } from "react";
-// // import { useAuth } from "./auth/AuthProvider.jsx";  // ✅ Import useAuth
-
-
-// // import './App.css'
-// // import Dashboard from './dashboard/Dashboard.jsx'
-// // import LoginForm from './auth/LoginForm.jsx'
-// // import RegisterForm from './auth/RegisterForm.jsx'
-// // //import AuthContext from './auth/AuthContext.jsx'
-// // import AuthProvider from './auth/AuthProvider.jsx'
-// // import MainNavigation from './navigation/MainNavigation.jsx'
-
-
-
-
-
-
-// import { useState } from "react";
-// import { useAuth } from "./auth/AuthProvider.jsx";
-
-// import './App.css';
-
-// import Dashboard from './dashboard/Dashboard.jsx';
-// import InventoryManagement from './inventory/InventoryManagement.jsx';
-// import JobCardsManagement from './jobcards/JobCardsManagement.jsx';
-// import LoginForm from './auth/LoginForm.jsx';
-// import RegisterForm from './auth/RegisterForm.jsx';
-// import AuthProvider from './auth/AuthProvider.jsx';
-// import MainNavigation from './navigation/MainNavigation.jsx';
-
-// // const App = () => {
-// //   const [showLogin, setShowLogin] = useState(true);
-
-// //   return (
-// //     <AuthProvider>
-// //       <AuthenticatedApp showLogin={showLogin} setShowLogin={setShowLogin} />
-// //     </AuthProvider>
-// //   );
-// // };
-
-// // const AuthenticatedApp = ({ showLogin, setShowLogin }) => {
-// //   const { isAuthenticated } = useAuth();
-
-// //   if (isAuthenticated) {
-// //     return <Dashboard />;
-// //   }
-
-// //   return showLogin ? (
-// //     <LoginForm onToggleForm={() => setShowLogin(false)} />
-// //   ) : (
-// //     <RegisterForm onToggleForm={() => setShowLogin(true)} />
-// //   );
-// // };
-
-// // export default App;
-
-
-
-// const MainApp = () => {
-//   const [currentPage, setCurrentPage] = useState('dashboard');
-
-//   const renderCurrentPage = () => {
-//     switch (currentPage) {
-//       case 'dashboard':
-//         return <Dashboard />;
-//       case 'inventory':
-//         return <InventoryManagement />;
-//       case 'jobcards':
-//         return <JobCardsManagement />;
-//       default:
-//         return <Dashboard />;
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-gray-50">
-//       <MainNavigation currentPage={currentPage} setCurrentPage={setCurrentPage} />
-//       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-//         {renderCurrentPage()}
-//       </div>
-//     </div>
-//   );
-// };
-
-// // Root App Component
-// const App = () => {
-//   const [showLogin, setShowLogin] = useState(true);
-
-//   return (
-//     <AuthProvider>
-//       <AuthenticatedApp showLogin={showLogin} setShowLogin={setShowLogin} />
-//     </AuthProvider>
-//   );
-// };
-
-// const AuthenticatedApp = ({ showLogin, setShowLogin }) => {
-//   const { isAuthenticated } = useAuth();
-
-//   if (isAuthenticated) {
-//     return <MainApp />;
-//   }
-
-//   return showLogin ? (
-//     <LoginForm onToggleForm={() => setShowLogin(false)} />
-//   ) : (
-//     <RegisterForm onToggleForm={() => setShowLogin(true)} />
-//   );
-// };
-
-// export default App;
-
-
 import { useState } from 'react';
-import AuthProvider, { useAuth } from './auth/AuthProvider.jsx';
+import AuthProvider, { useAuth } from './auth/AuthProvider';
 import LoginForm from './auth/LoginForm';
 import RegisterForm from './auth/RegisterForm';
 import Sidebar from './Sidebar';
 import Dashboard from './dashboard/Dashboard';
+import JobCards from './jobcards/JobCards';
+import JobCardCreate from './jobcards/JobCardCreate';
 
-// Placeholder components - replace with your actual components when ready
-const JobCards = () => (
-  <div className="bg-white rounded-lg shadow p-6">
-    <h2 className="text-2xl font-bold text-gray-800 mb-4">Job Cards Management</h2>
-    <p className="text-gray-600">Job cards component will go here</p>
-  </div>
-);
-
+// Placeholder components
 const Inventory = () => (
   <div className="bg-white rounded-lg shadow p-6">
     <h2 className="text-2xl font-bold text-gray-800 mb-4">Inventory Management</h2>
@@ -178,7 +43,6 @@ const Settings = () => (
   </div>
 );
 
-// Main content component (replaces MainLayout)
 const MainContent = () => {
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -186,15 +50,39 @@ const MainContent = () => {
   const pages = {
     dashboard: { component: Dashboard, title: 'Dashboard' },
     jobcards: { component: JobCards, title: 'Job Cards' },
+    'jobcards-create': { component: JobCardCreate, title: 'Create Job Card' },
     inventory: { component: Inventory, title: 'Inventory' },
     invoices: { component: Invoices, title: 'Invoices' },
     expenses: { component: Expenses, title: 'Expenses' },
     damages: { component: Damages, title: 'Damages' },
-    settings: { component: Settings, title: 'Settings' },
+    settings: { component: Settings, title: 'Settings' }
   };
 
   const CurrentComponent = pages[currentPage]?.component || Dashboard;
   const pageTitle = pages[currentPage]?.title || 'Dashboard';
+
+  // Handle navigation from JobCardCreate back to list
+  const handleJobCardCreated = () => {
+    setCurrentPage('jobcards');
+  };
+
+  const handleCancelCreate = () => {
+    setCurrentPage('jobcards');
+  };
+
+  // Render component with props if needed
+  const renderComponent = () => {
+    if (currentPage === 'jobcards-create') {
+      return <JobCardCreate onSuccess={handleJobCardCreated} onCancel={handleCancelCreate} />;
+    }
+    if (currentPage === 'jobcards') {
+      return <JobCards onCreateNew={() => setCurrentPage('jobcards-create')} />;
+    }
+    if (currentPage === 'dashboard') {
+      return <Dashboard onNavigate={setCurrentPage} />;
+    }
+    return <CurrentComponent />;
+  };
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
@@ -240,15 +128,14 @@ const MainContent = () => {
         </header>
 
         {/* Page Content */}
-        <div className="p-6">
-          <CurrentComponent />
+        <div className={currentPage === 'dashboard' ? '' : 'p-6'}>
+          {renderComponent()}
         </div>
       </main>
     </div>
   );
 };
 
-// Auth wrapper to handle login/register
 const AuthWrapper = () => {
   const { isAuthenticated } = useAuth();
   const [showRegister, setShowRegister] = useState(false);
@@ -264,7 +151,6 @@ const AuthWrapper = () => {
   return <MainContent />;
 };
 
-// Main App
 const App = () => {
   return (
     <AuthProvider>

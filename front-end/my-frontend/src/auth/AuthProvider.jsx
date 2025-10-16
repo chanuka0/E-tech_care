@@ -20,6 +20,7 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
+      console.log('Checking saved auth:', { savedToken: !!savedToken, savedUser: !!savedUser }); // Debug
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));

@@ -1,161 +1,6 @@
-
-// import {useApi} from '../services/apiService.jsx'
-// import { useState, useEffect } from 'react';
-
-// const Dashboard = () => {
-//   const { apiCall } = useApi();
-//   const [dashboardData, setDashboardData] = useState(null);
-//   const [loading, setLoading] = useState(false);
-//   const [error, setError] = useState('');
-
-//   const fetchDashboardData = async () => {
-//     setLoading(true);
-//     setError('');
-//     try {
-//       const data = await apiCall('/api/dashboard/summary');
-//         console.log('Dashboard data:', data); // <-- Add this
-//       setDashboardData(data);
-//     } catch (err) {
-//         console.error(err); // <-- Add this
-//       setError('Failed to load dashboard data');
-//     }
-//     setLoading(false);
-//   };
-
-//   useEffect(() => {
-//     fetchDashboardData();
-//   }, []);
-
-
-//   if (loading) {
-//     return (
-//       <div className="flex justify-center items-center h-64">
-//         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="space-y-6">
-//       <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
-      
-//       {error && (
-//         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-//           {error}
-//         </div>
-//       )}
-
-//       {dashboardData && (
-//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Items</h3>
-//             <p className="text-3xl font-bold text-blue-600">{dashboardData.inventorySummary?.totalItems || 0}</p>
-//           </div>
-          
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-2">Low Stock Items</h3>
-//             <p className="text-3xl font-bold text-yellow-600">{dashboardData.inventorySummary?.lowStockItems || 0}</p>
-//           </div>
-          
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-2">Out of Stock</h3>
-//             <p className="text-3xl font-bold text-red-600">{dashboardData.inventorySummary?.outOfStockItems || 0}</p>
-//           </div>
-          
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-2">Inventory Value</h3>
-//             <p className="text-3xl font-bold text-green-600">
-//               ${dashboardData.inventorySummary?.totalInventoryValue?.toFixed(2) || '0.00'}
-//             </p>
-//           </div>
-
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-2">Today's Sales</h3>
-//             <p className="text-3xl font-bold text-green-600">
-//               ${dashboardData.salesSummary?.todaysSales?.toFixed(2) || '0.00'}
-//             </p>
-//           </div>
-          
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-2">Monthly Sales</h3>
-//             <p className="text-3xl font-bold text-green-600">
-//               ${dashboardData.salesSummary?.monthlySales?.toFixed(2) || '0.00'}
-//             </p>
-//           </div>
-          
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-2">Pending Invoices</h3>
-//             <p className="text-3xl font-bold text-orange-600">{dashboardData.salesSummary?.pendingInvoices || 0}</p>
-//           </div>
-          
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-2">Jobs Completed Today</h3>
-//             <p className="text-3xl font-bold text-blue-600">{dashboardData.salesSummary?.completedJobsToday || 0}</p>
-//           </div>
-//         </div>
-//       )}
-
-//       {dashboardData?.lowStockAlerts && dashboardData.lowStockAlerts.length > 0 && (
-//         <div className="bg-white rounded-lg shadow p-6">
-//           <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock Alerts</h3>
-//           <div className="space-y-2">
-//             {dashboardData.lowStockAlerts.map(alert => (
-//               <div key={alert.id} className={`p-3 rounded ${
-//                 alert.alertLevel === 'OUT_OF_STOCK' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-//               }`}>
-//                 <div className="flex justify-between items-center">
-//                   <span className="font-medium">{alert.inventoryItemName}</span>
-//                   <span className="text-sm">Stock: {alert.currentStock}</span>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       )}
-
-//       {dashboardData?.recentInvoices && dashboardData.recentInvoices.length > 0 && (
-//         <div className="bg-white rounded-lg shadow p-6">
-//           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Invoices</h3>
-//           <div className="overflow-x-auto">
-//             <table className="min-w-full">
-//               <thead className="bg-gray-50">
-//                 <tr>
-//                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Invoice #</th>
-//                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Customer</th>
-//                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Amount</th>
-//                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Status</th>
-//                 </tr>
-//               </thead>
-//               <tbody className="divide-y divide-gray-200">
-//                 {dashboardData.recentInvoices.map(invoice => (
-//                   <tr key={invoice.id}>
-//                     <td className="px-4 py-2 text-sm text-gray-900">{invoice.invoiceNumber}</td>
-//                     <td className="px-4 py-2 text-sm text-gray-900">{invoice.customerName}</td>
-//                     <td className="px-4 py-2 text-sm text-gray-900">${invoice.totalAmount?.toFixed(2)}</td>
-//                     <td className="px-4 py-2 text-sm">
-//                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-//                         invoice.status === 'PAID' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-//                       }`}>
-//                         {invoice.status}
-//                       </span>
-//                     </td>
-//                   </tr>
-//                 ))}
-//               </tbody>
-//             </table>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-// export default Dashboard
-
-
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
-// Mock API hook - replace with your actual useApi hook
 const useApi = () => {
   return {
     apiCall: async (url) => {
@@ -172,7 +17,7 @@ const useApi = () => {
   };
 };
 
-const Dashboard = () => {
+const Dashboard = ({ onNavigate }) => {
   const { apiCall } = useApi();
   const [dashboardData, setDashboardData] = useState(null);
   const [profitData, setProfitData] = useState(null);
@@ -185,7 +30,6 @@ const Dashboard = () => {
   });
   const [showProfitReport, setShowProfitReport] = useState(false);
 
-  // Update current date/time every second
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentDateTime(new Date());
@@ -269,6 +113,27 @@ const Dashboard = () => {
       Profit: dashboardData.monthlyProfit || 0
     }
   ] : [];
+
+  const handleQuickAction = (action) => {
+    if (onNavigate) {
+      switch(action) {
+        case 'jobcard':
+          onNavigate('jobcards-create');
+          break;
+        case 'invoice':
+          onNavigate('invoices');
+          break;
+        case 'expense':
+          onNavigate('expenses');
+          break;
+        case 'inventory':
+          onNavigate('inventory');
+          break;
+        default:
+          break;
+      }
+    }
+  };
 
   return (
     <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
@@ -473,25 +338,37 @@ const Dashboard = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center">
+              <button 
+                onClick={() => handleQuickAction('expense')}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
+              >
                 <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Add Expense
               </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center">
+              <button 
+                onClick={() => handleQuickAction('invoice')}
+                className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
+              >
                 <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Create Invoice
               </button>
-              <button className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center">
+              <button 
+                onClick={() => handleQuickAction('jobcard')}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
+              >
                 <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
                 New Job Card
               </button>
-              <button className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center">
+              <button 
+                onClick={() => handleQuickAction('inventory')}
+                className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
+              >
                 <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
