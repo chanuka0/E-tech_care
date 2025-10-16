@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
+import JobCardEdit from './JobCardEdit';
 
 const JobCards = ({ onCreateNew }) => {
   const { apiCall } = useApi();
@@ -7,6 +8,7 @@ const JobCards = ({ onCreateNew }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [editingJobCard, setEditingJobCard] = useState(null);
 
   const fetchJobCards = async () => {
     setLoading(true);
@@ -47,7 +49,18 @@ const JobCards = ({ onCreateNew }) => {
       </div>
     );
   }
-
+  if (editingJobCard) {
+    return (
+      <JobCardEdit
+        jobCardId={editingJobCard}
+        onSuccess={() => {
+          setEditingJobCard(null);
+          fetchJobCards();
+        }}
+        onCancel={() => setEditingJobCard(null)}
+      />
+    );
+  }
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -122,14 +135,16 @@ const JobCards = ({ onCreateNew }) => {
               <p className="text-sm text-gray-600 line-clamp-2">{job.faultDescription}</p>
             </div>
 
-            <div className="mt-4 flex space-x-2">
-              <button className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium py-2 rounded-lg transition-colors">
-                View
-              </button>
-              <button className="flex-1 bg-green-50 hover:bg-green-100 text-green-600 font-medium py-2 rounded-lg transition-colors">
-                Edit
-              </button>
-            </div>
+              <div className="mt-4 flex space-x-2">
+                <button className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium py-2 rounded-lg transition-colors">
+                  View
+                </button>
+                <button 
+                  onClick={() => setEditingJobCard(job.id)}  // ← ADD THIS LINE
+                  className="flex-1 bg-green-50 hover:bg-green-100 text-green-600 font-medium py-2 rounded-lg transition-colors">
+                  Edit
+                </button>
+              </div>
           </div>
         ))}
       </div>

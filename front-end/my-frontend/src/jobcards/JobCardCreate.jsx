@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useApi } from '../services/apiService';
 import { useAuth } from '../auth/AuthProvider';
 import { BrowserMultiFormatReader } from '@zxing/browser';
+import JobCardEdit from './JobCardEdit';
 //import { useAuth } from '../auth/AuthProvider';
 
 
@@ -11,6 +12,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [editingJobCard, setEditingJobCard] = useState(null);
   
   const videoRef = useRef(null);
   const codeReaderRef = useRef(null);
@@ -120,18 +122,34 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     }
   };
 
-  const getUserIdFromToken = () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.userId || payload.sub || 1;
-      }
+const getUserIdFromToken = () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('Token payload:', payload); // Debug log
+      
+      // Try different possible fields and ensure it's a number
+      let userId = payload.userId || payload.id || payload.sub;
+      
+        // If userId is a string, try to parse it as a number
+        if (typeof userId === 'string') {
+            const parsed = parseInt(userId, 10);
+            if (!isNaN(parsed)) {
+            return parsed;
+            }
+            // If it's a username string like "admin", return a default ID
+            console.warn('userId is a string (username):', userId);
+            return 1; // Default fallback
+        }
+        
+        return userId || 1;
+        }
     } catch (error) {
-      console.error('Error decoding token:', error);
+        console.error('Error decoding token:', error);
     }
     return 1;
-  };
+    };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
