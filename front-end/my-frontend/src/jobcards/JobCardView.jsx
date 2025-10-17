@@ -1,0 +1,282 @@
+import { useState, useEffect } from 'react';
+import { useApi } from '../services/apiService';
+
+const JobCardView = ({ jobCardId, onClose, onEdit }) => {
+  const { apiCall } = useApi();
+  const [jobCard, setJobCard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchJobCard = async () => {
+      try {
+        setLoading(true);
+        const data = await apiCall(`/api/jobcards/${jobCardId}`);
+        setJobCard(data);
+      } catch (err) {
+        setError('Failed to load job card details');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (jobCardId) {
+      fetchJobCard();
+    }
+  }, [jobCardId]);
+
+  const getStatusColor = (status) => {
+    const colors = {
+      PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      IN_PROGRESS: 'bg-blue-100 text-blue-800 border-blue-300',
+      COMPLETED: 'bg-green-100 text-green-800 border-green-300',
+      DELIVERED: 'bg-purple-100 text-purple-800 border-purple-300',
+      CANCELLED: 'bg-red-100 text-red-800 border-red-300',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800 border-gray-300';
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !jobCard) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error || 'Job card not found'}
+        </div>
+        <button
+          onClick={onClose}
+          className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+        >
+          Back to List
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">{jobCard.jobNumber}</h1>
+              <p className="text-blue-100">Job Card Details</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="mt-4">
+            <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${getStatusColor(jobCard.status)}`}>
+              {jobCard.status}
+            </span>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Customer Information */}
+          <div className="border-b border-gray-200 pb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Customer Information
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+              <div>
+                <label className="text-sm font-medium text-gray-600">Name</label>
+                <p className="text-lg font-semibold text-gray-900">{jobCard.customerName}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">Phone</label>
+                <p className="text-lg font-semibold text-gray-900">{jobCard.customerPhone}</p>
+              </div>
+              {jobCard.customerEmail && (
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-600">Email</label>
+                  <p className="text-lg font-semibold text-gray-900">{jobCard.customerEmail}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Device Information */}
+          <div className="border-b border-gray-200 pb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Device Information
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
+              <div>
+                <label className="text-sm font-medium text-gray-600">Device Type</label>
+                <p className="text-lg font-semibold text-gray-900">{jobCard.deviceType}</p>
+              </div>
+              {jobCard.brandId && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Brand</label>
+                  <p className="text-lg font-semibold text-gray-900">{jobCard.brandId}</p>
+                </div>
+              )}
+              {jobCard.modelId && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Model</label>
+                  <p className="text-lg font-semibold text-gray-900">{jobCard.modelId}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Serial Numbers */}
+          {jobCard.serials && jobCard.serials.length > 0 && (
+            <div className="border-b border-gray-200 pb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
+                Serial Numbers
+              </h2>
+              <div className="space-y-2">
+                {jobCard.serials.map((serial, index) => (
+                  <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium text-blue-600">{serial.serialType}</span>
+                      <p className="text-lg font-mono font-semibold text-gray-900">{serial.serialValue}</p>
+                    </div>
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Service Details */}
+          <div className="border-b border-gray-200 pb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Service Details
+            </h2>
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <label className="text-sm font-medium text-gray-600 mb-2 block">Fault Description</label>
+                <p className="text-gray-900">{jobCard.faultDescription}</p>
+              </div>
+              {jobCard.notes && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <label className="text-sm font-medium text-gray-600 mb-2 block">Additional Notes</label>
+                  <p className="text-gray-900">{jobCard.notes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Payment Information */}
+          <div className="border-b border-gray-200 pb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Payment Information
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                <label className="text-sm font-medium text-green-600">Advance Payment</label>
+                <p className="text-2xl font-bold text-green-700">
+                  ${jobCard.advancePayment?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <label className="text-sm font-medium text-blue-600">Estimated Cost</label>
+                <p className="text-2xl font-bold text-blue-700">
+                  ${jobCard.estimatedCost?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Timeline
+            </h2>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                <span className="text-sm text-gray-600">Created:</span>
+                <span className="text-sm font-semibold text-gray-900">{formatDate(jobCard.createdAt)}</span>
+              </div>
+              {jobCard.updatedAt && (
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Last Updated:</span>
+                  <span className="text-sm font-semibold text-gray-900">{formatDate(jobCard.updatedAt)}</span>
+                </div>
+              )}
+              {jobCard.completedAt && (
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Completed:</span>
+                  <span className="text-sm font-semibold text-gray-900">{formatDate(jobCard.completedAt)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => onEdit(jobCardId)}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span>Edit Job Card</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default JobCardView;
