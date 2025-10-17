@@ -6,15 +6,10 @@ import Sidebar from './Sidebar';
 import Dashboard from './dashboard/Dashboard';
 import JobCards from './jobcards/JobCards';
 import JobCardCreate from './jobcards/JobCardCreate';
+import InventoryManagement from './inventory/InventoryManagement';
+import InvoiceList from './invoices/InvoiceList';
 
-// Placeholder components
-const Inventory = () => (
-  <div className="bg-white rounded-lg shadow p-6">
-    <h2 className="text-2xl font-bold text-gray-800 mb-4">Inventory Management</h2>
-    <p className="text-gray-600">Inventory component will go here</p>
-  </div>
-);
-
+// Placeholder components (keep for now)
 const Invoices = () => (
   <div className="bg-white rounded-lg shadow p-6">
     <h2 className="text-2xl font-bold text-gray-800 mb-4">Invoice Management</h2>
@@ -51,11 +46,12 @@ const MainContent = () => {
     dashboard: { component: Dashboard, title: 'Dashboard' },
     jobcards: { component: JobCards, title: 'Job Cards' },
     'jobcards-create': { component: JobCardCreate, title: 'Create Job Card' },
-    inventory: { component: Inventory, title: 'Inventory' },
+    inventory: { component: InventoryManagement, title: 'Inventory' }, // FIXED: Use actual component
     invoices: { component: Invoices, title: 'Invoices' },
     expenses: { component: Expenses, title: 'Expenses' },
     damages: { component: Damages, title: 'Damages' },
-    settings: { component: Settings, title: 'Settings' }
+    settings: { component: Settings, title: 'Settings' },
+    invoices: { component: InvoiceList, title: 'Invoices' }
   };
 
   const CurrentComponent = pages[currentPage]?.component || Dashboard;

@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
+import CancelOrderModal from './CancelOrderModal';
+import CreateInvoiceModal from "../invoices/CreateInvoiceModal";
+
 
 const JobCardView = ({ jobCardId, onClose, onEdit }) => {
   const { apiCall } = useApi();
   const [jobCard, setJobCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
+  
 
   useEffect(() => {
     const fetchJobCard = async () => {
@@ -25,6 +31,21 @@ const JobCardView = ({ jobCardId, onClose, onEdit }) => {
       fetchJobCard();
     }
   }, [jobCardId]);
+
+const handleCancelSuccess = (response) => {
+  setJobCard(response);
+  setShowCancelModal(false);
+};
+
+// ADD THIS NEW FUNCTION
+const handleInvoiceSuccess = (response) => {
+  setShowCreateInvoiceModal(false);
+  const msg = document.createElement('div');
+  msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+  msg.textContent = 'Invoice created successfully!';
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 3000);
+};
 
   const getStatusColor = (status) => {
     const colors = {
@@ -91,10 +112,13 @@ const JobCardView = ({ jobCardId, onClose, onEdit }) => {
               </svg>
             </button>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 flex items-center space-x-4">
             <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${getStatusColor(jobCard.status)}`}>
               {jobCard.status}
             </span>
+            {jobCard.status === 'CANCELLED' && (
+              <span className="text-red-200 text-sm font-medium">❌ Cancelled</span>
+            )}
           </div>
         </div>
 
@@ -153,31 +177,6 @@ const JobCardView = ({ jobCardId, onClose, onEdit }) => {
             </div>
           </div>
 
-          {/* Serial Numbers */}
-          {jobCard.serials && jobCard.serials.length > 0 && (
-            <div className="border-b border-gray-200 pb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                </svg>
-                Serial Numbers
-              </h2>
-              <div className="space-y-2">
-                {jobCard.serials.map((serial, index) => (
-                  <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-medium text-blue-600">{serial.serialType}</span>
-                      <p className="text-lg font-mono font-semibold text-gray-900">{serial.serialValue}</p>
-                    </div>
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Service Details */}
           <div className="border-b border-gray-200 pb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
@@ -187,6 +186,12 @@ const JobCardView = ({ jobCardId, onClose, onEdit }) => {
               Service Details
             </h2>
             <div className="space-y-4">
+              {jobCard.fault && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <label className="text-sm font-medium text-gray-600 mb-2 block">Fault Type</label>
+                  <p className="text-gray-900">{jobCard.fault.faultName}</p>
+                </div>
+              )}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <label className="text-sm font-medium text-gray-600 mb-2 block">Fault Description</label>
                 <p className="text-gray-900">{jobCard.faultDescription}</p>
@@ -209,20 +214,76 @@ const JobCardView = ({ jobCardId, onClose, onEdit }) => {
               Payment Information
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                <label className="text-sm font-medium text-green-600">Advance Payment</label>
-                <p className="text-2xl font-bold text-green-700">
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <label className="text-sm font-medium text-blue-600">Advance Payment</label>
+                <p className="text-2xl font-bold text-blue-700">
                   ${jobCard.advancePayment?.toFixed(2) || '0.00'}
                 </p>
               </div>
-              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                <label className="text-sm font-medium text-blue-600">Estimated Cost</label>
-                <p className="text-2xl font-bold text-blue-700">
+              <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                <label className="text-sm font-medium text-green-600">Estimated Cost</label>
+                <p className="text-2xl font-bold text-green-700">
                   ${jobCard.estimatedCost?.toFixed(2) || '0.00'}
                 </p>
               </div>
             </div>
           </div>
+
+          {/* Cancellation Details (if cancelled) */}
+          {jobCard.status === 'CANCELLED' && jobCard.cancelledBy && (
+            <div className="border-b border-gray-200 pb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v2m0 0v2m0-6v-2m0 0V7a2 2 0 012-2h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V9a2 2 0 01-2 2h-.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293H12zm0 0V7a2 2 0 00-2-2H7.414a1 1 0 00-.707.293L4.293 7.707A1 1 0 004 8.414V9a2 2 0 002 2h.586a1 1 0 01.707.293l2.414 2.414a1 1 0 00.707.293h2m0 0v5m0 0V21" />
+                </svg>
+                Cancellation Details
+              </h2>
+
+              <div className="space-y-4">
+                {/* Cancelled By */}
+                <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-red-600 font-medium mb-1">Cancelled By</p>
+                      <p className="text-lg font-bold text-red-900">
+                        {jobCard.cancelledBy === 'CUSTOMER' ? 'Customer' : 'Technician'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-red-600 font-medium mb-1">User ID</p>
+                      <p className="text-lg font-bold text-red-900">#{jobCard.cancelledByUserId}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Original Costs */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-600 font-medium mb-1">Original Advance</p>
+                    <p className="text-2xl font-bold text-blue-900">${jobCard.advancePayment?.toFixed(2) || '0.00'}</p>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <p className="text-sm text-green-600 font-medium mb-1">Original Estimate</p>
+                    <p className="text-2xl font-bold text-green-900">${jobCard.estimatedCost?.toFixed(2) || '0.00'}</p>
+                  </div>
+                </div>
+
+                {/* Cancellation Fee (if Customer cancelled) */}
+                {jobCard.cancelledBy === 'CUSTOMER' && jobCard.cancellationFee > 0 && (
+                  <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                    <p className="text-sm text-orange-600 font-medium mb-1">Cancellation Fee (Invoice Created)</p>
+                    <p className="text-2xl font-bold text-orange-900">${jobCard.cancellationFee?.toFixed(2)}</p>
+                  </div>
+                )}
+
+                {/* Cancellation Reason */}
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-600 font-medium mb-2">Reason for Cancellation</p>
+                  <p className="text-gray-900">{jobCard.cancellationReason}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Timeline */}
           <div>
@@ -254,27 +315,67 @@ const JobCardView = ({ jobCardId, onClose, onEdit }) => {
               )}
             </div>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-            <button
-              onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Close
-            </button>
-            <button
-              onClick={() => onEdit(jobCardId)}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span>Edit Job Card</span>
-            </button>
-          </div>
+            {/* Action Buttons */}
+            <div className="flex flex-wrap justify-end gap-3 pt-6 border-t border-gray-200">
+              <button
+                onClick={onClose}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+              >
+                Close
+              </button>
+              {jobCard.status !== 'CANCELLED' && (
+                <>
+                  {jobCard.status === 'COMPLETED' && (
+                    <button
+                      onClick={() => setShowCreateInvoiceModal(true)}
+                      className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md transition-colors flex items-center space-x-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Create Invoice</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onEdit(jobCardId)}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Edit Job Card</span>
+                  </button>
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>Cancel Job Card</span>
+                  </button>
+                </>
+              )}
+            </div>
         </div>
       </div>
+        {/* Cancel Modal */}
+        {showCancelModal && (
+          <CancelOrderModal
+            jobCard={jobCard}
+            onSuccess={handleCancelSuccess}
+            onClose={() => setShowCancelModal(false)}
+          />
+        )}
+
+        {/* Create Invoice Modal */}
+        {showCreateInvoiceModal && (
+          <CreateInvoiceModal
+            jobCard={jobCard}
+            onSuccess={handleInvoiceSuccess}
+            onClose={() => setShowCreateInvoiceModal(false)}
+          />
+        )}
     </div>
   );
 };
