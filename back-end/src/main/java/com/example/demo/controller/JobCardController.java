@@ -50,12 +50,15 @@ public class JobCardController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> cancelData) {
         String cancelledBy = (String) cancelData.get("cancelledBy");
+        Long cancelledByUserId = ((Number) cancelData.get("cancelledByUserId")).longValue(); // NEW
         String reason = (String) cancelData.get("reason");
         Double fee = cancelData.get("fee") != null ?
                 Double.valueOf(cancelData.get("fee").toString()) : 0.0;
 
-        return ResponseEntity.ok(jobCardService.cancelJobCard(id, cancelledBy, reason, fee));
+        return ResponseEntity.ok(jobCardService.cancelJobCard(id, cancelledBy,
+                cancelledByUserId, reason, fee));
     }
+
 
     @GetMapping("/status/{status}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")

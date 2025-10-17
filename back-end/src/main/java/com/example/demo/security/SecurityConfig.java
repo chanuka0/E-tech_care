@@ -98,9 +98,11 @@ public class SecurityConfig {
                                 "/api/jobcards/**",
                                 "/api/invoices/**",
                                 "/api/inventory/**",
+                                "/api/inventory",
                                 "/api/expenses/**",
                                 "/api/damages/**",
                                 "/api/reports/**",
+                                "/api/faults",
                                 "/api/pdf/**"
                         ).authenticated()
 
