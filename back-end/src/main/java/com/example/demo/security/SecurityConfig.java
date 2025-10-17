@@ -94,8 +94,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/users/profile",
                                 "/api/laptop-brands/active",
-                                "/api/job-cards",
-                                "/api/job-cards/**",
+                                "/api/jobcards",
+                                "/api/jobcards/**",
                                 "/api/invoices/**",
                                 "/api/inventory/**",
                                 "/api/expenses/**",

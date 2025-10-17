@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 
 import com.example.demo.entity.JobCard;
+import com.example.demo.entity.JobCardSerial;
 import com.example.demo.entity.JobStatus;
 import com.example.demo.services.JobCardService;
 import lombok.RequiredArgsConstructor;
@@ -66,5 +67,12 @@ public class JobCardController {
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<JobCard>> getPendingAlerts() {
         return ResponseEntity.ok(jobCardService.getPendingJobsOlderThanDays(2));
+    }
+    @PostMapping("/{id}/serials")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<JobCard> addSerial(
+            @PathVariable Long id,
+            @RequestBody JobCardSerial serial) {
+        return ResponseEntity.ok(jobCardService.addSerialToJobCard(id, serial));
     }
 }
