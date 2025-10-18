@@ -56,15 +56,26 @@ const CreateInvoiceModal = ({ jobCard, onSuccess, onClose }) => {
       return;
     }
 
-    const item = {
-      inventoryItemId: parseInt(newItem.inventoryItemId),
-      itemName: selectedItem.name,
-      quantity: newItem.quantity,
-      unitPrice: selectedItem.sellingPrice,
-      description: newItem.description || selectedItem.description,
-      total: newItem.quantity * selectedItem.sellingPrice,
-      serialNumbers: newItem.serialNumbers
-    };
+    // const item = {
+    //   inventoryItemId: parseInt(newItem.inventoryItemId),
+    //   itemName: selectedItem.name,
+    //   quantity: newItem.quantity,
+    //   unitPrice: selectedItem.sellingPrice,
+    //   description: newItem.description || selectedItem.description,
+    //   total: newItem.quantity * selectedItem.sellingPrice,
+    //   serialNumbers: newItem.serialNumbers
+    // };
+
+    // inside handleAddItem()
+const item = {
+  inventoryItem: { id: parseInt(newItem.inventoryItemId) }, // <-- send nested object
+  itemName: selectedItem.name,
+  quantity: newItem.quantity,
+  unitPrice: selectedItem.sellingPrice,
+  description: newItem.description || selectedItem.description,
+  total: newItem.quantity * selectedItem.sellingPrice,
+  serialNumbers: newItem.serialNumbers
+};
 
     setInvoiceData(prev => ({
       ...prev,
