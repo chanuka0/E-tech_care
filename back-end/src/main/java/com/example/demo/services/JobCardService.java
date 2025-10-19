@@ -324,4 +324,8 @@ public class JobCardService {
     private String generateJobNumber() {
         return "JOB-" + System.currentTimeMillis();
     }
+    public JobCard getJobCardByNumber(String jobNumber) {
+        return jobCardRepository.findByJobNumber(jobNumber)
+                .orElseThrow(() -> new RuntimeException("Job card not found: " + jobNumber));
+    }
 }

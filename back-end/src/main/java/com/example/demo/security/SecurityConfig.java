@@ -97,6 +97,7 @@ public class SecurityConfig {
                                 "/api/jobcards",
                                 "/api/jobcards/**",
                                 "/api/invoices/**",
+                                "/api/invoices",
                                 "/api/inventory/**",
                                 "/api/inventory",
                                 "/api/expenses/**",

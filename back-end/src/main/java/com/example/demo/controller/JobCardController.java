@@ -1,6 +1,5 @@
 package com.example.demo.controller;
 
-
 import com.example.demo.entity.JobCard;
 import com.example.demo.entity.JobCardSerial;
 import com.example.demo.entity.JobStatus;
@@ -59,7 +58,6 @@ public class JobCardController {
                 cancelledByUserId, reason, fee));
     }
 
-
     @GetMapping("/status/{status}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<JobCard>> getJobCardsByStatus(@PathVariable JobStatus status) {
@@ -77,5 +75,10 @@ public class JobCardController {
             @PathVariable Long id,
             @RequestBody JobCardSerial serial) {
         return ResponseEntity.ok(jobCardService.addSerialToJobCard(id, serial));
+    }
+    @GetMapping("/by-number/{jobNumber}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<JobCard> getJobCardByNumber(@PathVariable String jobNumber) {
+        return ResponseEntity.ok(jobCardService.getJobCardByNumber(jobNumber));
     }
 }
