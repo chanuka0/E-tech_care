@@ -290,18 +290,18 @@ public class JobCardService {
         return jobCardRepository.save(jobCard);
     }
 
-    @Transactional
-    public JobCard cancelJobCard(Long id, String cancelledBy, String reason, Double fee) {
-        JobCard jobCard = jobCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job card not found"));
-
-        jobCard.setStatus(JobStatus.CANCELLED);
-        jobCard.setCancelledBy(cancelledBy);
-        jobCard.setCancellationReason(reason);
-        jobCard.setCancellationFee(fee);
-
-        return jobCardRepository.save(jobCard);
-    }
+//    @Transactional
+//    public JobCard cancelJobCard(Long id, String cancelledBy, String reason, Double fee) {
+//        JobCard jobCard = jobCardRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        jobCard.setStatus(JobStatus.CANCELLED);
+//        jobCard.setCancelledBy(cancelledBy);
+//        jobCard.setCancellationReason(reason);
+//        jobCard.setCancellationFee(fee);
+//
+//        return jobCardRepository.save(jobCard);
+//    }
 
     public List<JobCard> getAllJobCards() {
         return jobCardRepository.findAll();
