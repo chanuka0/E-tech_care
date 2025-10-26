@@ -79,7 +79,8 @@ public class SecurityConfig {
                                 "/h2-console/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/actuator/health"
+                                "/actuator/health",
+                                "/api/expenses**"
                         ).permitAll()
 
                         // Admin-only endpoints
