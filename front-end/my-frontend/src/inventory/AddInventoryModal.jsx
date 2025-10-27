@@ -41,7 +41,7 @@ const AddInventoryModal = ({ onAdd, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
         <div className="bg-blue-600 text-white p-6 flex justify-between items-center sticky top-0">
           <h3 className="text-xl font-bold">Add New Item</h3>
           <button onClick={onClose} className="text-white hover:bg-blue-700 p-1 rounded">
@@ -122,7 +122,7 @@ const AddInventoryModal = ({ onAdd, onClose }) => {
                 value={formData.purchasePrice}
                 onChange={handleChange}
                 min="0"
-                step="0.01"
+                step="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -134,7 +134,7 @@ const AddInventoryModal = ({ onAdd, onClose }) => {
                 value={formData.sellingPrice}
                 onChange={handleChange}
                 min="0"
-                step="0.01"
+                step="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -148,7 +148,7 @@ const AddInventoryModal = ({ onAdd, onClose }) => {
               value={formData.specialPrice}
               onChange={handleChange}
               min="0"
-              step="0.01"
+              step="0"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
