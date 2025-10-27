@@ -1,9 +1,114 @@
+//////package com.example.demo.services;
+//////
+////////package com.etechcare.service;
+////////
+////////import com.etechcare.entity.*;
+////////import com.etechcare.repository.*;
+//////import com.example.demo.entity.*;
+//////import com.example.demo.repositories.InvoiceRepository;
+//////import com.example.demo.repositories.JobCardRepository;
+//////import lombok.RequiredArgsConstructor;
+//////import org.springframework.stereotype.Service;
+//////import org.springframework.transaction.annotation.Transactional;
+//////import java.time.LocalDateTime;
+//////import java.util.List;
+//////
+//////@Service
+//////@RequiredArgsConstructor
+//////public class InvoiceService {
+//////    private final InvoiceRepository invoiceRepository;
+//////    private final InventoryService inventoryService;
+//////    private final JobCardRepository jobCardRepository;
+//////    private final NotificationService notificationService;
+//////
+//////    @Transactional
+//////    public Invoice createInvoice(Invoice invoice) {
+//////        invoice.setInvoiceNumber(generateInvoiceNumber());
+//////        invoice.setCreatedAt(LocalDateTime.now());
+//////
+//////        // Calculate totals
+//////        double subtotal = invoice.getItems().stream()
+//////                .mapToDouble(InvoiceItem::getTotal)
+//////                .sum();
+//////
+//////        invoice.setSubtotal(subtotal);
+//////        invoice.setTotal(subtotal - invoice.getDiscount() + invoice.getTax());
+//////        invoice.setBalance(invoice.getTotal() - invoice.getPaidAmount());
+//////
+//////        // Determine payment status
+//////        if (invoice.getPaidAmount() >= invoice.getTotal()) {
+//////            invoice.setPaymentStatus(PaymentStatus.PAID);
+//////        } else if (invoice.getPaidAmount() > 0) {
+//////            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
+//////        } else {
+//////            invoice.setPaymentStatus(PaymentStatus.UNPAID);
+//////        }
+//////
+//////        Invoice saved = invoiceRepository.save(invoice);
+//////
+//////        // Deduct stock for each item
+//////        for (InvoiceItem item : saved.getItems()) {
+//////            inventoryService.deductStock(
+//////                    item.getInventoryItem().getId(),
+//////                    item.getQuantity(),
+//////                    item.getSerialNumbers()
+//////            );
+//////        }
+//////
+//////        // Update job card if linked
+//////        if (saved.getJobCard() != null) {
+//////            JobCard jobCard = jobCardRepository.findById(saved.getJobCard().getId())
+//////                    .orElseThrow(() -> new RuntimeException("Job card not found"));
+//////            jobCard.setStatus(JobStatus.DELIVERED);
+//////            jobCardRepository.save(jobCard);
+//////        }
+//////
+//////        notificationService.sendNotification(
+//////                NotificationType.INVOICE_CREATED,
+//////                "Invoice created: " + saved.getInvoiceNumber(),
+//////                saved
+//////        );
+//////
+//////        return saved;
+//////    }
+//////
+//////    @Transactional
+//////    public Invoice addPayment(Long invoiceId, Double amount, PaymentMethod method) {
+//////        Invoice invoice = invoiceRepository.findById(invoiceId)
+//////                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//////
+//////        invoice.setPaidAmount(invoice.getPaidAmount() + amount);
+//////        invoice.setBalance(invoice.getTotal() - invoice.getPaidAmount());
+//////        invoice.setPaymentMethod(method);
+//////
+//////        if (invoice.getPaidAmount() >= invoice.getTotal()) {
+//////            invoice.setPaymentStatus(PaymentStatus.PAID);
+//////        } else if (invoice.getPaidAmount() > 0) {
+//////            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
+//////        }
+//////
+//////        return invoiceRepository.save(invoice);
+//////    }
+//////
+//////    public List<Invoice> getAllInvoices() {
+//////        return invoiceRepository.findAll();
+//////    }
+//////
+//////    public Invoice getInvoiceById(Long id) {
+//////        return invoiceRepository.findById(id)
+//////                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//////    }
+//////
+//////    public List<Invoice> getInvoicesByDateRange(LocalDateTime start, LocalDateTime end) {
+//////        return invoiceRepository.findByCreatedAtBetween(start, end);
+//////    }
+//////
+//////    private String generateInvoiceNumber() {
+//////        return "INV-" + System.currentTimeMillis();
+//////    }
+//////}
 ////package com.example.demo.services;
 ////
-//////package com.etechcare.service;
-//////
-//////import com.etechcare.entity.*;
-//////import com.etechcare.repository.*;
 ////import com.example.demo.entity.*;
 ////import com.example.demo.repositories.InvoiceRepository;
 ////import com.example.demo.repositories.JobCardRepository;
@@ -12,6 +117,7 @@
 ////import org.springframework.transaction.annotation.Transactional;
 ////import java.time.LocalDateTime;
 ////import java.util.List;
+////import java.util.stream.Collectors;
 ////
 ////@Service
 ////@RequiredArgsConstructor
@@ -46,7 +152,7 @@
 ////
 ////        Invoice saved = invoiceRepository.save(invoice);
 ////
-////        // Deduct stock for each item
+////        // DEDUCT STOCK ONLY WHEN INVOICE IS SAVED
 ////        for (InvoiceItem item : saved.getItems()) {
 ////            inventoryService.deductStock(
 ////                    item.getInventoryItem().getId(),
@@ -90,8 +196,45 @@
 ////        return invoiceRepository.save(invoice);
 ////    }
 ////
+////    @Transactional
+////    public void deleteInvoice(Long invoiceId, Long userId, String reason) {
+////        Invoice invoice = invoiceRepository.findById(invoiceId)
+////                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+////
+////        // Mark as deleted instead of actual delete
+////        invoice.setIsDeleted(true);
+////        invoice.setDeletedBy(userId);
+////        invoice.setDeletedAt(LocalDateTime.now());
+////        invoice.setDeletionReason(reason);
+////
+////        invoiceRepository.save(invoice);
+////
+////        // RESTORE STOCK when invoice is deleted
+////        for (InvoiceItem item : invoice.getItems()) {
+////            if (item.getSerialNumbers() != null && !item.getSerialNumbers().isEmpty()) {
+////                // Restore serialized items
+////                for (String serial : item.getSerialNumbers()) {
+////                    // Mark serial as AVAILABLE again in inventory
+////                }
+////            } else {
+////                // Restore quantity
+////                InventoryItem invItem = item.getInventoryItem();
+////                invItem.setQuantity(invItem.getQuantity() + item.getQuantity());
+////                // inventoryItemRepository.save(invItem); - handled in service
+////            }
+////        }
+////
+////        notificationService.sendNotification(
+////                NotificationType.INVOICE_DELETED,
+////                "Invoice deleted: " + invoice.getInvoiceNumber(),
+////                invoice
+////        );
+////    }
+////
 ////    public List<Invoice> getAllInvoices() {
-////        return invoiceRepository.findAll();
+////        return invoiceRepository.findAll().stream()
+////                .filter(inv -> !Boolean.TRUE.equals(inv.getIsDeleted()))
+////                .collect(Collectors.toList());
 ////    }
 ////
 ////    public Invoice getInvoiceById(Long id) {
@@ -100,179 +243,36 @@
 ////    }
 ////
 ////    public List<Invoice> getInvoicesByDateRange(LocalDateTime start, LocalDateTime end) {
-////        return invoiceRepository.findByCreatedAtBetween(start, end);
+////        return invoiceRepository.findByCreatedAtBetween(start, end).stream()
+////                .filter(inv -> !Boolean.TRUE.equals(inv.getIsDeleted()))
+////                .collect(Collectors.toList());
+////    }
+////
+////    // NEW: Search by job card number
+////    public List<Invoice> searchByJobCardNumber(String jobCardNumber) {
+////        return invoiceRepository.findAll().stream()
+////                .filter(inv -> !Boolean.TRUE.equals(inv.getIsDeleted()) &&
+////                        inv.getJobCard() != null &&
+////                        inv.getJobCard().getJobNumber().contains(jobCardNumber))
+////                .collect(Collectors.toList());
+////    }
+////
+////    // NEW: Search by customer name or invoice number
+////    public List<Invoice> searchByCustomerOrInvoice(String searchTerm) {
+////        String term = searchTerm.toLowerCase();
+////        return invoiceRepository.findAll().stream()
+////                .filter(inv -> !Boolean.TRUE.equals(inv.getIsDeleted()) &&
+////                        (inv.getCustomerName().toLowerCase().contains(term) ||
+////                                inv.getInvoiceNumber().toLowerCase().contains(term)))
+////                .collect(Collectors.toList());
 ////    }
 ////
 ////    private String generateInvoiceNumber() {
 ////        return "INV-" + System.currentTimeMillis();
 ////    }
+////
+////
 ////}
-//package com.example.demo.services;
-//
-//import com.example.demo.entity.*;
-//import com.example.demo.repositories.InvoiceRepository;
-//import com.example.demo.repositories.JobCardRepository;
-//import lombok.RequiredArgsConstructor;
-//import org.springframework.stereotype.Service;
-//import org.springframework.transaction.annotation.Transactional;
-//import java.time.LocalDateTime;
-//import java.util.List;
-//import java.util.stream.Collectors;
-//
-//@Service
-//@RequiredArgsConstructor
-//public class InvoiceService {
-//    private final InvoiceRepository invoiceRepository;
-//    private final InventoryService inventoryService;
-//    private final JobCardRepository jobCardRepository;
-//    private final NotificationService notificationService;
-//
-//    @Transactional
-//    public Invoice createInvoice(Invoice invoice) {
-//        invoice.setInvoiceNumber(generateInvoiceNumber());
-//        invoice.setCreatedAt(LocalDateTime.now());
-//
-//        // Calculate totals
-//        double subtotal = invoice.getItems().stream()
-//                .mapToDouble(InvoiceItem::getTotal)
-//                .sum();
-//
-//        invoice.setSubtotal(subtotal);
-//        invoice.setTotal(subtotal - invoice.getDiscount() + invoice.getTax());
-//        invoice.setBalance(invoice.getTotal() - invoice.getPaidAmount());
-//
-//        // Determine payment status
-//        if (invoice.getPaidAmount() >= invoice.getTotal()) {
-//            invoice.setPaymentStatus(PaymentStatus.PAID);
-//        } else if (invoice.getPaidAmount() > 0) {
-//            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
-//        } else {
-//            invoice.setPaymentStatus(PaymentStatus.UNPAID);
-//        }
-//
-//        Invoice saved = invoiceRepository.save(invoice);
-//
-//        // DEDUCT STOCK ONLY WHEN INVOICE IS SAVED
-//        for (InvoiceItem item : saved.getItems()) {
-//            inventoryService.deductStock(
-//                    item.getInventoryItem().getId(),
-//                    item.getQuantity(),
-//                    item.getSerialNumbers()
-//            );
-//        }
-//
-//        // Update job card if linked
-//        if (saved.getJobCard() != null) {
-//            JobCard jobCard = jobCardRepository.findById(saved.getJobCard().getId())
-//                    .orElseThrow(() -> new RuntimeException("Job card not found"));
-//            jobCard.setStatus(JobStatus.DELIVERED);
-//            jobCardRepository.save(jobCard);
-//        }
-//
-//        notificationService.sendNotification(
-//                NotificationType.INVOICE_CREATED,
-//                "Invoice created: " + saved.getInvoiceNumber(),
-//                saved
-//        );
-//
-//        return saved;
-//    }
-//
-//    @Transactional
-//    public Invoice addPayment(Long invoiceId, Double amount, PaymentMethod method) {
-//        Invoice invoice = invoiceRepository.findById(invoiceId)
-//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
-//
-//        invoice.setPaidAmount(invoice.getPaidAmount() + amount);
-//        invoice.setBalance(invoice.getTotal() - invoice.getPaidAmount());
-//        invoice.setPaymentMethod(method);
-//
-//        if (invoice.getPaidAmount() >= invoice.getTotal()) {
-//            invoice.setPaymentStatus(PaymentStatus.PAID);
-//        } else if (invoice.getPaidAmount() > 0) {
-//            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
-//        }
-//
-//        return invoiceRepository.save(invoice);
-//    }
-//
-//    @Transactional
-//    public void deleteInvoice(Long invoiceId, Long userId, String reason) {
-//        Invoice invoice = invoiceRepository.findById(invoiceId)
-//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
-//
-//        // Mark as deleted instead of actual delete
-//        invoice.setIsDeleted(true);
-//        invoice.setDeletedBy(userId);
-//        invoice.setDeletedAt(LocalDateTime.now());
-//        invoice.setDeletionReason(reason);
-//
-//        invoiceRepository.save(invoice);
-//
-//        // RESTORE STOCK when invoice is deleted
-//        for (InvoiceItem item : invoice.getItems()) {
-//            if (item.getSerialNumbers() != null && !item.getSerialNumbers().isEmpty()) {
-//                // Restore serialized items
-//                for (String serial : item.getSerialNumbers()) {
-//                    // Mark serial as AVAILABLE again in inventory
-//                }
-//            } else {
-//                // Restore quantity
-//                InventoryItem invItem = item.getInventoryItem();
-//                invItem.setQuantity(invItem.getQuantity() + item.getQuantity());
-//                // inventoryItemRepository.save(invItem); - handled in service
-//            }
-//        }
-//
-//        notificationService.sendNotification(
-//                NotificationType.INVOICE_DELETED,
-//                "Invoice deleted: " + invoice.getInvoiceNumber(),
-//                invoice
-//        );
-//    }
-//
-//    public List<Invoice> getAllInvoices() {
-//        return invoiceRepository.findAll().stream()
-//                .filter(inv -> !Boolean.TRUE.equals(inv.getIsDeleted()))
-//                .collect(Collectors.toList());
-//    }
-//
-//    public Invoice getInvoiceById(Long id) {
-//        return invoiceRepository.findById(id)
-//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
-//    }
-//
-//    public List<Invoice> getInvoicesByDateRange(LocalDateTime start, LocalDateTime end) {
-//        return invoiceRepository.findByCreatedAtBetween(start, end).stream()
-//                .filter(inv -> !Boolean.TRUE.equals(inv.getIsDeleted()))
-//                .collect(Collectors.toList());
-//    }
-//
-//    // NEW: Search by job card number
-//    public List<Invoice> searchByJobCardNumber(String jobCardNumber) {
-//        return invoiceRepository.findAll().stream()
-//                .filter(inv -> !Boolean.TRUE.equals(inv.getIsDeleted()) &&
-//                        inv.getJobCard() != null &&
-//                        inv.getJobCard().getJobNumber().contains(jobCardNumber))
-//                .collect(Collectors.toList());
-//    }
-//
-//    // NEW: Search by customer name or invoice number
-//    public List<Invoice> searchByCustomerOrInvoice(String searchTerm) {
-//        String term = searchTerm.toLowerCase();
-//        return invoiceRepository.findAll().stream()
-//                .filter(inv -> !Boolean.TRUE.equals(inv.getIsDeleted()) &&
-//                        (inv.getCustomerName().toLowerCase().contains(term) ||
-//                                inv.getInvoiceNumber().toLowerCase().contains(term)))
-//                .collect(Collectors.toList());
-//    }
-//
-//    private String generateInvoiceNumber() {
-//        return "INV-" + System.currentTimeMillis();
-//    }
-//
-//
-//}
 
 
 package com.example.demo.services;
@@ -628,3 +628,322 @@ public class InvoiceService {
         }
     }
 }
+
+//package com.example.demo.services;
+//
+//import com.example.demo.entity.*;
+//import com.example.demo.repositories.InvoiceRepository;
+//import com.example.demo.repositories.JobCardRepository;
+//import com.example.demo.repositories.InventoryItemRepository;
+//import lombok.RequiredArgsConstructor;
+//import org.springframework.stereotype.Service;
+//import org.springframework.transaction.annotation.Transactional;
+//import java.time.LocalDateTime;
+//import java.util.List;
+//import java.util.stream.Collectors;
+//
+//@Service
+//@RequiredArgsConstructor
+//public class InvoiceService {
+//    private final InvoiceRepository invoiceRepository;
+//    private final InventoryService inventoryService;
+//    private final JobCardRepository jobCardRepository;
+//    private final InventoryItemRepository inventoryItemRepository;
+//
+//    @Transactional
+//    public Invoice createInvoice(Invoice invoice) {
+//        try {
+//            // Generate invoice number
+//            invoice.setInvoiceNumber(generateInvoiceNumber());
+//            invoice.setCreatedAt(LocalDateTime.now());
+//
+//            // Validate and set job card relationship
+//            if (invoice.getJobCard() != null && invoice.getJobCard().getId() != null) {
+//                JobCard jobCard = jobCardRepository.findById(invoice.getJobCard().getId())
+//                        .orElseThrow(() -> new RuntimeException("Job card not found"));
+//                invoice.setJobCard(jobCard);
+//            }
+//
+//            // Calculate totals
+//            calculateInvoiceTotals(invoice);
+//
+//            // Save invoice first
+//            Invoice savedInvoice = invoiceRepository.save(invoice);
+//
+//            // Set invoice reference in all items
+//            if (savedInvoice.getItems() != null) {
+//                for (InvoiceItem item : savedInvoice.getItems()) {
+//                    item.setInvoice(savedInvoice);
+//
+//                    // Deduct stock from inventory
+//                    if (item.getInventoryItem() != null) {
+//                        inventoryService.deductStock(
+//                                item.getInventoryItem().getId(),
+//                                item.getQuantity() != null ? item.getQuantity() : 0,
+//                                item.getSerialNumbers()
+//                        );
+//                    }
+//                }
+//            }
+//
+//            // Update job card status if linked
+//            if (savedInvoice.getJobCard() != null) {
+//                JobCard jobCard = savedInvoice.getJobCard();
+//                jobCard.setStatus(JobStatus.DELIVERED);
+//                jobCardRepository.save(jobCard);
+//            }
+//
+//            return savedInvoice;
+//        } catch (Exception e) {
+//            throw new RuntimeException("Failed to create invoice: " + e.getMessage(), e);
+//        }
+//    }
+//
+//    private void calculateInvoiceTotals(Invoice invoice) {
+//        double subtotal = 0.0;
+//        if (invoice.getItems() != null) {
+//            subtotal = invoice.getItems().stream()
+//                    .mapToDouble(item -> {
+//                        double itemTotal = (item.getUnitPrice() != null ? item.getUnitPrice() : 0) *
+//                                (item.getQuantity() != null ? item.getQuantity() : 0);
+//                        item.setTotal(itemTotal);
+//                        return itemTotal;
+//                    })
+//                    .sum();
+//        }
+//
+//        invoice.setSubtotal(subtotal);
+//
+//        double discount = invoice.getDiscount() != null ? invoice.getDiscount() : 0;
+//        double tax = invoice.getTax() != null ? invoice.getTax() : 0;
+//        double total = subtotal - discount + tax;
+//
+//        invoice.setTotal(total);
+//
+//        double paidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
+//        invoice.setBalance(total - paidAmount);
+//
+//        // Set payment status
+//        if (paidAmount >= total) {
+//            invoice.setPaymentStatus(PaymentStatus.PAID);
+//        } else if (paidAmount > 0) {
+//            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
+//        } else {
+//            invoice.setPaymentStatus(PaymentStatus.UNPAID);
+//        }
+//    }
+//
+//    @Transactional
+//    public Invoice addPayment(Long invoiceId, Double amount, PaymentMethod method) {
+//        Invoice invoice = invoiceRepository.findById(invoiceId)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//
+//        double currentPaid = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
+//        invoice.setPaidAmount(currentPaid + amount);
+//        invoice.setPaymentMethod(method);
+//
+//        invoice.setBalance(invoice.getTotal() - invoice.getPaidAmount());
+//
+//        if (invoice.getPaidAmount() >= invoice.getTotal()) {
+//            invoice.setPaymentStatus(PaymentStatus.PAID);
+//        } else if (invoice.getPaidAmount() > 0) {
+//            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
+//        }
+//
+//        return invoiceRepository.save(invoice);
+//    }
+//
+//    @Transactional(readOnly = true)
+//    public List<Invoice> getAllInvoices() {
+//        return invoiceRepository.findByIsDeletedFalseOrIsDeletedNull();
+//    }
+//
+//    @Transactional(readOnly = true)
+//    public Invoice getInvoiceById(Long id) {
+//        return invoiceRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//    }
+//
+//    @Transactional(readOnly = true)
+//    public Invoice getInvoiceByIdWithItems(Long id) {
+//        Invoice invoice = invoiceRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//
+//        if (invoice.getItems() != null) {
+//            invoice.getItems().size();
+//            invoice.getItems().forEach(item -> {
+//                if (item.getSerialNumbers() != null) {
+//                    item.getSerialNumbers().size();
+//                }
+//                if (item.getInventoryItem() != null) {
+//                    item.getInventoryItem().getId();
+//                }
+//            });
+//        }
+//
+//        if (invoice.getJobCard() != null) {
+//            invoice.getJobCard().getJobNumber();
+//        }
+//
+//        return invoice;
+//    }
+//
+//    @Transactional(readOnly = true)
+//    public List<Invoice> getInvoicesByDateRange(LocalDateTime start, LocalDateTime end) {
+//        return invoiceRepository.findByCreatedAtBetween(start, end).stream()
+//                .filter(inv -> inv.getIsDeleted() == null || !inv.getIsDeleted())
+//                .collect(Collectors.toList());
+//    }
+//
+//    @Transactional(readOnly = true)
+//    public List<Invoice> searchByJobCardNumber(String jobCardNumber) {
+//        return invoiceRepository.findByJobCard_JobNumberContainingIgnoreCaseAndIsDeletedFalse(jobCardNumber);
+//    }
+//
+//    @Transactional(readOnly = true)
+//    public List<Invoice> searchByCustomerOrInvoice(String searchTerm) {
+//        return invoiceRepository.searchByCustomerOrInvoice(searchTerm);
+//    }
+//
+//    @Transactional
+//    public void deleteInvoice(Long invoiceId, Long userId, String reason) {
+//        Invoice invoice = invoiceRepository.findById(invoiceId)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//
+//        invoice.setIsDeleted(true);
+//        invoice.setDeletedBy(userId);
+//        invoice.setDeletedAt(LocalDateTime.now());
+//        invoice.setDeletionReason(reason);
+//
+//        invoiceRepository.save(invoice);
+//
+//        if (invoice.getItems() != null) {
+//            for (InvoiceItem item : invoice.getItems()) {
+//                if (item.getInventoryItem() != null) {
+//                    InventoryItem inventoryItem = item.getInventoryItem();
+//                    if (item.getSerialNumbers() != null && !item.getSerialNumbers().isEmpty()) {
+//                        // Restore serialized items
+//                    } else {
+//                        int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
+//                        inventoryItem.setQuantity((inventoryItem.getQuantity() != null ? inventoryItem.getQuantity() : 0) + quantity);
+//                        inventoryItemRepository.save(inventoryItem);
+//                    }
+//                }
+//            }
+//        }
+//    }
+//
+//    @Transactional
+//    public Invoice updateInvoice(Long id, Invoice invoiceDetails) {
+//        Invoice invoice = invoiceRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//
+//        if (invoiceDetails.getCustomerName() != null) {
+//            invoice.setCustomerName(invoiceDetails.getCustomerName());
+//        }
+//        if (invoiceDetails.getCustomerPhone() != null) {
+//            invoice.setCustomerPhone(invoiceDetails.getCustomerPhone());
+//        }
+//        if (invoiceDetails.getDiscount() != null) {
+//            invoice.setDiscount(invoiceDetails.getDiscount());
+//        }
+//        if (invoiceDetails.getTax() != null) {
+//            invoice.setTax(invoiceDetails.getTax());
+//        }
+//        if (invoiceDetails.getPaidAmount() != null) {
+//            invoice.setPaidAmount(invoiceDetails.getPaidAmount());
+//        }
+//
+//        calculateInvoiceTotals(invoice);
+//        return invoiceRepository.save(invoice);
+//    }
+//
+//    @Transactional
+//    public Invoice cancelInvoice(Long invoiceId, String reason, Long cancelledBy) {
+//        Invoice invoice = invoiceRepository.findById(invoiceId)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//
+//        if (invoice.getPaymentStatus() == PaymentStatus.PAID) {
+//            throw new RuntimeException("Cannot cancel paid invoice");
+//        }
+//
+//        invoice.setIsDeleted(true);
+//        invoice.setDeletionReason(reason);
+//        invoice.setDeletedBy(cancelledBy);
+//        invoice.setDeletedAt(LocalDateTime.now());
+//
+//        return invoiceRepository.save(invoice);
+//    }
+//
+//    @Transactional(readOnly = true)
+//    public Invoice findByJobCardId(Long jobCardId) {
+//        return invoiceRepository.findByJobCardIdAndIsDeletedFalse(jobCardId)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found for job card"));
+//    }
+//
+//    private String generateInvoiceNumber() {
+//        String dateStr = LocalDateTime.now().toString().replace("-", "").substring(0, 8);
+//        long count = invoiceRepository.count() + 1;
+//        return String.format("INV-%s-%06d", dateStr, count);
+//    }
+//
+//    @Transactional(readOnly = true)
+//    public InvoiceSummary getInvoiceSummary() {
+//        List<Invoice> invoices = getAllInvoices();
+//
+//        double totalRevenue = invoices.stream()
+//                .mapToDouble(inv -> inv.getTotal() != null ? inv.getTotal() : 0)
+//                .sum();
+//
+//        double totalCollected = invoices.stream()
+//                .mapToDouble(inv -> inv.getPaidAmount() != null ? inv.getPaidAmount() : 0)
+//                .sum();
+//
+//        double totalOutstanding = invoices.stream()
+//                .mapToDouble(inv -> inv.getBalance() != null ? inv.getBalance() : 0)
+//                .sum();
+//
+//        long paidCount = invoices.stream()
+//                .filter(inv -> PaymentStatus.PAID.equals(inv.getPaymentStatus()))
+//                .count();
+//
+//        long partialCount = invoices.stream()
+//                .filter(inv -> PaymentStatus.PARTIAL.equals(inv.getPaymentStatus()))
+//                .count();
+//
+//        long unpaidCount = invoices.stream()
+//                .filter(inv -> PaymentStatus.UNPAID.equals(inv.getPaymentStatus()))
+//                .count();
+//
+//        return new InvoiceSummary(
+//                totalRevenue,
+//                totalCollected,
+//                totalOutstanding,
+//                invoices.size(),
+//                paidCount,
+//                partialCount,
+//                unpaidCount
+//        );
+//    }
+//
+//    public static class InvoiceSummary {
+//        public double totalRevenue;
+//        public double totalCollected;
+//        public double totalOutstanding;
+//        public long totalInvoices;
+//        public long paidInvoices;
+//        public long partialInvoices;
+//        public long unpaidInvoices;
+//
+//        public InvoiceSummary(double totalRevenue, double totalCollected, double totalOutstanding,
+//                              long totalInvoices, long paidInvoices, long partialInvoices, long unpaidInvoices) {
+//            this.totalRevenue = totalRevenue;
+//            this.totalCollected = totalCollected;
+//            this.totalOutstanding = totalOutstanding;
+//            this.totalInvoices = totalInvoices;
+//            this.paidInvoices = paidInvoices;
+//            this.partialInvoices = partialInvoices;
+//            this.unpaidInvoices = unpaidInvoices;
+//        }
+//    }
+//}

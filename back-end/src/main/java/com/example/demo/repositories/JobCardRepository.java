@@ -13,6 +13,7 @@ import java.util.Optional;
 
 @Repository
 public interface JobCardRepository extends JpaRepository<JobCard, Long> {
+
     Optional<JobCard> findByJobNumber(String jobNumber);
 
     List<JobCard> findByStatus(JobStatus status);
@@ -23,13 +24,16 @@ public interface JobCardRepository extends JpaRepository<JobCard, Long> {
 
     List<JobCard> findByDeviceType(String deviceType);
 
+
     @Query("SELECT j FROM JobCard j WHERE j.status = :status AND j.createdAt <= :threshold")
     List<JobCard> findPendingJobsOlderThan(@Param("threshold") LocalDateTime threshold);
 
     @Query("SELECT j FROM JobCard j WHERE j.status = 'PENDING' AND j.createdAt <= :threshold")
     List<JobCard> findPendingJobsOlderThanDate(@Param("threshold") LocalDateTime threshold);
 
+
     Long countByStatus(JobStatus status);
+
 
     @Query("SELECT COUNT(j) FROM JobCard j WHERE j.createdAt BETWEEN :start AND :end")
     Long countJobsByDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
