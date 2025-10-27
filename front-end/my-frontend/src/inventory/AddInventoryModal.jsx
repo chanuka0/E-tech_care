@@ -1,5 +1,12 @@
 import { useState } from 'react';
 
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'LKR' // Change this to your preferred currency
+  }).format(value || 0);
+};
+
 const AddInventoryModal = ({ onAdd, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',

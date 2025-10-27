@@ -39,8 +39,8 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     serialValue: ''
   });
 
-  const deviceTypes = ['LAPTOP', 'DESKTOP', 'PRINTER', 'PROJECTOR'];
-  const serialTypes = ['IMEI', 'SERIAL_NUMBER', 'MODEL_NUMBER'];
+  const deviceTypes = ['LAPTOP', 'DESKTOP', 'PRINTER', 'PROJECTOR','OTHER'];
+  const serialTypes = ['RAM_01_SERIAL', 'RAM_02_SERIAL','RAM 03_SERIAL','RAM_04_SERIAL','CPU_SERIAL','HDD_01_SERIAL','HDD_02_SERIAL','SSD_01_SERIAL','SSD_02_SERIAL','ADAPTOR_SERIAL','BATTERY_SERIAL'];
   const brands = ['HP', 'Dell', 'Lenovo', 'Acer', 'Asus', 'Apple', 'Samsung', 'Canon', 'Epson', 'Brother'];
   const models = ['Model A', 'Model B', 'Model C', 'Model D', 'Model E'];
 

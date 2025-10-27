@@ -52,15 +52,15 @@ const ViewInventoryModal = ({ item, onAddSerial, onClose }) => {
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-blue-50 p-3 rounded-lg">
                 <p className="text-xs text-gray-600">Purchase</p>
-                <p className="text-lg font-bold text-blue-600">${item.purchasePrice?.toFixed(2)}</p>
+                <p className="text-lg font-bold text-blue-600">Rs.{item.purchasePrice?.toFixed(2)}</p>
               </div>
               <div className="bg-green-50 p-3 rounded-lg">
                 <p className="text-xs text-gray-600">Selling</p>
-                <p className="text-lg font-bold text-green-600">${item.sellingPrice?.toFixed(2)}</p>
+                <p className="text-lg font-bold text-green-600">Rs.{item.sellingPrice?.toFixed(2)}</p>
               </div>
               <div className="bg-purple-50 p-3 rounded-lg">
                 <p className="text-xs text-gray-600">Special</p>
-                <p className="text-lg font-bold text-purple-600">${item.specialPrice?.toFixed(2)}</p>
+                <p className="text-lg font-bold text-purple-600">Rs.{item.specialPrice?.toFixed(2)}</p>
               </div>
             </div>
           </div>

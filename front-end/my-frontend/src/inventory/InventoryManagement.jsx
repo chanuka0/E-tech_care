@@ -245,8 +245,8 @@ const InventoryManagement = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div>
-                          <p>${item.sellingPrice?.toFixed(2)}</p>
-                          <p className="text-xs text-gray-500">Bought: ${item.purchasePrice?.toFixed(2)}</p>
+                          <p>Rs.{item.sellingPrice?.toFixed(2)}</p>
+                          <p className="text-xs text-gray-500">Bought: Rs.{item.purchasePrice?.toFixed(2)}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
