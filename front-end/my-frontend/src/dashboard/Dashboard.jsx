@@ -478,6 +478,27 @@ const Dashboard = ({ onNavigate }) => {
     }).format(date);
   };
 
+  const handleQuickAction = (action) => {
+    if (onNavigate) {
+      switch(action) {
+        case 'jobcard':
+          onNavigate('jobcards-create');
+          break;
+        case 'invoice':
+          onNavigate('invoices');
+          break;
+        case 'expense':
+          onNavigate('expenses');
+          break;
+        case 'inventory':
+          onNavigate('inventory');
+          break;
+        default:
+          break;
+      }
+    }
+  };
+
   if (loading && !dashboardData) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -500,27 +521,6 @@ const Dashboard = ({ onNavigate }) => {
       Profit: dashboardData.monthlyProfit || 0
     }
   ] : [];
-
-  const handleQuickAction = (action) => {
-    if (onNavigate) {
-      switch(action) {
-        case 'jobcard':
-          onNavigate('jobcards-create');
-          break;
-        case 'invoice':
-          onNavigate('invoices');
-          break;
-        case 'expense':
-          onNavigate('expenses');
-          break;
-        case 'inventory':
-          onNavigate('inventory');
-          break;
-        default:
-          break;
-      }
-    }
-  };
 
   return (
     <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
@@ -610,6 +610,49 @@ const Dashboard = ({ onNavigate }) => {
                   </svg>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Quick Actions - MOVED AFTER JOB CARD COUNT */}
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <button 
+                onClick={() => handleQuickAction('expense')}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
+              >
+                <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Expense
+              </button>
+              <button 
+                onClick={() => handleQuickAction('invoice')}
+                className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
+              >
+                <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Create Invoice
+              </button>
+              <button 
+                onClick={() => handleQuickAction('jobcard')}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
+              >
+                <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                New Job Card
+              </button>
+              <button 
+                onClick={() => handleQuickAction('inventory')}
+                className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
+              >
+                <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                Manage Inventory
+              </button>
             </div>
           </div>
 
@@ -753,49 +796,6 @@ const Dashboard = ({ onNavigate }) => {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <button 
-                onClick={() => handleQuickAction('expense')}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
-              >
-                <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Expense
-              </button>
-              <button 
-                onClick={() => handleQuickAction('invoice')}
-                className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
-              >
-                <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Create Invoice
-              </button>
-              <button 
-                onClick={() => handleQuickAction('jobcard')}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
-              >
-                <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                New Job Card
-              </button>
-              <button 
-                onClick={() => handleQuickAction('inventory')}
-                className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex flex-col items-center"
-              >
-                <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                Manage Inventory
-              </button>
-            </div>
           </div>
         </>
       )}
