@@ -751,12 +751,12 @@ const JobCardView = ({ jobCardId, onClose, onEdit }) => {
                             </td>
                             <td className="text-right py-3 px-2">
                               <span className="font-semibold text-gray-900">
-                                ${(item.unitPrice || 0).toFixed(2)}
+                                Rs.{(item.unitPrice || 0).toFixed(2)}
                               </span>
                             </td>
                             <td className="text-right py-3 px-2">
                               <span className="font-bold text-green-700">
-                                ${itemTotal.toFixed(2)}
+                                Rs.{itemTotal.toFixed(2)}
                               </span>
                             </td>
                           </tr>
@@ -772,7 +772,7 @@ const JobCardView = ({ jobCardId, onClose, onEdit }) => {
                     <div className="flex items-center justify-between gap-8">
                       <span className="text-lg font-semibold text-gray-900">Total Parts Cost:</span>
                       <span className="text-2xl font-bold text-green-700">
-                        ${calculateUsedItemsTotal().toFixed(2)}
+                       Rs.{calculateUsedItemsTotal().toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -793,13 +793,13 @@ const JobCardView = ({ jobCardId, onClose, onEdit }) => {
               <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                 <label className="text-sm font-medium text-blue-600">Advance Payment</label>
                 <p className="text-2xl font-bold text-blue-700">
-                  ${jobCard.advancePayment?.toFixed(2) || '0.00'}
+                  Rs.{jobCard.advancePayment?.toFixed(2) || '0.00'}
                 </p>
               </div>
               <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
                 <label className="text-sm font-medium text-green-600">Estimated Cost</label>
                 <p className="text-2xl font-bold text-green-700">
-                  ${jobCard.estimatedCost?.toFixed(2) || '0.00'}
+                  Rs.{jobCard.estimatedCost?.toFixed(2) || '0.00'}
                 </p>
               </div>
             </div>

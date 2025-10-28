@@ -169,6 +169,7 @@ import InventoryManagement from './inventory/InventoryManagement';
 import InvoiceList from './invoices/InvoiceList';
 import Settings from './faults/Settings'; // ✅ Make sure this file exists!
 import ExpenseCategoryManagement from './faults/ExpenseCategoryManagement';
+import ExpenseManagement from './faults/ExpenseManagement';
 
 // Placeholder components
 const Expenses = () => (
@@ -195,7 +196,7 @@ const MainContent = () => {
     'jobcards-create': { component: JobCardCreate, title: 'Create Job Card' },
     inventory: { component: InventoryManagement, title: 'Inventory' },
     invoices: { component: InvoiceList, title: 'Invoices' },
-    expenses: { component: ExpenseCategoryManagement, title: 'Expenses' },
+    expenses: { component: ExpenseManagement, title: 'Expenses' },
     //damages: { component: Damages, title: 'Damages' },
     settings: { component: Settings, title: 'Settings' }
   };
