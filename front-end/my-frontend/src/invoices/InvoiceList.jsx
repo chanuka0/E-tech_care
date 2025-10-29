@@ -384,6 +384,7 @@ const InvoiceList = () => {
   const { apiCall } = useApi();
   const [invoices, setInvoices] = useState([]);
   const [allInvoices, setAllInvoices] = useState([]);
+  const [displayedInvoices, setDisplayedInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -393,6 +394,7 @@ const InvoiceList = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
+  const [displayCount, setDisplayCount] = useState(10);
   
   const videoRef = useRef(null);
   const codeReaderRef = useRef(null);
@@ -402,8 +404,10 @@ const InvoiceList = () => {
     setError('');
     try {
       const data = await apiCall('/api/invoices');
-      setAllInvoices(data);
-      setInvoices(data);
+      // Sort invoices by creation date (newest first)
+      const sortedInvoices = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setAllInvoices(sortedInvoices);
+      setInvoices(sortedInvoices);
     } catch (err) {
       setError('Failed to fetch invoices');
       console.error(err);
@@ -414,6 +418,11 @@ const InvoiceList = () => {
   useEffect(() => {
     fetchInvoices();
   }, []);
+
+  // Update displayed invoices when invoices or displayCount changes
+  useEffect(() => {
+    setDisplayedInvoices(invoices.slice(0, displayCount));
+  }, [invoices, displayCount]);
 
   // Real-time job card search with debounce
   useEffect(() => {
@@ -427,6 +436,7 @@ const InvoiceList = () => {
         inv.jobCard?.jobNumber?.toLowerCase().includes(searchJobCard.toLowerCase())
       );
       setInvoices(filtered);
+      setDisplayCount(10); // Reset to 10 when searching
     }, 300);
 
     return () => clearTimeout(timer);
@@ -445,6 +455,7 @@ const InvoiceList = () => {
         inv.invoiceNumber?.toLowerCase().includes(searchCustomer.toLowerCase())
       );
       setInvoices(filtered);
+      setDisplayCount(10); // Reset to 10 when searching
     }, 300);
 
     return () => clearTimeout(timer);
@@ -471,6 +482,11 @@ const InvoiceList = () => {
     }
 
     setInvoices(filtered);
+    setDisplayCount(10); // Reset to 10 when filtering
+  };
+
+  const handleSeeMore = () => {
+    setDisplayCount(prevCount => prevCount + 10);
   };
 
   // Barcode Scanner
@@ -537,8 +553,10 @@ const InvoiceList = () => {
   };
 
   const filteredByStatus = filterStatus === 'ALL' 
-    ? invoices 
-    : invoices.filter(inv => inv.paymentStatus === filterStatus);
+    ? displayedInvoices 
+    : displayedInvoices.filter(inv => inv.paymentStatus === filterStatus);
+
+  const hasMoreInvoices = invoices.length > displayCount;
 
   if (viewingInvoice) {
     return (
@@ -701,82 +719,104 @@ const InvoiceList = () => {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Invoice #</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Job Card</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Customer</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Total</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Paid</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Balance</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredByStatus.map(invoice => (
-                  <tr key={invoice.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-gray-900">{invoice.invoiceNumber}</td>
-                    <td className="px-6 py-4">
-                      {invoice.jobCard ? (
-                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium cursor-pointer hover:bg-blue-100"
-                              onClick={() => setSearchJobCard(invoice.jobCard.jobNumber)}>
-                          {invoice.jobCard.jobNumber}
-                        </span>
-                      ) : (
-                        <span className="text-gray-500 text-sm">Direct Sale</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-gray-900">{invoice.customerName}</td>
-                    <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.total.toFixed(2)}</td>
-                    <td className="px-6 py-4 text-green-600 font-semibold">Rs.{invoice.paidAmount.toFixed(2)}</td>
-                    <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.balance.toFixed(2)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusColor(invoice.paymentStatus)}`}>
-                        {invoice.paymentStatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {new Date(invoice.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => setViewingInvoice(invoice.id)}
-                          className="text-blue-600 hover:text-blue-900 font-medium text-sm hover:underline"
-                        >
-                          View
-                        </button>
-                        
-                        {/* Edit Button - only for unpaid/partial invoices */}
-                        {(invoice.paymentStatus === 'UNPAID' || invoice.paymentStatus === 'PARTIAL') && (
-                          <button
-                            onClick={() => handleEditInvoice(invoice.id)}
-                            className="text-green-600 hover:text-green-900 font-medium text-sm hover:underline"
-                          >
-                            Edit
-                          </button>
-                        )}
-                        
-                        {/* Cancel Button - only for unpaid/partial invoices */}
-                        {(invoice.paymentStatus === 'UNPAID' || invoice.paymentStatus === 'PARTIAL') && (
-                          <button
-                            onClick={() => handleCancelInvoice(invoice.id)}
-                            className="text-red-600 hover:text-red-900 font-medium text-sm hover:underline"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Invoice #</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Job Card</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Customer</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Total</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Paid</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Balance</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredByStatus.map(invoice => (
+                    <tr key={invoice.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-gray-900">{invoice.invoiceNumber}</td>
+                      <td className="px-6 py-4">
+                        {invoice.jobCard ? (
+                          <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium cursor-pointer hover:bg-blue-100"
+                                onClick={() => setSearchJobCard(invoice.jobCard.jobNumber)}>
+                            {invoice.jobCard.jobNumber}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500 text-sm">Direct Sale</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-gray-900">{invoice.customerName}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.total.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-green-600 font-semibold">Rs.{invoice.paidAmount.toFixed(2)}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.balance.toFixed(2)}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusColor(invoice.paymentStatus)}`}>
+                          {invoice.paymentStatus}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {new Date(invoice.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => setViewingInvoice(invoice.id)}
+                            className="text-blue-600 hover:text-blue-900 font-medium text-sm hover:underline"
+                          >
+                            View
+                          </button>
+                          
+                          {/* Edit Button - only for unpaid/partial invoices */}
+                          {(invoice.paymentStatus === 'UNPAID' || invoice.paymentStatus === 'PARTIAL') && (
+                            <button
+                              onClick={() => handleEditInvoice(invoice.id)}
+                              className="text-green-600 hover:text-green-900 font-medium text-sm hover:underline"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          
+                          {/* Cancel Button - only for unpaid/partial invoices */}
+                          {(invoice.paymentStatus === 'UNPAID' || invoice.paymentStatus === 'PARTIAL') && (
+                            <button
+                              onClick={() => handleCancelInvoice(invoice.id)}
+                              className="text-red-600 hover:text-red-900 font-medium text-sm hover:underline"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* See More Button */}
+            {hasMoreInvoices && (
+              <div className="flex justify-center py-4 border-t border-gray-200">
+                <button
+                  onClick={handleSeeMore}
+                  className="bg-white hover:bg-gray-50 text-gray-700 font-medium py-2 px-6 border border-gray-300 rounded-lg shadow-sm transition-colors"
+                >
+                  See More ({invoices.length - displayCount} remaining)
+                </button>
+              </div>
+            )}
+
+            {/* Display Count Info */}
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+              <p className="text-sm text-gray-600">
+                Showing {filteredByStatus.length} of {invoices.length} invoices
+                {hasMoreInvoices && ` • Load more to see older invoices`}
+              </p>
+            </div>
+          </>
         )}
       </div>
 
