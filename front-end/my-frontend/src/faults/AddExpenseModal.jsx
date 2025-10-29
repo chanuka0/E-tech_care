@@ -195,7 +195,6 @@
 // };
 
 // export default AddExpenseModal;
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 
@@ -203,21 +202,30 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
   const { token } = useAuth();
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
-    categoryName: '',
+    category: '',
     price: '',
-    description: '',
-    isActive: true
+    description: ''
   });
   const [error, setError] = useState('');
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchCategories();
+    console.log('Token:', token);
+    if (token) {
+      fetchCategories();
+    } else {
+      console.error('No token available');
+      setError('Authentication required. Please login again.');
+    }
   }, [token]);
 
   const fetchCategories = async () => {
     setLoadingCategories(true);
+    setError('');
     try {
+      console.log('Fetching categories with token:', token);
+      
       const response = await fetch('http://localhost:8081/api/expense-categories', {
         method: 'GET',
         headers: {
@@ -226,48 +234,61 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
         },
       });
 
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Categories received:', data);
+        
         const activeCategories = data.filter(cat => cat.isActive === true);
+        console.log('Active categories:', activeCategories);
+        
         setCategories(activeCategories);
       } else {
-        console.error('Failed to fetch categories');
+        const errorText = await response.text();
+        console.error('Failed to fetch categories. Status:', response.status);
+        console.error('Error response:', errorText);
+        setError(`Failed to fetch categories. Status: ${response.status}`);
       }
     } catch (err) {
       console.error('Error fetching categories:', err);
-      setError('Failed to load categories');
+      setError(`Error fetching categories: ${err.message}`);
     }
     setLoadingCategories(false);
   };
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    if (!formData.categoryName.trim()) {
+    if (!formData.category.trim()) {
       setError('Please select a category');
+      setLoading(false);
       return;
     }
 
     if (!formData.price || parseFloat(formData.price) <= 0) {
       setError('Price must be greater than 0');
+      setLoading(false);
       return;
     }
 
     const expenseData = {
-      categoryName: formData.categoryName,
-      price: parseFloat(formData.price),
-      description: formData.description,
-      isActive: formData.isActive
+      category: formData.category,
+      amount: parseFloat(formData.price),
+      description: formData.description
     };
+
+    console.log('Submitting expense:', expenseData);
 
     try {
       const response = await fetch('http://localhost:8081/api/expenses', {
@@ -279,24 +300,28 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
         body: JSON.stringify(expenseData),
       });
 
+      console.log('Create response status:', response.status);
+
       if (response.ok) {
         const newExpense = await response.json();
+        console.log('Expense created:', newExpense);
         onAdd(newExpense);
         setFormData({
-          categoryName: '',
+          category: '',
           price: '',
-          description: '',
-          isActive: true
+          description: ''
         });
         onClose();
       } else {
         const errorData = await response.json();
+        console.error('Error creating expense:', errorData);
         setError(errorData.message || 'Failed to add expense');
       }
     } catch (err) {
       console.error('Error adding expense:', err);
       setError('Error adding expense. Please try again.');
     }
+    setLoading(false);
   };
 
   return (
@@ -330,16 +355,16 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
               </div>
             ) : categories.length > 0 ? (
               <select
-                name="categoryName"
-                value={formData.categoryName}
+                name="category"
+                value={formData.category}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
-                <option value="">Select a category</option>
+                <option value="">-- Select a category --</option>
                 {categories.map(cat => (
-                  <option key={cat.id} value={cat.categoryName}>
-                    {cat.categoryName}
+                  <option key={cat.id} value={cat.name}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -347,6 +372,9 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
               <div className="p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md text-sm">
                 No categories available. Please create one first in Settings.
               </div>
+            )}
+            {!loadingCategories && categories.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">Categories loaded: {categories.length}</p>
             )}
           </div>
 
@@ -386,20 +414,6 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
             />
           </div>
 
-          {/* Active Status */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              name="isActive"
-              checked={formData.isActive}
-              onChange={handleChange}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-            />
-            <label className="ml-2 text-sm font-medium text-gray-700">
-              Mark as active
-            </label>
-          </div>
-
           {/* Button Group */}
           <div className="flex space-x-3 pt-4 border-t border-gray-200">
             <button
@@ -411,10 +425,10 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
             </button>
             <button
               type="submit"
-              disabled={loadingCategories || categories.length === 0}
+              disabled={loadingCategories || categories.length === 0 || loading}
               className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md transition-colors font-medium"
             >
-              Add Expense
+              {loading ? 'Adding...' : 'Add Expense'}
             </button>
           </div>
         </form>

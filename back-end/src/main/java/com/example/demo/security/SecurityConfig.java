@@ -78,9 +78,9 @@ public class SecurityConfig {
                                 "/api/users/login/user",
                                 "/h2-console/**",
                                 "/swagger-ui/**",
+                                "/api/expenses/**",
                                 "/v3/api-docs/**",
-                                "/actuator/health",
-                                "/api/expenses**"
+                                "/actuator/health"
                         ).permitAll()
 
                         // Admin-only endpoints
@@ -101,7 +101,7 @@ public class SecurityConfig {
                                 "/api/invoices",
                                 "/api/inventory/**",
                                 "/api/inventory",
-                                "/api/expenses/**",
+//                                "/api/expenses/**",
                                 "/api/damages/**",
                                 "/api/reports/**",
                                 "/api/faults",
