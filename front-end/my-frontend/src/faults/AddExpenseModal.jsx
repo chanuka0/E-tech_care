@@ -384,7 +384,7 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
               Price <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-2.5 text-gray-500 font-medium">$</span>
+              <span className="absolute left-3 top-2.5 text-gray-500 font-medium"></span>
               <input
                 type="number"
                 name="price"
