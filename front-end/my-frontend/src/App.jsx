@@ -168,8 +168,8 @@ import JobCardCreate from './jobcards/JobCardCreate';
 import InventoryManagement from './inventory/InventoryManagement';
 import InvoiceList from './invoices/InvoiceList';
 import Settings from './faults/Settings'; // ✅ Make sure this file exists!
-import ExpenseCategoryManagement from './faults/ExpenseCategoryManagement';
-import ExpenseManagement from './faults/ExpenseManagement';
+import ExpenseCategoryManagement from './expenses/ExpenseCategoryManagement';
+import ExpenseManagement from './expenses/ExpenseManagement';
 
 // Placeholder components
 const Expenses = () => (
