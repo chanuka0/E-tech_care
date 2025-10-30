@@ -516,7 +516,7 @@ const JobCards = ({ onCreateNew }) => {
   const [editingJobCard, setEditingJobCard] = useState(null);
   const [viewingJobCard, setViewingJobCard] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [visibleCount, setVisibleCount] = useState(10);
+  const [visibleCount, setVisibleCount] = useState(20);
 
   const fetchJobCards = async () => {
     setLoading(true);
@@ -567,7 +567,7 @@ const JobCards = ({ onCreateNew }) => {
 
   // Function to load more job cards
   const loadMore = () => {
-    setVisibleCount(prev => prev + 10);
+    setVisibleCount(prev => prev + 20);
   };
 
   if (loading) {

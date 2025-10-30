@@ -394,7 +394,7 @@ const InvoiceList = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
-  const [displayCount, setDisplayCount] = useState(10);
+  const [displayCount, setDisplayCount] = useState(20);
   
   const videoRef = useRef(null);
   const codeReaderRef = useRef(null);
@@ -436,7 +436,7 @@ const InvoiceList = () => {
         inv.jobCard?.jobNumber?.toLowerCase().includes(searchJobCard.toLowerCase())
       );
       setInvoices(filtered);
-      setDisplayCount(10); // Reset to 10 when searching
+      setDisplayCount(20); // Reset to 10 when searching
     }, 300);
 
     return () => clearTimeout(timer);
@@ -455,7 +455,7 @@ const InvoiceList = () => {
         inv.invoiceNumber?.toLowerCase().includes(searchCustomer.toLowerCase())
       );
       setInvoices(filtered);
-      setDisplayCount(10); // Reset to 10 when searching
+      setDisplayCount(20); // Reset to 10 when searching
     }, 300);
 
     return () => clearTimeout(timer);
@@ -482,11 +482,11 @@ const InvoiceList = () => {
     }
 
     setInvoices(filtered);
-    setDisplayCount(10); // Reset to 10 when filtering
+    setDisplayCount(20); // Reset to 10 when filtering
   };
 
   const handleSeeMore = () => {
-    setDisplayCount(prevCount => prevCount + 10);
+    setDisplayCount(prevCount => prevCount + 20);
   };
 
   // Barcode Scanner

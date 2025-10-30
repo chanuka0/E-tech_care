@@ -364,7 +364,7 @@ const InventoryManagement = () => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
-  const [displayCount, setDisplayCount] = useState(10);
+  const [displayCount, setDisplayCount] = useState(20);
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -491,7 +491,7 @@ const InventoryManagement = () => {
   const displayedItems = filteredItems.slice(0, displayCount);
 
   const handleSeeMore = () => {
-    setDisplayCount(prevCount => prevCount + 10);
+    setDisplayCount(prevCount => prevCount + 20);
   };
 
   const canShowMore = displayCount < filteredItems.length;
