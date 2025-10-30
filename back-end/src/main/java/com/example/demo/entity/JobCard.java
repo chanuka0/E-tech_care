@@ -1,10 +1,10 @@
 package com.example.demo.entity;
 
-//package com.etechcare.entity;
-
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -17,38 +17,81 @@ public class JobCard {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 100)
     private String jobNumber;
 
+    @NotBlank(message = "Customer name cannot be blank")
+    @Column(nullable = false, length = 100)
     private String customerName;
+
+    @Column(nullable = false, length = 20)
     private String customerPhone;
+
+    @Column(length = 100)
     private String customerEmail;
-    private String deviceType; // LAPTOP, DESKTOP, PRINTER, PROJECTOR
+
+    @Column(nullable = false, length = 50)
+    private String deviceType;
+
+    @Column(length = 50)
     private String brandId;
+
+    @Column(length = 50)
     private String modelId;
+
+    // NEW: Fault reference
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "fault_id")
+    private Fault fault;
+
+    @NotBlank(message = "Fault description cannot be blank")
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String faultDescription;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
 
     @Enumerated(EnumType.STRING)
-    private JobStatus status; // PENDING, IN_PROGRESS, COMPLETED, DELIVERED, CANCELLED
+    @Column(length = 50, nullable = false)
+    private JobStatus status;
 
+    @Column(name = "advance_payment")
     private Double advancePayment;
+
+    @Column(name = "estimated_cost")
     private Double estimatedCost;
 
-    @OneToMany(mappedBy = "jobCard", cascade = CascadeType.ALL)
-    private List<JobCardSerial> serials;
+    // Serials
+    @OneToMany(mappedBy = "jobCard", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<JobCardSerial> serials = new ArrayList<>();
 
-    private String cancelledBy; // CUSTOMER or TECHNICIAN
+    // NEW: Used items
+    @OneToMany(mappedBy = "jobCard", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<UsedItem> usedItems = new ArrayList<>();
+
+    // Cancellation fields
+    @Column(length = 50)
+    private String cancelledBy;
+
+    @Column(name = "cancelled_by_user_id")
+    private Long cancelledByUserId; // NEW: Who cancelled (user ID)
+
+    @Column(columnDefinition = "TEXT")
     private String cancellationReason;
+
+    @Column(name = "cancellation_fee")
     private Double cancellationFee;
 
-    @Column(nullable = false)
+    @Column(nullable = false, name = "created_by")
     private Long createdBy;
 
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
     @PrePersist
@@ -60,5 +103,31 @@ public class JobCard {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public void addSerial(JobCardSerial serial) {
+        if (serials == null) {
+            serials = new ArrayList<>();
+        }
+        serials.add(serial);
+        serial.setJobCard(this);
+    }
+
+    public void removeSerial(JobCardSerial serial) {
+        serials.remove(serial);
+        serial.setJobCard(null);
+    }
+
+    public void addUsedItem(UsedItem item) {
+        if (usedItems == null) {
+            usedItems = new ArrayList<>();
+        }
+        usedItems.add(item);
+        item.setJobCard(this);
+    }
+
+    public void removeUsedItem(UsedItem item) {
+        usedItems.remove(item);
+        item.setJobCard(null);
     }
 }

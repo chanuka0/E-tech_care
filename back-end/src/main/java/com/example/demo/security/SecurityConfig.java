@@ -78,6 +78,7 @@ public class SecurityConfig {
                                 "/api/users/login/user",
                                 "/h2-console/**",
                                 "/swagger-ui/**",
+                                "/api/expenses/**",
                                 "/v3/api-docs/**",
                                 "/actuator/health"
                         ).permitAll()
@@ -94,13 +95,16 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/users/profile",
                                 "/api/laptop-brands/active",
-                                "/api/job-cards",
-                                "/api/job-cards/**",
+                                "/api/jobcards",
+                                "/api/jobcards/**",
                                 "/api/invoices/**",
+                                "/api/invoices",
                                 "/api/inventory/**",
-                                "/api/expenses/**",
+                                "/api/inventory",
+//                                "/api/expenses/**",
                                 "/api/damages/**",
                                 "/api/reports/**",
+                                "/api/faults",
                                 "/api/pdf/**"
                         ).authenticated()
 

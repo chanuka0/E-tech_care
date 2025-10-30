@@ -56,4 +56,55 @@ public class InventoryController {
     public ResponseEntity<List<InventoryItem>> getLowStockItems() {
         return ResponseEntity.ok(inventoryService.getLowStockItems());
     }
+
+    @PostMapping("/{id}/deduct-stock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<?> deductStock(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> deductData) {
+
+        Integer quantity = deductData.get("quantityUsed") != null
+                ? ((Number) deductData.get("quantityUsed")).intValue()
+                : 0;
+
+        @SuppressWarnings("unchecked")
+        List<String> serialNumbers = (List<String>) deductData.get("serialNumbers");
+        String reason = (String) deductData.get("reason");
+        String notes = (String) deductData.get("notes");
+
+        if (quantity <= 0) {
+            return ResponseEntity.badRequest().body("Quantity used must be greater than 0");
+        }
+
+        inventoryService.deductStock(id, quantity, serialNumbers, reason, notes);
+        return ResponseEntity.ok(Map.of("message", "Stock deducted successfully"));
+    }
+
+//    @PostMapping("/{id}/deduct-stock")
+//    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+//    public ResponseEntity<Void> deductStock(
+//            @PathVariable Long id,
+//            @RequestBody Map<String, Object> deductData) {
+//
+//        Integer quantity = deductData.get("quantityUsed") != null
+//                ? ((Number) deductData.get("quantityUsed")).intValue()
+//                : 0;
+////        Integer quantity = deductData.get("quantityUsed") != null ?
+////                ((Number) deductData.get("quantityUsed")).intValue() : 0;
+//
+//        @SuppressWarnings("unchecked")
+//        List<String> serialNumbers = (List<String>) deductData.get("serialNumbers");
+//        String reason = (String) deductData.get("reason");
+//        String notes = (String) deductData.get("notes");
+//
+//        inventoryService.deductStock(id, quantity, serialNumbers);
+//        return ResponseEntity.ok().build();
+//    }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
+        inventoryService.deleteItem(id);
+        return ResponseEntity.noContent().build();
+    }
+
 }

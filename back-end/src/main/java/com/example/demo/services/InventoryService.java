@@ -113,4 +113,80 @@ public class InventoryService {
     private String generateSku() {
         return "SKU-" + System.currentTimeMillis();
     }
+
+
+//    public void deductStock(Long id, Integer quantity, List<String> serialNumbers, String reason, String notes) {
+//    }
+//
+//    public void deleteItem(Long id) {
+//    }
+@Transactional
+public void deductStock(Long id, Integer quantity, List<String> serialNumbers, String reason, String notes) {
+    InventoryItem item = inventoryItemRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+
+    if (item.getHasSerialization()) {
+        if (serialNumbers == null || serialNumbers.isEmpty()) {
+            throw new RuntimeException("Serial numbers required for serialized item");
+        }
+
+        for (String serial : serialNumbers) {
+            InventorySerial invSerial = inventorySerialRepository.findBySerialNumber(serial)
+                    .orElseThrow(() -> new RuntimeException("Serial not found: " + serial));
+
+            if (invSerial.getStatus() == SerialStatus.SOLD) {
+                throw new RuntimeException("Serial already sold: " + serial);
+            }
+
+            invSerial.setStatus(SerialStatus.SOLD);
+            invSerial.setSoldAt(LocalDateTime.now());
+            invSerial.setNotes(notes);
+            inventorySerialRepository.save(invSerial);
+        }
+
+        // Update quantity automatically based on sold serials
+        item.setQuantity(item.getQuantity() - serialNumbers.size());
+    } else {
+        if (item.getQuantity() < quantity) {
+            throw new RuntimeException("Not enough stock for item: " + item.getName());
+        }
+        item.setQuantity(item.getQuantity() - quantity);
+    }
+
+    inventoryItemRepository.save(item);
+
+    // Log or notify about stock deduction (optional)
+    notificationService.sendNotification(
+            NotificationType.STOCK_UPDATE,
+            "Stock deducted for item: " + item.getName() +
+                    " | Qty: " + quantity +
+                    (reason != null ? " | Reason: " + reason : ""),
+            item
+    );
+
+    checkLowStock(item);
+}
+
+    @Transactional
+    public void deleteItem(Long id) {
+        InventoryItem item = inventoryItemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Item not found"));
+
+        // If item has serials, remove them first (due to foreign key)
+        if (item.getSerials() != null && !item.getSerials().isEmpty()) {
+            for (InventorySerial serial : item.getSerials()) {
+                inventorySerialRepository.delete(serial);
+            }
+        }
+
+        inventoryItemRepository.delete(item);
+
+        // Optional: notify deletion
+        notificationService.sendNotification(
+                NotificationType.ITEM_REMOVED,
+                "Item deleted: " + item.getName() + " (SKU: " + item.getSku() + ")",
+                item
+        );
+    }
+
 }
