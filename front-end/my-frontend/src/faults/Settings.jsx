@@ -111,8 +111,8 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import FaultManagement from './FaultManagement';
-import ExpenseCategoryManagement from './ExpenseCategoryManagement';
-import ServiceCategoryManagement from './ServiceCategoryManagement';
+import ExpenseCategoryManagement from '../expenses/ExpenseCategoryManagement';
+import ServiceCategoryManagement from '../faults/Servicecategorymanagement.jsx';
 
 const Settings = () => {
   const { isAdmin } = useAuth();
