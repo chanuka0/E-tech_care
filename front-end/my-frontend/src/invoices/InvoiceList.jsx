@@ -1,3 +1,4 @@
+
 // import { useState, useEffect, useRef } from 'react';
 // import { useApi } from '../services/apiService';
 // import InvoiceView from './InvoiceView';
@@ -8,6 +9,7 @@
 //   const { apiCall } = useApi();
 //   const [invoices, setInvoices] = useState([]);
 //   const [allInvoices, setAllInvoices] = useState([]);
+//   const [displayedInvoices, setDisplayedInvoices] = useState([]);
 //   const [loading, setLoading] = useState(false);
 //   const [error, setError] = useState('');
 //   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -16,6 +18,8 @@
 //   const [viewingInvoice, setViewingInvoice] = useState(null);
 //   const [showCreateModal, setShowCreateModal] = useState(false);
 //   const [showScanner, setShowScanner] = useState(false);
+//   const [editingInvoice, setEditingInvoice] = useState(null);
+//   const [displayCount, setDisplayCount] = useState(10);
   
 //   const videoRef = useRef(null);
 //   const codeReaderRef = useRef(null);
@@ -25,8 +29,10 @@
 //     setError('');
 //     try {
 //       const data = await apiCall('/api/invoices');
-//       setAllInvoices(data);
-//       setInvoices(data);
+//       // Sort invoices by creation date (newest first)
+//       const sortedInvoices = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+//       setAllInvoices(sortedInvoices);
+//       setInvoices(sortedInvoices);
 //     } catch (err) {
 //       setError('Failed to fetch invoices');
 //       console.error(err);
@@ -37,6 +43,11 @@
 //   useEffect(() => {
 //     fetchInvoices();
 //   }, []);
+
+//   // Update displayed invoices when invoices or displayCount changes
+//   useEffect(() => {
+//     setDisplayedInvoices(invoices.slice(0, displayCount));
+//   }, [invoices, displayCount]);
 
 //   // Real-time job card search with debounce
 //   useEffect(() => {
@@ -50,6 +61,7 @@
 //         inv.jobCard?.jobNumber?.toLowerCase().includes(searchJobCard.toLowerCase())
 //       );
 //       setInvoices(filtered);
+//       setDisplayCount(10); // Reset to 10 when searching
 //     }, 300);
 
 //     return () => clearTimeout(timer);
@@ -68,6 +80,7 @@
 //         inv.invoiceNumber?.toLowerCase().includes(searchCustomer.toLowerCase())
 //       );
 //       setInvoices(filtered);
+//       setDisplayCount(10); // Reset to 10 when searching
 //     }, 300);
 
 //     return () => clearTimeout(timer);
@@ -94,6 +107,11 @@
 //     }
 
 //     setInvoices(filtered);
+//     setDisplayCount(10); // Reset to 10 when filtering
+//   };
+
+//   const handleSeeMore = () => {
+//     setDisplayCount(prevCount => prevCount + 10);
 //   };
 
 //   // Barcode Scanner
@@ -121,6 +139,35 @@
 //     }
 //   }, [showScanner]);
 
+//   const handleEditInvoice = (invoiceId) => {
+//     setEditingInvoice(invoiceId);
+//   };
+
+//   const handleCancelInvoice = async (invoiceId) => {
+//     const reason = prompt('Please enter reason for cancellation:');
+//     if (reason && reason.trim()) {
+//       try {
+//         await apiCall(`/api/invoices/${invoiceId}/cancel`, {
+//           method: 'POST',
+//           body: JSON.stringify({ reason })
+//         });
+        
+//         showSuccessMessage('Invoice cancelled successfully!');
+//         fetchInvoices();
+//       } catch (err) {
+//         setError(err.message || 'Failed to cancel invoice');
+//       }
+//     }
+//   };
+
+//   const showSuccessMessage = (message) => {
+//     const msg = document.createElement('div');
+//     msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+//     msg.textContent = message;
+//     document.body.appendChild(msg);
+//     setTimeout(() => msg.remove(), 3000);
+//   };
+
 //   const getPaymentStatusColor = (status) => {
 //     const colors = {
 //       PAID: 'bg-green-100 text-green-800',
@@ -131,8 +178,10 @@
 //   };
 
 //   const filteredByStatus = filterStatus === 'ALL' 
-//     ? invoices 
-//     : invoices.filter(inv => inv.paymentStatus === filterStatus);
+//     ? displayedInvoices 
+//     : displayedInvoices.filter(inv => inv.paymentStatus === filterStatus);
+
+//   const hasMoreInvoices = invoices.length > displayCount;
 
 //   if (viewingInvoice) {
 //     return (
@@ -156,6 +205,19 @@
 //           fetchInvoices();
 //         }}
 //         onClose={() => setShowCreateModal(false)}
+//       />
+//     );
+//   }
+
+//   if (editingInvoice) {
+//     return (
+//       <CreateInvoiceModal
+//         jobCard={null}
+//         onSuccess={() => {
+//           setEditingInvoice(null);
+//           fetchInvoices();
+//         }}
+//         onClose={() => setEditingInvoice(null)}
 //       />
 //     );
 //   }
@@ -186,7 +248,7 @@
 
 //       {/* Search Bars */}
 //       <div className="bg-white rounded-lg shadow p-4 space-y-4">
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 //           {/* Search 1: Job Card Number with Barcode */}
 //           <div>
 //             <label className="block text-sm font-medium text-gray-700 mb-2">Search by Job Card</label>
@@ -244,26 +306,24 @@
 //               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
 //             />
 //           </div>
-//         </div>
 
-//         {/* Status Filter */}
-//         <div className="flex space-x-2 overflow-x-auto">
-//           {['ALL', 'PAID', 'PARTIAL', 'UNPAID'].map(status => (
-//             <button
-//               key={status}
-//               onClick={() => {
-//                 setFilterStatus(status);
-//                 filterInvoices(searchJobCard, searchCustomer, status);
+//           {/* Status Filter */}
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+//             <select
+//               value={filterStatus}
+//               onChange={(e) => {
+//                 setFilterStatus(e.target.value);
+//                 filterInvoices(searchJobCard, searchCustomer, e.target.value);
 //               }}
-//               className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
-//                 filterStatus === status
-//                   ? 'bg-blue-600 text-white'
-//                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-//               }`}
+//               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
 //             >
-//               {status}
-//             </button>
-//           ))}
+//               <option value="ALL">All Status</option>
+//               <option value="PAID">Paid</option>
+//               <option value="PARTIAL">Partial</option>
+//               <option value="UNPAID">Unpaid</option>
+//             </select>
+//           </div>
 //         </div>
 //       </div>
 
@@ -284,60 +344,104 @@
 //             </button>
 //           </div>
 //         ) : (
-//           <div className="overflow-x-auto">
-//             <table className="w-full">
-//               <thead className="bg-gray-50">
-//                 <tr>
-//                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Invoice #</th>
-//                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Job Card</th>
-//                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Customer</th>
-//                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Total</th>
-//                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Paid</th>
-//                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Balance</th>
-//                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-//                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
-//                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Action</th>
-//                 </tr>
-//               </thead>
-//               <tbody className="divide-y divide-gray-200">
-//                 {filteredByStatus.map(invoice => (
-//                   <tr key={invoice.id} className="hover:bg-gray-50 transition-colors">
-//                     <td className="px-6 py-4 font-semibold text-gray-900">{invoice.invoiceNumber}</td>
-//                     <td className="px-6 py-4">
-//                       {invoice.jobCard ? (
-//                         <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium cursor-pointer hover:bg-blue-100"
-//                               onClick={() => setSearchJobCard(invoice.jobCard.jobNumber)}>
-//                           {invoice.jobCard.jobNumber}
-//                         </span>
-//                       ) : (
-//                         <span className="text-gray-500 text-sm">Direct Sale</span>
-//                       )}
-//                     </td>
-//                     <td className="px-6 py-4 text-gray-900">{invoice.customerName}</td>
-//                     <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.total.toFixed(2)}</td>
-//                     <td className="px-6 py-4 text-green-600 font-semibold">Rs.{invoice.paidAmount.toFixed(2)}</td>
-//                     <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.balance.toFixed(2)}</td>
-//                     <td className="px-6 py-4">
-//                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusColor(invoice.paymentStatus)}`}>
-//                         {invoice.paymentStatus}
-//                       </span>
-//                     </td>
-//                     <td className="px-6 py-4 text-sm text-gray-600">
-//                       {new Date(invoice.createdAt).toLocaleDateString()}
-//                     </td>
-//                     <td className="px-6 py-4">
-//                       <button
-//                         onClick={() => setViewingInvoice(invoice.id)}
-//                         className="text-blue-600 hover:text-blue-900 font-medium text-sm hover:underline"
-//                       >
-//                         View
-//                       </button>
-//                     </td>
+//           <>
+//             <div className="overflow-x-auto">
+//               <table className="w-full">
+//                 <thead className="bg-gray-50">
+//                   <tr>
+//                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Invoice #</th>
+//                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Job Card</th>
+//                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Customer</th>
+//                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Total</th>
+//                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Paid</th>
+//                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Balance</th>
+//                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+//                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
+//                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
 //                   </tr>
-//                 ))}
-//               </tbody>
-//             </table>
-//           </div>
+//                 </thead>
+//                 <tbody className="divide-y divide-gray-200">
+//                   {filteredByStatus.map(invoice => (
+//                     <tr key={invoice.id} className="hover:bg-gray-50 transition-colors">
+//                       <td className="px-6 py-4 font-semibold text-gray-900">{invoice.invoiceNumber}</td>
+//                       <td className="px-6 py-4">
+//                         {invoice.jobCard ? (
+//                           <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium cursor-pointer hover:bg-blue-100"
+//                                 onClick={() => setSearchJobCard(invoice.jobCard.jobNumber)}>
+//                             {invoice.jobCard.jobNumber}
+//                           </span>
+//                         ) : (
+//                           <span className="text-gray-500 text-sm">Direct Sale</span>
+//                         )}
+//                       </td>
+//                       <td className="px-6 py-4 text-gray-900">{invoice.customerName}</td>
+//                       <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.total.toFixed(2)}</td>
+//                       <td className="px-6 py-4 text-green-600 font-semibold">Rs.{invoice.paidAmount.toFixed(2)}</td>
+//                       <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.balance.toFixed(2)}</td>
+//                       <td className="px-6 py-4">
+//                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusColor(invoice.paymentStatus)}`}>
+//                           {invoice.paymentStatus}
+//                         </span>
+//                       </td>
+//                       <td className="px-6 py-4 text-sm text-gray-600">
+//                         {new Date(invoice.createdAt).toLocaleDateString()}
+//                       </td>
+//                       <td className="px-6 py-4">
+//                         <div className="flex space-x-2">
+//                           <button
+//                             onClick={() => setViewingInvoice(invoice.id)}
+//                             className="text-blue-600 hover:text-blue-900 font-medium text-sm hover:underline"
+//                           >
+//                             View
+//                           </button>
+                          
+//                           {/* Edit Button - only for unpaid/partial invoices */}
+//                           {(invoice.paymentStatus === 'UNPAID' || invoice.paymentStatus === 'PARTIAL') && (
+//                             <button
+//                               onClick={() => handleEditInvoice(invoice.id)}
+//                               className="text-green-600 hover:text-green-900 font-medium text-sm hover:underline"
+//                             >
+//                               Edit
+//                             </button>
+//                           )}
+                          
+//                           {/* Cancel Button - only for unpaid/partial invoices */}
+//                           {(invoice.paymentStatus === 'UNPAID' || invoice.paymentStatus === 'PARTIAL') && (
+//                             <button
+//                               onClick={() => handleCancelInvoice(invoice.id)}
+//                               className="text-red-600 hover:text-red-900 font-medium text-sm hover:underline"
+//                             >
+//                               Cancel
+//                             </button>
+//                           )}
+//                         </div>
+//                       </td>
+//                     </tr>
+//                   ))}
+//                 </tbody>
+//               </table>
+//             </div>
+
+//             {/* See More Button */}
+//             {hasMoreInvoices && (
+//               <div className="flex justify-center py-4 border-t border-gray-200">
+//                 <button
+//                   onClick={handleSeeMore}
+//                   className="bg-white hover:bg-gray-50 text-gray-700 font-medium py-2 px-6 border border-gray-300 rounded-lg shadow-sm transition-colors"
+//                 >
+//                   See More ({invoices.length - displayCount} remaining)
+//                 </button>
+//               </div>
+//             )}
+
+//             {/* Display Count Info */}
+//             <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+//               <p className="text-sm text-gray-600">
+//                 Showing {filteredByStatus.length} of {invoices.length} invoices
+//                 {hasMoreInvoices && ` • Load more to see older invoices`}
+//               </p>
+//             </div>
+//           </>
 //         )}
 //       </div>
 
@@ -378,6 +482,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useApi } from '../services/apiService';
 import InvoiceView from './InvoiceView';
 import CreateInvoiceModal from './CreateInvoiceModal';
+import InvoiceEdit from './InvoiceEdit';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 
 const InvoiceList = () => {
@@ -404,7 +509,6 @@ const InvoiceList = () => {
     setError('');
     try {
       const data = await apiCall('/api/invoices');
-      // Sort invoices by creation date (newest first)
       const sortedInvoices = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setAllInvoices(sortedInvoices);
       setInvoices(sortedInvoices);
@@ -419,12 +523,10 @@ const InvoiceList = () => {
     fetchInvoices();
   }, []);
 
-  // Update displayed invoices when invoices or displayCount changes
   useEffect(() => {
     setDisplayedInvoices(invoices.slice(0, displayCount));
   }, [invoices, displayCount]);
 
-  // Real-time job card search with debounce
   useEffect(() => {
     if (!searchJobCard.trim()) {
       filterInvoices('', searchCustomer, filterStatus);
@@ -436,13 +538,12 @@ const InvoiceList = () => {
         inv.jobCard?.jobNumber?.toLowerCase().includes(searchJobCard.toLowerCase())
       );
       setInvoices(filtered);
-      setDisplayCount(10); // Reset to 10 when searching
+      setDisplayCount(10);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [searchJobCard, allInvoices]);
 
-  // Real-time customer search with debounce
   useEffect(() => {
     if (!searchCustomer.trim()) {
       filterInvoices(searchJobCard, '', filterStatus);
@@ -455,7 +556,7 @@ const InvoiceList = () => {
         inv.invoiceNumber?.toLowerCase().includes(searchCustomer.toLowerCase())
       );
       setInvoices(filtered);
-      setDisplayCount(10); // Reset to 10 when searching
+      setDisplayCount(10);
     }, 300);
 
     return () => clearTimeout(timer);
@@ -482,14 +583,13 @@ const InvoiceList = () => {
     }
 
     setInvoices(filtered);
-    setDisplayCount(10); // Reset to 10 when filtering
+    setDisplayCount(10);
   };
 
   const handleSeeMore = () => {
     setDisplayCount(prevCount => prevCount + 10);
   };
 
-  // Barcode Scanner
   useEffect(() => {
     if (showScanner && videoRef.current) {
       const codeReader = new BrowserMultiFormatReader();
@@ -513,10 +613,6 @@ const InvoiceList = () => {
       };
     }
   }, [showScanner]);
-
-  const handleEditInvoice = (invoiceId) => {
-    setEditingInvoice(invoiceId);
-  };
 
   const handleCancelInvoice = async (invoiceId) => {
     const reason = prompt('Please enter reason for cancellation:');
@@ -586,8 +682,8 @@ const InvoiceList = () => {
 
   if (editingInvoice) {
     return (
-      <CreateInvoiceModal
-        jobCard={null}
+      <InvoiceEdit
+        invoiceId={editingInvoice}
         onSuccess={() => {
           setEditingInvoice(null);
           fetchInvoices();
@@ -611,7 +707,7 @@ const InvoiceList = () => {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          <span>Create Invoice</span>
+          <span>Create Direct Invoice</span>
         </button>
       </div>
 
@@ -646,7 +742,6 @@ const InvoiceList = () => {
               </button>
             </div>
 
-            {/* Barcode Scanner */}
             {showScanner && (
               <div className="mt-2 p-3 border-2 border-purple-300 rounded-lg bg-white">
                 <div className="flex justify-between items-center mb-2">
@@ -773,7 +868,7 @@ const InvoiceList = () => {
                           {/* Edit Button - only for unpaid/partial invoices */}
                           {(invoice.paymentStatus === 'UNPAID' || invoice.paymentStatus === 'PARTIAL') && (
                             <button
-                              onClick={() => handleEditInvoice(invoice.id)}
+                              onClick={() => setEditingInvoice(invoice.id)}
                               className="text-green-600 hover:text-green-900 font-medium text-sm hover:underline"
                             >
                               Edit
