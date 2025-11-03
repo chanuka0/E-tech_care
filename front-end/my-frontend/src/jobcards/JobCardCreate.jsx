@@ -763,7 +763,6 @@
 
 // export default JobCardCreate;
 
-
 import { useState, useEffect, useRef } from 'react';
 import { useApi } from '../services/apiService';
 import { BrowserMultiFormatReader } from '@zxing/browser';
@@ -782,6 +781,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
   
   const [faults, setFaults] = useState([]);
   const [services, setServices] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   const [formData, setFormData] = useState({
     customerName: '',
@@ -797,8 +797,8 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     deviceBarcode: '',
     deviceBarcodes: [],
     otherSerials: [],
-    selectedFaults: [],      // NEW: Array of selected fault IDs
-    selectedServices: [],    // NEW: Array of selected service objects
+    selectedFaults: [],
+    selectedServices: [],
   });
 
   const [currentOtherSerial, setCurrentOtherSerial] = useState({
@@ -811,68 +811,85 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
   const brands = ['HP', 'Dell', 'Lenovo', 'Acer', 'Asus', 'Apple', 'Samsung', 'Canon', 'Epson', 'Brother'];
   const models = ['Model A', 'Model B', 'Model C', 'Model D', 'Model E'];
 
-  // Fetch faults and services on component mount
+  // Fetch faults and services on component mount - FIXED VERSION
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchData = async () => {
+      if (dataLoaded) return;
+      
       try {
         const [faultsData, servicesData] = await Promise.all([
           apiCall('/api/faults'),
           apiCall('/api/service-categories')
         ]);
-        setFaults(faultsData);
-        setServices(servicesData);
+        
+        if (isMounted) {
+          setFaults(faultsData || []);
+          setServices(servicesData || []);
+          setDataLoaded(true);
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Failed to load faults and services');
+        if (isMounted) {
+          setError('Failed to load faults and services');
+        }
       }
     };
+
     fetchData();
-  }, [apiCall]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [apiCall, dataLoaded]);
 
   // Device Barcode Scanner
   useEffect(() => {
-    if (showDeviceBarcodeScanner && deviceBarcodeVideoRef.current) {
-      const codeReader = new BrowserMultiFormatReader();
-      deviceBarcodeReaderRef.current = codeReader;
+    if (!showDeviceBarcodeScanner || !deviceBarcodeVideoRef.current) return;
 
-      codeReader.decodeFromVideoDevice(undefined, deviceBarcodeVideoRef.current, (result, error) => {
-        if (result) {
-          handleDeviceBarcodeScan(result.getText());
-        }
-        if (error && error.name !== 'NotFoundException') {
-          console.error('Device barcode scan error:', error);
-        }
-      });
+    const codeReader = new BrowserMultiFormatReader();
+    deviceBarcodeReaderRef.current = codeReader;
 
-      return () => {
-        if (deviceBarcodeReaderRef.current) {
-          deviceBarcodeReaderRef.current.reset();
-        }
-      };
-    }
+    codeReader.decodeFromVideoDevice(undefined, deviceBarcodeVideoRef.current, (result, error) => {
+      if (result) {
+        handleDeviceBarcodeScan(result.getText());
+      }
+      if (error && error.name !== 'NotFoundException') {
+        console.error('Device barcode scan error:', error);
+      }
+    });
+
+    return () => {
+      if (deviceBarcodeReaderRef.current) {
+        deviceBarcodeReaderRef.current.reset();
+        deviceBarcodeReaderRef.current = null;
+      }
+    };
   }, [showDeviceBarcodeScanner]);
 
   // Other Serial Scanner
   useEffect(() => {
-    if (showOtherSerialScanner && otherSerialVideoRef.current) {
-      const codeReader = new BrowserMultiFormatReader();
-      otherSerialReaderRef.current = codeReader;
+    if (!showOtherSerialScanner || !otherSerialVideoRef.current) return;
 
-      codeReader.decodeFromVideoDevice(undefined, otherSerialVideoRef.current, (result, error) => {
-        if (result) {
-          handleOtherSerialScan(result.getText());
-        }
-        if (error && error.name !== 'NotFoundException') {
-          console.error('Other serial scan error:', error);
-        }
-      });
+    const codeReader = new BrowserMultiFormatReader();
+    otherSerialReaderRef.current = codeReader;
 
-      return () => {
-        if (otherSerialReaderRef.current) {
-          otherSerialReaderRef.current.reset();
-        }
-      };
-    }
+    codeReader.decodeFromVideoDevice(undefined, otherSerialVideoRef.current, (result, error) => {
+      if (result) {
+        handleOtherSerialScan(result.getText());
+      }
+      if (error && error.name !== 'NotFoundException') {
+        console.error('Other serial scan error:', error);
+      }
+    });
+
+    return () => {
+      if (otherSerialReaderRef.current) {
+        otherSerialReaderRef.current.reset();
+        otherSerialReaderRef.current = null;
+      }
+    };
   }, [showOtherSerialScanner, currentOtherSerial.serialType]);
 
   const handleChange = (e) => {
@@ -945,6 +962,11 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     }
 
     const selectedService = services.find(s => s.id === parseInt(serviceId));
+    
+    if (!selectedService) {
+      setError('Selected service not found');
+      return;
+    }
     
     if (formData.selectedServices.some(s => s.id === parseInt(serviceId))) {
       setError('This service is already selected');
@@ -1034,11 +1056,18 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
   };
 
   const showSuccessMessage = (message) => {
+    const existingMessages = document.querySelectorAll('.success-message');
+    existingMessages.forEach(msg => msg.remove());
+    
     const msg = document.createElement('div');
-    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    msg.className = 'success-message fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
     msg.textContent = message;
     document.body.appendChild(msg);
-    setTimeout(() => msg.remove(), 3000);
+    setTimeout(() => {
+      if (msg.parentNode) {
+        msg.remove();
+      }
+    }, 3000);
   };
 
   const handleSubmit = async (e) => {
@@ -1091,25 +1120,21 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
         deviceType: formData.deviceType,
         brandId: formData.brandId,
         modelId: formData.modelId,
-        faults: formData.selectedFaults.map(id => ({ id })),  // Convert to objects
-        serviceCategories: formData.selectedServices.map(s => ({ id: s.id })),  // Convert to objects
+        faults: formData.selectedFaults.map(id => ({ id })),
+        serviceCategories: formData.selectedServices.map(s => ({ id: s.id })),
         faultDescription: formData.faultDescription,
         notes: formData.notes,
         advancePayment: parseFloat(formData.advancePayment) || 0,
         estimatedCost: parseFloat(formData.estimatedCost) || 0,
         createdBy: getUserIdFromToken(),
         serials: [
-          // Add device barcodes as DEVICE_SERIAL type
           ...formData.deviceBarcodes.map(barcode => ({
             serialType: 'DEVICE_SERIAL',
             serialValue: barcode
           })),
-          // Add other serials
           ...formData.otherSerials
         ]
       };
-
-      console.log('Sending payload:', JSON.stringify(payload, null, 2));
 
       const response = await apiCall('/api/jobcards', {
         method: 'POST',
@@ -1475,7 +1500,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
             </div>
           </div>
 
-          {/* FAULTS SECTION - NEW */}
+          {/* FAULTS SECTION */}
           <div className="border-b border-gray-200 pb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <svg className="w-6 h-6 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1527,7 +1552,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
             </div>
           </div>
 
-          {/* SERVICES SECTION - NEW */}
+          {/* SERVICES SECTION */}
           <div className="border-b border-gray-200 pb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
