@@ -1,9 +1,5 @@
 package com.example.demo.services;
 
-//package com.etechcare.service;
-//
-//import com.etechcare.entity.*;
-//import com.etechcare.repository.*;
 import com.example.demo.entity.InventoryItem;
 import com.example.demo.entity.InventorySerial;
 import com.example.demo.entity.NotificationType;
