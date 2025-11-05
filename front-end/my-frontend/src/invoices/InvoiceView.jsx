@@ -503,7 +503,7 @@
 import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
 import PaymentModal from './PaymentModal';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
 const InvoiceView = ({ invoiceId, onClose, onRefresh }) => {

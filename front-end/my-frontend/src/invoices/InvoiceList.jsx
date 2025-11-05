@@ -845,9 +845,9 @@ const InvoiceList = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 text-gray-900">{invoice.customerName}</td>
-                      <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.total.toFixed(2)}</td>
-                      <td className="px-6 py-4 text-green-600 font-semibold">Rs.{invoice.paidAmount.toFixed(2)}</td>
-                      <td className="px-6 py-4 font-semibold text-gray-900">Rs.{invoice.balance.toFixed(2)}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-900">Rs.{(invoice.total ?? 0).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-green-600 font-semibold">Rs.{(invoice.paidAmount ?? 0).toFixed(2)}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-900">Rs.{(invoice.balance ?? 0).toFixed(2)}</td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusColor(invoice.paymentStatus)}`}>
                           {invoice.paymentStatus}
