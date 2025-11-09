@@ -298,6 +298,8 @@
 //}
 
 
+
+
 //package com.example.demo.entity;
 //
 //import jakarta.persistence.*;
@@ -369,6 +371,10 @@
 //    @Column(name = "total_service_price")
 //    private Double totalServicePrice = 0.0;
 //
+//    // ADDED: One Day Service flag
+//    @Column(name = "one_day_service", nullable = false)
+//    private Boolean oneDayService = false;
+//
 //    // Service Categories (many-to-many relationship)
 //    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
 //    @JoinTable(
@@ -417,6 +423,9 @@
 //        updatedAt = LocalDateTime.now();
 //        if (totalServicePrice == null) {
 //            totalServicePrice = 0.0;
+//        }
+//        if (oneDayService == null) {
+//            oneDayService = false; // Default to false
 //        }
 //    }
 //
@@ -542,13 +551,24 @@ public class JobCard {
     @Column(nullable = false, length = 50)
     private String deviceType;
 
-    @Column(length = 50)
-    private String brandId;
+    // NEW: Changed to ManyToOne relationships
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "brand_id")
+    private Brand brand;
 
-    @Column(length = 50)
-    private String modelId;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "model_id")
+    private Model model;
 
-    // MODIFIED: Multiple faults (many-to-many relationship)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "processor_id")
+    private Processor processor;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "device_condition_id")
+    private DeviceCondition deviceCondition;
+
+    // Multiple faults (many-to-many relationship)
     @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "job_card_faults",
@@ -574,11 +594,9 @@ public class JobCard {
     @Column(name = "estimated_cost")
     private Double estimatedCost;
 
-    // ADDED: Total service price (calculated from service categories)
     @Column(name = "total_service_price")
     private Double totalServicePrice = 0.0;
 
-    // ADDED: One Day Service flag
     @Column(name = "one_day_service", nullable = false)
     private Boolean oneDayService = false;
 
@@ -632,7 +650,7 @@ public class JobCard {
             totalServicePrice = 0.0;
         }
         if (oneDayService == null) {
-            oneDayService = false; // Default to false
+            oneDayService = false;
         }
     }
 
@@ -667,7 +685,6 @@ public class JobCard {
         item.setJobCard(null);
     }
 
-    // MODIFIED: Fault helper methods (plural)
     public void addFault(Fault fault) {
         if (faults == null) {
             faults = new ArrayList<>();
@@ -689,7 +706,6 @@ public class JobCard {
         }
     }
 
-    // Service category helper methods
     public void addServiceCategory(ServiceCategory serviceCategory) {
         if (serviceCategories == null) {
             serviceCategories = new ArrayList<>();
@@ -711,7 +727,6 @@ public class JobCard {
         }
     }
 
-    // ADDED: Calculate total service price from service categories
     public void calculateTotalServicePrice() {
         this.totalServicePrice = 0.0;
         if (serviceCategories != null && !serviceCategories.isEmpty()) {

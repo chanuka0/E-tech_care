@@ -8,18 +8,18 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "brands")
+@Table(name = "device_conditions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Brand {
+public class DeviceCondition {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Brand name cannot be blank")
-    @Column(name = "brand_name", unique = true, nullable = false, length = 255)
-    private String brandName;
+    @NotBlank(message = "Condition name cannot be blank")
+    @Column(name = "condition_name", unique = true, nullable = false, length = 255)
+    private String conditionName;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;

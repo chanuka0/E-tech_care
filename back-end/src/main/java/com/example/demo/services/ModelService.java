@@ -11,42 +11,36 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class ModelService {
-
     private final ModelRepository modelRepository;
 
     @Transactional
     public Model createModel(Model model) {
-        // Check if model already exists for this brand
-        if (modelRepository.existsByNameAndBrandId(model.getName(), model.getBrandId())) {
-            throw new RuntimeException("Model with name '" + model.getName() + "' already exists for this brand");
-        }
+        model.setIsActive(true);
         return modelRepository.save(model);
     }
 
-    public List<Model> getAllModels() {
-        return modelRepository.findAll();
+    public List<Model> getAllActiveModels() {
+        return modelRepository.findAllActive();
     }
 
     public Model getModelById(Long id) {
         return modelRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Model not found with id: " + id));
-    }
-
-    public List<Model> getModelsByBrandId(Long brandId) {
-        return modelRepository.findByBrandId(brandId);
+                .orElseThrow(() -> new RuntimeException("Model not found"));
     }
 
     @Transactional
-    public Model updateModel(Long id, Model modelDetails) {
-        Model model = getModelById(id);
-        model.setName(modelDetails.getName());
-        model.setBrandId(modelDetails.getBrandId());
-        return modelRepository.save(model);
+    public Model updateModel(Long id, Model updates) {
+        Model existing = getModelById(id);
+        existing.setModelName(updates.getModelName());
+        existing.setDescription(updates.getDescription());
+        existing.setIsActive(updates.getIsActive());
+        return modelRepository.save(existing);
     }
 
     @Transactional
     public void deleteModel(Long id) {
         Model model = getModelById(id);
-        modelRepository.delete(model);
+        model.setIsActive(false);
+        modelRepository.save(model);
     }
 }

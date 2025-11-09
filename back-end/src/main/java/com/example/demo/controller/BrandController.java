@@ -14,11 +14,10 @@ import java.util.List;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class BrandController {
-
     private final BrandService brandService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Brand> createBrand(@RequestBody Brand brand) {
         return ResponseEntity.ok(brandService.createBrand(brand));
     }
@@ -26,7 +25,7 @@ public class BrandController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<Brand>> getAllBrands() {
-        return ResponseEntity.ok(brandService.getAllBrands());
+        return ResponseEntity.ok(brandService.getAllActiveBrands());
     }
 
     @GetMapping("/{id}")

@@ -105,6 +105,14 @@ public class SecurityConfig {
                                 "/api/damages/**",
                                 "/api/reports/**",
                                 "/api/faults",
+                                "/api/brands",          // NEW
+                                "/api/brands/**",       // NEW
+                                "/api/models",          // NEW
+                                "/api/models/**",       // NEW
+                                "/api/processors",      // NEW
+                                "/api/processors/**",   // NEW
+                                "/api/device-conditions",    // NEW
+                                "/api/device-conditions/**", // NEW
                                 "/api/pdf/**"
                         ).authenticated()
 
