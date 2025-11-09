@@ -317,4 +317,8 @@ public class Invoice {
         createdAt = LocalDateTime.now();
         isDeleted = false;
     }
+
+    public String getCustomerEmail() {
+        return "";
+    }
 }

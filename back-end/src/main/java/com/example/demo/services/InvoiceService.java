@@ -1057,461 +1057,795 @@
 
 
 
+//package com.example.demo.services;
+//
+//import com.example.demo.entity.*;
+//import com.example.demo.repositories.InvoiceRepository;
+//import com.example.demo.repositories.JobCardRepository;
+//import com.example.demo.repositories.InventoryItemRepository;
+//import lombok.RequiredArgsConstructor;
+//import org.springframework.stereotype.Service;
+//import org.springframework.transaction.annotation.Transactional;
+//import java.time.LocalDateTime;
+//import java.util.List;
+//import java.util.stream.Collectors;
+//
+//@Service
+//@RequiredArgsConstructor
+//public class InvoiceService {
+//    private final InvoiceRepository invoiceRepository;
+//    private final InventoryService inventoryService;
+//    private final JobCardRepository jobCardRepository;
+//    private final InventoryItemRepository inventoryItemRepository;
+//
+//    /**
+//     * Create a new invoice with items
+//     * IMPORTANT: Deducts inventory and does NOT change job card status yet
+//     */
+//    @Transactional
+//    public Invoice createInvoice(Invoice invoice) {
+//        // Generate unique invoice number
+//        invoice.setInvoiceNumber(generateInvoiceNumber());
+//        invoice.setCreatedAt(LocalDateTime.now());
+//
+//        // Calculate subtotal from items
+//        double subtotal = invoice.getItems() != null
+//                ? invoice.getItems().stream()
+//                .mapToDouble(item -> item.getTotal() != null ? item.getTotal() : 0)
+//                .sum()
+//                : 0;
+//
+//        invoice.setSubtotal(subtotal);
+//
+//        // Calculate total (subtotal - discount + tax)
+//        double total = subtotal - (invoice.getDiscount() != null ? invoice.getDiscount() : 0)
+//                + (invoice.getTax() != null ? invoice.getTax() : 0);
+//        invoice.setTotal(total);
+//
+//        // Calculate balance
+//        double paidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
+//        invoice.setBalance(total - paidAmount);
+//
+//        // Determine payment status
+//        if (paidAmount >= total) {
+//            invoice.setPaymentStatus(PaymentStatus.PAID);
+//        } else if (paidAmount > 0) {
+//            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
+//        } else {
+//            invoice.setPaymentStatus(PaymentStatus.UNPAID);
+//        }
+//
+//        // Save invoice
+//        Invoice saved = invoiceRepository.save(invoice);
+//
+//        // Set invoice reference in all items and deduct stock
+//        if (saved.getItems() != null) {
+//            for (InvoiceItem item : saved.getItems()) {
+//                item.setInvoice(saved);
+//
+//                // Deduct stock from inventory
+//                if (item.getInventoryItem() != null) {
+//                    inventoryService.deductStock(
+//                            item.getInventoryItem().getId(),
+//                            item.getQuantity() != null ? item.getQuantity() : 0,
+//                            item.getSerialNumbers()
+//                    );
+//                }
+//            }
+//        }
+//
+//        // CRITICAL: Update job card status to DELIVERED if invoice is PAID on creation
+//        if (saved.getJobCard() != null && saved.getPaymentStatus() == PaymentStatus.PAID) {
+//            updateJobCardToDelivered(saved.getJobCard().getId());
+//        }
+//
+//        return saved;
+//    }
+//
+//    /**
+//     * Add payment to invoice and update payment status
+//     * CRITICAL: Automatically changes job card status to DELIVERED when fully paid
+//     */
+//    @Transactional
+//    public Invoice addPayment(Long invoiceId, Double amount, PaymentMethod method) {
+//        Invoice invoice = invoiceRepository.findById(invoiceId)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//
+//        // Add payment
+//        double currentPaid = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
+//        invoice.setPaidAmount(currentPaid + amount);
+//        invoice.setPaymentMethod(method);
+//
+//        // Update balance
+//        invoice.setBalance(invoice.getTotal() - invoice.getPaidAmount());
+//
+//        // Store old payment status
+//        PaymentStatus oldStatus = invoice.getPaymentStatus();
+//
+//        // Update payment status
+//        if (invoice.getPaidAmount() >= invoice.getTotal()) {
+//            invoice.setPaymentStatus(PaymentStatus.PAID);
+//        } else if (invoice.getPaidAmount() > 0) {
+//            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
+//        }
+//
+//        Invoice savedInvoice = invoiceRepository.save(invoice);
+//
+//        // CRITICAL: Update job card status to DELIVERED if:
+//        // 1. Invoice is now PAID
+//        // 2. Previous status was not PAID
+//        // 3. Job card exists
+//        if (savedInvoice.getPaymentStatus() == PaymentStatus.PAID &&
+//                oldStatus != PaymentStatus.PAID &&
+//                savedInvoice.getJobCard() != null) {
+//
+//            updateJobCardToDelivered(savedInvoice.getJobCard().getId());
+//
+//            // Log the status change
+//            System.out.println("✅ Job Card " + savedInvoice.getJobCard().getJobNumber() +
+//                    " status changed to DELIVERED (Invoice fully paid)");
+//        }
+//
+//        return savedInvoice;
+//    }
+//
+//    /**
+//     * CRITICAL METHOD: Update job card status to DELIVERED
+//     * Called when invoice is fully paid
+//     */
+//    private void updateJobCardToDelivered(Long jobCardId) {
+//        JobCard jobCard = jobCardRepository.findById(jobCardId)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        // Only update if not already DELIVERED or CANCELLED
+//        if (jobCard.getStatus() != JobStatus.DELIVERED && jobCard.getStatus() != JobStatus.CANCELLED) {
+//            jobCard.setStatus(JobStatus.DELIVERED);
+//            jobCard.setUpdatedAt(LocalDateTime.now());
+//            jobCardRepository.save(jobCard);
+//
+//            System.out.println("✅ Job Card " + jobCard.getJobNumber() + " marked as DELIVERED");
+//        }
+//    }
+//
+//    /**
+//     * Get all invoices (excluding deleted ones)
+//     */
+//    @Transactional(readOnly = true)
+//    public List<Invoice> getAllInvoices() {
+//        return invoiceRepository.findAll().stream()
+//                .filter(inv -> inv.getIsDeleted() == null || !inv.getIsDeleted())
+//                .map(this::enrichInvoiceWithJobCardDetails)
+//                .collect(Collectors.toList());
+//    }
+//
+//    /**
+//     * Get invoice by ID (LAZY loading - items not loaded)
+//     */
+//    @Transactional(readOnly = true)
+//    public Invoice getInvoiceById(Long id) {
+//        Invoice invoice = invoiceRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//        return enrichInvoiceWithJobCardDetails(invoice);
+//    }
+//
+//    /**
+//     * Get invoice by ID WITH items and full job card details loaded (EAGER loading)
+//     * IMPORTANT: Use this when you need all details including serials and faults
+//     */
+//    @Transactional(readOnly = true)
+//    public Invoice getInvoiceByIdWithItems(Long id) {
+//        // Fetch invoice from database
+//        Invoice invoice = invoiceRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//
+//        // Force loading of items (triggers database query)
+//        if (invoice.getItems() != null) {
+//            invoice.getItems().size();
+//            // Also load details of each item
+//            invoice.getItems().forEach(item -> {
+//                if (item.getSerialNumbers() != null) {
+//                    item.getSerialNumbers().size();
+//                }
+//                if (item.getInventoryItem() != null) {
+//                    item.getInventoryItem().getId();
+//                }
+//            });
+//        }
+//
+//        // Force loading of job card if present
+//        if (invoice.getJobCard() != null) {
+//            invoice.getJobCard().getJobNumber();
+//            // Force load all job card relationships
+//            if (invoice.getJobCard().getFaults() != null) {
+//                invoice.getJobCard().getFaults().size();
+//            }
+//            if (invoice.getJobCard().getServiceCategories() != null) {
+//                invoice.getJobCard().getServiceCategories().size();
+//            }
+//            if (invoice.getJobCard().getSerials() != null) {
+//                invoice.getJobCard().getSerials().size();
+//            }
+//            if (invoice.getJobCard().getUsedItems() != null) {
+//                invoice.getJobCard().getUsedItems().size();
+//            }
+//        }
+//
+//        return enrichInvoiceWithJobCardDetails(invoice);
+//    }
+//
+//    /**
+//     * ADDED: Enrich invoice with complete job card details including serials and faults
+//     */
+//    private Invoice enrichInvoiceWithJobCardDetails(Invoice invoice) {
+//        if (invoice.getJobCard() != null) {
+//            JobCard jobCard = invoice.getJobCard();
+//
+//            // Ensure all relationships are loaded
+//            if (jobCard.getFaults() != null) {
+//                jobCard.getFaults().forEach(fault -> {
+//                    fault.getId();
+//                });
+//            }
+//
+//            if (jobCard.getServiceCategories() != null) {
+//                jobCard.getServiceCategories().forEach(service -> {
+//                    service.getId();
+//                });
+//            }
+//
+//            if (jobCard.getSerials() != null) {
+//                jobCard.getSerials().forEach(serial -> {
+//                    serial.getId();
+//                });
+//            }
+//
+//            if (jobCard.getUsedItems() != null) {
+//                jobCard.getUsedItems().forEach(item -> {
+//                    item.getId();
+//                });
+//            }
+//        }
+//        return invoice;
+//    }
+//
+//    /**
+//     * Get invoices by date range
+//     */
+//    @Transactional(readOnly = true)
+//    public List<Invoice> getInvoicesByDateRange(LocalDateTime start, LocalDateTime end) {
+//        return invoiceRepository.findByCreatedAtBetween(start, end).stream()
+//                .filter(inv -> inv.getIsDeleted() == null || !inv.getIsDeleted())
+//                .map(this::enrichInvoiceWithJobCardDetails)
+//                .collect(Collectors.toList());
+//    }
+//
+//    /**
+//     * Search invoices by job card number
+//     */
+//    @Transactional(readOnly = true)
+//    public List<Invoice> searchByJobCardNumber(String jobCardNumber) {
+//        return invoiceRepository.findAll().stream()
+//                .filter(inv -> (inv.getIsDeleted() == null || !inv.getIsDeleted()) &&
+//                        inv.getJobCard() != null &&
+//                        inv.getJobCard().getJobNumber() != null &&
+//                        inv.getJobCard().getJobNumber().toLowerCase().contains(jobCardNumber.toLowerCase()))
+//                .map(this::enrichInvoiceWithJobCardDetails)
+//                .collect(Collectors.toList());
+//    }
+//
+//    /**
+//     * Search invoices by customer name or invoice number
+//     */
+//    @Transactional(readOnly = true)
+//    public List<Invoice> searchByCustomerOrInvoice(String searchTerm) {
+//        String term = searchTerm.toLowerCase();
+//        return invoiceRepository.findAll().stream()
+//                .filter(inv -> (inv.getIsDeleted() == null || !inv.getIsDeleted()) &&
+//                        ((inv.getCustomerName() != null && inv.getCustomerName().toLowerCase().contains(term)) ||
+//                                (inv.getInvoiceNumber() != null && inv.getInvoiceNumber().toLowerCase().contains(term))))
+//                .map(this::enrichInvoiceWithJobCardDetails)
+//                .collect(Collectors.toList());
+//    }
+//
+//    /**
+//     * Delete invoice (soft delete - mark as deleted)
+//     */
+//    @Transactional
+//    public void deleteInvoice(Long invoiceId, Long userId, String reason) {
+//        Invoice invoice = invoiceRepository.findById(invoiceId)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//
+//        // Mark as deleted instead of actual delete
+//        invoice.setIsDeleted(true);
+//        invoice.setDeletedBy(userId);
+//        invoice.setDeletedAt(LocalDateTime.now());
+//        invoice.setDeletionReason(reason);
+//
+//        invoiceRepository.save(invoice);
+//
+//        // RESTORE STOCK when invoice is deleted
+//        if (invoice.getItems() != null) {
+//            for (InvoiceItem item : invoice.getItems()) {
+//                if (item.getInventoryItem() != null) {
+//                    InventoryItem inventoryItem = item.getInventoryItem();
+//
+//                    if (item.getSerialNumbers() != null && !item.getSerialNumbers().isEmpty()) {
+//                        // Restore serialized items
+//                        for (String serial : item.getSerialNumbers()) {
+//                            // Mark serial as AVAILABLE again
+//                        }
+//                    } else {
+//                        // Restore quantity
+//                        int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
+//                        inventoryItem.setQuantity((inventoryItem.getQuantity() != null ? inventoryItem.getQuantity() : 0) + quantity);
+//                        inventoryItemRepository.save(inventoryItem);
+//                    }
+//                }
+//            }
+//        }
+//
+//        // IMPORTANT: If job card was DELIVERED because of this invoice, revert to COMPLETED
+//        if (invoice.getJobCard() != null && invoice.getJobCard().getStatus() == JobStatus.DELIVERED) {
+//            JobCard jobCard = invoice.getJobCard();
+//            jobCard.setStatus(JobStatus.COMPLETED);
+//            jobCard.setUpdatedAt(LocalDateTime.now());
+//            jobCardRepository.save(jobCard);
+//
+//            System.out.println("⚠️ Job Card " + jobCard.getJobNumber() + " reverted to COMPLETED (Invoice deleted)");
+//        }
+//    }
+//
+//    /**
+//     * Update invoice
+//     */
+//    @Transactional
+//    public Invoice updateInvoice(Long id, Invoice invoiceDetails) {
+//        Invoice invoice = invoiceRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+//
+//        // Update fields
+//        if (invoiceDetails.getCustomerName() != null) {
+//            invoice.setCustomerName(invoiceDetails.getCustomerName());
+//        }
+//        if (invoiceDetails.getCustomerPhone() != null) {
+//            invoice.setCustomerPhone(invoiceDetails.getCustomerPhone());
+//        }
+//        if (invoiceDetails.getDiscount() != null) {
+//            invoice.setDiscount(invoiceDetails.getDiscount());
+//        }
+//        if (invoiceDetails.getTax() != null) {
+//            invoice.setTax(invoiceDetails.getTax());
+//        }
+//
+//        // Recalculate totals
+//        double subtotal = invoice.getItems() != null
+//                ? invoice.getItems().stream()
+//                .mapToDouble(item -> item.getTotal() != null ? item.getTotal() : 0)
+//                .sum()
+//                : 0;
+//
+//        invoice.setSubtotal(subtotal);
+//        double total = subtotal - (invoice.getDiscount() != null ? invoice.getDiscount() : 0)
+//                + (invoice.getTax() != null ? invoice.getTax() : 0);
+//        invoice.setTotal(total);
+//        invoice.setBalance(total - (invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0));
+//
+//        Invoice updated = invoiceRepository.save(invoice);
+//        return enrichInvoiceWithJobCardDetails(updated);
+//    }
+//
+//    /**
+//     * Generate unique invoice number
+//     */
+//    private String generateInvoiceNumber() {
+//        // Format: INV-YYYYMMDD-000001
+//        String dateStr = LocalDateTime.now().toString().replace("-", "").substring(0, 8);
+//        long count = invoiceRepository.count() + 1;
+//        return String.format("INV-%s-%06d", dateStr, count);
+//    }
+//
+//    /**
+//     * Get invoice summary (statistics)
+//     */
+//    @Transactional(readOnly = true)
+//    public InvoiceSummary getInvoiceSummary() {
+//        List<Invoice> invoices = getAllInvoices();
+//
+//        double totalRevenue = invoices.stream()
+//                .mapToDouble(inv -> inv.getTotal() != null ? inv.getTotal() : 0)
+//                .sum();
+//
+//        double totalCollected = invoices.stream()
+//                .mapToDouble(inv -> inv.getPaidAmount() != null ? inv.getPaidAmount() : 0)
+//                .sum();
+//
+//        double totalOutstanding = invoices.stream()
+//                .mapToDouble(inv -> inv.getBalance() != null ? inv.getBalance() : 0)
+//                .sum();
+//
+//        long paidCount = invoices.stream()
+//                .filter(inv -> PaymentStatus.PAID.equals(inv.getPaymentStatus()))
+//                .count();
+//
+//        long partialCount = invoices.stream()
+//                .filter(inv -> PaymentStatus.PARTIAL.equals(inv.getPaymentStatus()))
+//                .count();
+//
+//        long unpaidCount = invoices.stream()
+//                .filter(inv -> PaymentStatus.UNPAID.equals(inv.getPaymentStatus()))
+//                .count();
+//
+//        return new InvoiceSummary(
+//                totalRevenue,
+//                totalCollected,
+//                totalOutstanding,
+//                invoices.size(),
+//                paidCount,
+//                partialCount,
+//                unpaidCount
+//        );
+//    }
+//
+//    /**
+//     * Inner class for invoice summary statistics
+//     */
+//    public static class InvoiceSummary {
+//        public double totalRevenue;
+//        public double totalCollected;
+//        public double totalOutstanding;
+//        public long totalInvoices;
+//        public long paidInvoices;
+//        public long partialInvoices;
+//        public long unpaidInvoices;
+//
+//        public InvoiceSummary(double totalRevenue, double totalCollected, double totalOutstanding,
+//                              long totalInvoices, long paidInvoices, long partialInvoices, long unpaidInvoices) {
+//            this.totalRevenue = totalRevenue;
+//            this.totalCollected = totalCollected;
+//            this.totalOutstanding = totalOutstanding;
+//            this.totalInvoices = totalInvoices;
+//            this.paidInvoices = paidInvoices;
+//            this.partialInvoices = partialInvoices;
+//            this.unpaidInvoices = unpaidInvoices;
+//        }
+//    }
+//}
+
 package com.example.demo.services;
 
 import com.example.demo.entity.*;
-import com.example.demo.repositories.InvoiceRepository;
-import com.example.demo.repositories.JobCardRepository;
-import com.example.demo.repositories.InventoryItemRepository;
+import com.example.demo.repositories.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
-    private final InventoryService inventoryService;
     private final JobCardRepository jobCardRepository;
     private final InventoryItemRepository inventoryItemRepository;
+    private final InventorySerialRepository inventorySerialRepository;
+    private final NotificationService notificationService;
+    private final InventoryService inventoryService;
 
-    /**
-     * Create a new invoice with items
-     * IMPORTANT: Deducts inventory and does NOT change job card status yet
-     */
     @Transactional
     public Invoice createInvoice(Invoice invoice) {
-        // Generate unique invoice number
+        // Generate invoice number
         invoice.setInvoiceNumber(generateInvoiceNumber());
-        invoice.setCreatedAt(LocalDateTime.now());
 
-        // Calculate subtotal from items
-        double subtotal = invoice.getItems() != null
-                ? invoice.getItems().stream()
-                .mapToDouble(item -> item.getTotal() != null ? item.getTotal() : 0)
-                .sum()
-                : 0;
+        // Set payment status based on paid amount
+        updatePaymentStatus(invoice);
 
-        invoice.setSubtotal(subtotal);
+        // Calculate totals
+        calculateInvoiceTotals(invoice);
 
-        // Calculate total (subtotal - discount + tax)
-        double total = subtotal - (invoice.getDiscount() != null ? invoice.getDiscount() : 0)
-                + (invoice.getTax() != null ? invoice.getTax() : 0);
-        invoice.setTotal(total);
+        // Set bidirectional relationships for items
+        if (invoice.getItems() != null) {
+            for (InvoiceItem item : invoice.getItems()) {
+                item.setInvoice(invoice);
 
-        // Calculate balance
-        double paidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
-        invoice.setBalance(total - paidAmount);
-
-        // Determine payment status
-        if (paidAmount >= total) {
-            invoice.setPaymentStatus(PaymentStatus.PAID);
-        } else if (paidAmount > 0) {
-            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
-        } else {
-            invoice.setPaymentStatus(PaymentStatus.UNPAID);
-        }
-
-        // Save invoice
-        Invoice saved = invoiceRepository.save(invoice);
-
-        // Set invoice reference in all items and deduct stock
-        if (saved.getItems() != null) {
-            for (InvoiceItem item : saved.getItems()) {
-                item.setInvoice(saved);
-
-                // Deduct stock from inventory
+                // NEW: Deduct inventory stock when invoice is created
                 if (item.getInventoryItem() != null) {
-                    inventoryService.deductStock(
-                            item.getInventoryItem().getId(),
-                            item.getQuantity() != null ? item.getQuantity() : 0,
-                            item.getSerialNumbers()
-                    );
+                    deductInventoryForInvoiceItem(invoice, item);
                 }
             }
         }
 
-        // CRITICAL: Update job card status to DELIVERED if invoice is PAID on creation
+        Invoice saved = invoiceRepository.save(invoice);
+
+        // CRITICAL: Update job card status if invoice is fully paid
         if (saved.getJobCard() != null && saved.getPaymentStatus() == PaymentStatus.PAID) {
-            updateJobCardToDelivered(saved.getJobCard().getId());
+            updateJobCardStatusToDelivered(saved.getJobCard().getId());
+        }
+
+        notificationService.sendNotification(
+                NotificationType.INVOICE_CREATED,
+                "Invoice created: " + saved.getInvoiceNumber() +
+                        " | Amount: Rs." + saved.getTotal() +
+                        " | Status: " + saved.getPaymentStatus(),
+                saved
+        );
+
+        return saved;
+    }
+
+    @Transactional
+    public Invoice updateInvoice(Long id, Invoice updates) {
+        Invoice existing = invoiceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+
+        if (existing.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new RuntimeException("Cannot update a fully paid invoice");
+        }
+
+        // Update basic fields
+        existing.setCustomerName(updates.getCustomerName());
+        existing.setCustomerPhone(updates.getCustomerPhone());
+        existing.setCustomerName(updates.getCustomerEmail());
+        existing.setDiscount(updates.getDiscount());
+        existing.setTax(updates.getTax());
+        existing.setPaymentMethod(updates.getPaymentMethod());
+        existing.setPaidAmount(updates.getPaidAmount());
+
+        // Update items
+        if (updates.getItems() != null) {
+            existing.getItems().clear();
+            for (InvoiceItem item : updates.getItems()) {
+                item.setInvoice(existing);
+                existing.getItems().add(item);
+            }
+        }
+
+        // Recalculate totals and payment status
+        calculateInvoiceTotals(existing);
+        updatePaymentStatus(existing);
+
+        Invoice saved = invoiceRepository.save(existing);
+
+        // CRITICAL: Update job card status if invoice is now fully paid
+        if (saved.getJobCard() != null && saved.getPaymentStatus() == PaymentStatus.PAID) {
+            updateJobCardStatusToDelivered(saved.getJobCard().getId());
+        }
+
+        return saved;
+    }
+
+    @Transactional
+    public Invoice addPayment(Long invoiceId, Double amount, PaymentMethod method) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+
+        if (invoice.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new RuntimeException("Invoice is already fully paid");
+        }
+
+        if (amount <= 0) {
+            throw new RuntimeException("Payment amount must be greater than 0");
+        }
+
+        if (amount > invoice.getBalance()) {
+            throw new RuntimeException("Payment amount cannot exceed balance due");
+        }
+
+        // Update paid amount
+        invoice.setPaidAmount(invoice.getPaidAmount() + amount);
+        invoice.setBalance(invoice.getTotal() - invoice.getPaidAmount());
+        invoice.setPaymentMethod(method);
+
+        // Update payment status
+        updatePaymentStatus(invoice);
+
+        Invoice saved = invoiceRepository.save(invoice);
+
+        notificationService.sendNotification(
+                NotificationType.PAYMENT_RECEIVED,
+                "Payment received: Rs." + amount + " for Invoice " + saved.getInvoiceNumber() +
+                        " | New Balance: Rs." + saved.getBalance(),
+                saved
+        );
+
+        // CRITICAL: Update job card status to DELIVERED if invoice is now fully paid
+        if (saved.getJobCard() != null && saved.getPaymentStatus() == PaymentStatus.PAID) {
+            updateJobCardStatusToDelivered(saved.getJobCard().getId());
         }
 
         return saved;
     }
 
     /**
-     * Add payment to invoice and update payment status
-     * CRITICAL: Automatically changes job card status to DELIVERED when fully paid
+     * CRITICAL METHOD: Update job card status to DELIVERED when invoice is fully paid
      */
     @Transactional
-    public Invoice addPayment(Long invoiceId, Double amount, PaymentMethod method) {
-        Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new RuntimeException("Invoice not found"));
-
-        // Add payment
-        double currentPaid = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
-        invoice.setPaidAmount(currentPaid + amount);
-        invoice.setPaymentMethod(method);
-
-        // Update balance
-        invoice.setBalance(invoice.getTotal() - invoice.getPaidAmount());
-
-        // Store old payment status
-        PaymentStatus oldStatus = invoice.getPaymentStatus();
-
-        // Update payment status
-        if (invoice.getPaidAmount() >= invoice.getTotal()) {
-            invoice.setPaymentStatus(PaymentStatus.PAID);
-        } else if (invoice.getPaidAmount() > 0) {
-            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
-        }
-
-        Invoice savedInvoice = invoiceRepository.save(invoice);
-
-        // CRITICAL: Update job card status to DELIVERED if:
-        // 1. Invoice is now PAID
-        // 2. Previous status was not PAID
-        // 3. Job card exists
-        if (savedInvoice.getPaymentStatus() == PaymentStatus.PAID &&
-                oldStatus != PaymentStatus.PAID &&
-                savedInvoice.getJobCard() != null) {
-
-            updateJobCardToDelivered(savedInvoice.getJobCard().getId());
-
-            // Log the status change
-            System.out.println("✅ Job Card " + savedInvoice.getJobCard().getJobNumber() +
-                    " status changed to DELIVERED (Invoice fully paid)");
-        }
-
-        return savedInvoice;
-    }
-
-    /**
-     * CRITICAL METHOD: Update job card status to DELIVERED
-     * Called when invoice is fully paid
-     */
-    private void updateJobCardToDelivered(Long jobCardId) {
+    protected void updateJobCardStatusToDelivered(Long jobCardId) {
         JobCard jobCard = jobCardRepository.findById(jobCardId)
                 .orElseThrow(() -> new RuntimeException("Job card not found"));
 
-        // Only update if not already DELIVERED or CANCELLED
-        if (jobCard.getStatus() != JobStatus.DELIVERED && jobCard.getStatus() != JobStatus.CANCELLED) {
+        // Only update if status is COMPLETED
+        if (jobCard.getStatus() == JobStatus.COMPLETED) {
             jobCard.setStatus(JobStatus.DELIVERED);
-            jobCard.setUpdatedAt(LocalDateTime.now());
             jobCardRepository.save(jobCard);
 
-            System.out.println("✅ Job Card " + jobCard.getJobNumber() + " marked as DELIVERED");
+            notificationService.sendNotification(
+                    NotificationType.DELIVERED,
+                    "Job card " + jobCard.getJobNumber() + " marked as DELIVERED (Invoice fully paid)",
+                    jobCard
+            );
         }
     }
 
     /**
-     * Get all invoices (excluding deleted ones)
+     * Deduct inventory stock for invoice items
      */
-    @Transactional(readOnly = true)
-    public List<Invoice> getAllInvoices() {
-        return invoiceRepository.findAll().stream()
-                .filter(inv -> inv.getIsDeleted() == null || !inv.getIsDeleted())
-                .map(this::enrichInvoiceWithJobCardDetails)
-                .collect(Collectors.toList());
-    }
+    private void deductInventoryForInvoiceItem(Invoice invoice, InvoiceItem item) {
+        InventoryItem invItem = inventoryItemRepository.findById(item.getInventoryItem().getId())
+                .orElseThrow(() -> new RuntimeException("Inventory item not found"));
 
-    /**
-     * Get invoice by ID (LAZY loading - items not loaded)
-     */
-    @Transactional(readOnly = true)
-    public Invoice getInvoiceById(Long id) {
-        Invoice invoice = invoiceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Invoice not found"));
-        return enrichInvoiceWithJobCardDetails(invoice);
-    }
-
-    /**
-     * Get invoice by ID WITH items and full job card details loaded (EAGER loading)
-     * IMPORTANT: Use this when you need all details including serials and faults
-     */
-    @Transactional(readOnly = true)
-    public Invoice getInvoiceByIdWithItems(Long id) {
-        // Fetch invoice from database
-        Invoice invoice = invoiceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Invoice not found"));
-
-        // Force loading of items (triggers database query)
-        if (invoice.getItems() != null) {
-            invoice.getItems().size();
-            // Also load details of each item
-            invoice.getItems().forEach(item -> {
-                if (item.getSerialNumbers() != null) {
-                    item.getSerialNumbers().size();
-                }
-                if (item.getInventoryItem() != null) {
-                    item.getInventoryItem().getId();
-                }
-            });
-        }
-
-        // Force loading of job card if present
+        // Check if this is a job card invoice - if yes, skip deduction (already deducted in job card)
         if (invoice.getJobCard() != null) {
-            invoice.getJobCard().getJobNumber();
-            // Force load all job card relationships
-            if (invoice.getJobCard().getFaults() != null) {
-                invoice.getJobCard().getFaults().size();
-            }
-            if (invoice.getJobCard().getServiceCategories() != null) {
-                invoice.getJobCard().getServiceCategories().size();
-            }
-            if (invoice.getJobCard().getSerials() != null) {
-                invoice.getJobCard().getSerials().size();
-            }
-            if (invoice.getJobCard().getUsedItems() != null) {
-                invoice.getJobCard().getUsedItems().size();
-            }
+            // Stock already deducted when job card was created with used items
+            return;
         }
 
-        return enrichInvoiceWithJobCardDetails(invoice);
+        // For direct invoices (no job card), deduct stock
+        List<String> serialNumbers = item.getSerialNumbers();
+
+        inventoryService.deductStockForInvoice(
+                invItem.getId(),
+                item.getQuantity(),
+                serialNumbers,
+                invoice.getId(),
+                invoice.getInvoiceNumber(),
+                "Sold via invoice: " + invoice.getInvoiceNumber()
+        );
     }
 
-    /**
-     * ADDED: Enrich invoice with complete job card details including serials and faults
-     */
-    private Invoice enrichInvoiceWithJobCardDetails(Invoice invoice) {
-        if (invoice.getJobCard() != null) {
-            JobCard jobCard = invoice.getJobCard();
+    private void calculateInvoiceTotals(Invoice invoice) {
+        Double itemsSubtotal = invoice.getItems().stream()
+                .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
+                .sum();
 
-            // Ensure all relationships are loaded
-            if (jobCard.getFaults() != null) {
-                jobCard.getFaults().forEach(fault -> {
-                    fault.getId();
-                });
-            }
-
-            if (jobCard.getServiceCategories() != null) {
-                jobCard.getServiceCategories().forEach(service -> {
-                    service.getId();
-                });
-            }
-
-            if (jobCard.getSerials() != null) {
-                jobCard.getSerials().forEach(serial -> {
-                    serial.getId();
-                });
-            }
-
-            if (jobCard.getUsedItems() != null) {
-                jobCard.getUsedItems().forEach(item -> {
-                    item.getId();
-                });
-            }
+        // If invoice has a job card, add service categories total
+        Double serviceTotal = 0.0;
+        if (invoice.getJobCard() != null && invoice.getJobCard().getServiceCategories() != null) {
+            serviceTotal = invoice.getJobCard().getServiceCategories().stream()
+                    .mapToDouble(sc -> sc.getServicePrice() != null ? sc.getServicePrice() : 0.0)
+                    .sum();
         }
-        return invoice;
+
+        Double subtotal = itemsSubtotal + serviceTotal;
+        Double total = subtotal - invoice.getDiscount() + invoice.getTax();
+        Double balance = total - invoice.getPaidAmount();
+
+        invoice.setSubtotal(subtotal);
+        invoice.setTotal(total);
+        invoice.setBalance(balance);
     }
 
-    /**
-     * Get invoices by date range
-     */
-    @Transactional(readOnly = true)
-    public List<Invoice> getInvoicesByDateRange(LocalDateTime start, LocalDateTime end) {
-        return invoiceRepository.findByCreatedAtBetween(start, end).stream()
-                .filter(inv -> inv.getIsDeleted() == null || !inv.getIsDeleted())
-                .map(this::enrichInvoiceWithJobCardDetails)
-                .collect(Collectors.toList());
+    private void updatePaymentStatus(Invoice invoice) {
+        if (invoice.getPaidAmount() >= invoice.getTotal()) {
+            invoice.setPaymentStatus(PaymentStatus.PAID);
+            invoice.setBalance(0.0);
+        } else if (invoice.getPaidAmount() > 0) {
+            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
+        } else {
+            invoice.setPaymentStatus(PaymentStatus.UNPAID);
+        }
     }
 
-    /**
-     * Search invoices by job card number
-     */
-    @Transactional(readOnly = true)
-    public List<Invoice> searchByJobCardNumber(String jobCardNumber) {
-        return invoiceRepository.findAll().stream()
-                .filter(inv -> (inv.getIsDeleted() == null || !inv.getIsDeleted()) &&
-                        inv.getJobCard() != null &&
-                        inv.getJobCard().getJobNumber() != null &&
-                        inv.getJobCard().getJobNumber().toLowerCase().contains(jobCardNumber.toLowerCase()))
-                .map(this::enrichInvoiceWithJobCardDetails)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Search invoices by customer name or invoice number
-     */
-    @Transactional(readOnly = true)
-    public List<Invoice> searchByCustomerOrInvoice(String searchTerm) {
-        String term = searchTerm.toLowerCase();
-        return invoiceRepository.findAll().stream()
-                .filter(inv -> (inv.getIsDeleted() == null || !inv.getIsDeleted()) &&
-                        ((inv.getCustomerName() != null && inv.getCustomerName().toLowerCase().contains(term)) ||
-                                (inv.getInvoiceNumber() != null && inv.getInvoiceNumber().toLowerCase().contains(term))))
-                .map(this::enrichInvoiceWithJobCardDetails)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Delete invoice (soft delete - mark as deleted)
-     */
     @Transactional
-    public void deleteInvoice(Long invoiceId, Long userId, String reason) {
-        Invoice invoice = invoiceRepository.findById(invoiceId)
+    public void deleteInvoice(Long id, Long deletedBy, String reason) {
+        Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));
 
-        // Mark as deleted instead of actual delete
+        if (invoice.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new RuntimeException("Cannot delete a fully paid invoice");
+        }
+
         invoice.setIsDeleted(true);
-        invoice.setDeletedBy(userId);
+        invoice.setDeletedBy(deletedBy);
         invoice.setDeletedAt(LocalDateTime.now());
         invoice.setDeletionReason(reason);
 
         invoiceRepository.save(invoice);
 
-        // RESTORE STOCK when invoice is deleted
-        if (invoice.getItems() != null) {
-            for (InvoiceItem item : invoice.getItems()) {
-                if (item.getInventoryItem() != null) {
-                    InventoryItem inventoryItem = item.getInventoryItem();
-
-                    if (item.getSerialNumbers() != null && !item.getSerialNumbers().isEmpty()) {
-                        // Restore serialized items
-                        for (String serial : item.getSerialNumbers()) {
-                            // Mark serial as AVAILABLE again
-                        }
-                    } else {
-                        // Restore quantity
-                        int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
-                        inventoryItem.setQuantity((inventoryItem.getQuantity() != null ? inventoryItem.getQuantity() : 0) + quantity);
-                        inventoryItemRepository.save(inventoryItem);
-                    }
-                }
-            }
-        }
-
-        // IMPORTANT: If job card was DELIVERED because of this invoice, revert to COMPLETED
-        if (invoice.getJobCard() != null && invoice.getJobCard().getStatus() == JobStatus.DELIVERED) {
-            JobCard jobCard = invoice.getJobCard();
-            jobCard.setStatus(JobStatus.COMPLETED);
-            jobCard.setUpdatedAt(LocalDateTime.now());
-            jobCardRepository.save(jobCard);
-
-            System.out.println("⚠️ Job Card " + jobCard.getJobNumber() + " reverted to COMPLETED (Invoice deleted)");
-        }
+        notificationService.sendNotification(
+                NotificationType.INVOICE_DELETED,
+                "Invoice deleted: " + invoice.getInvoiceNumber() + " | Reason: " + reason,
+                invoice
+        );
     }
 
     /**
-     * Update invoice
+     * Get invoice by ID with items loaded (uses EAGER fetch from entity)
      */
-    @Transactional
-    public Invoice updateInvoice(Long id, Invoice invoiceDetails) {
-        Invoice invoice = invoiceRepository.findById(id)
+    public Invoice getInvoiceByIdWithItems(Long id) {
+        return invoiceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));
-
-        // Update fields
-        if (invoiceDetails.getCustomerName() != null) {
-            invoice.setCustomerName(invoiceDetails.getCustomerName());
-        }
-        if (invoiceDetails.getCustomerPhone() != null) {
-            invoice.setCustomerPhone(invoiceDetails.getCustomerPhone());
-        }
-        if (invoiceDetails.getDiscount() != null) {
-            invoice.setDiscount(invoiceDetails.getDiscount());
-        }
-        if (invoiceDetails.getTax() != null) {
-            invoice.setTax(invoiceDetails.getTax());
-        }
-
-        // Recalculate totals
-        double subtotal = invoice.getItems() != null
-                ? invoice.getItems().stream()
-                .mapToDouble(item -> item.getTotal() != null ? item.getTotal() : 0)
-                .sum()
-                : 0;
-
-        invoice.setSubtotal(subtotal);
-        double total = subtotal - (invoice.getDiscount() != null ? invoice.getDiscount() : 0)
-                + (invoice.getTax() != null ? invoice.getTax() : 0);
-        invoice.setTotal(total);
-        invoice.setBalance(total - (invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0));
-
-        Invoice updated = invoiceRepository.save(invoice);
-        return enrichInvoiceWithJobCardDetails(updated);
     }
 
-    /**
-     * Generate unique invoice number
-     */
-    private String generateInvoiceNumber() {
-        // Format: INV-YYYYMMDD-000001
-        String dateStr = LocalDateTime.now().toString().replace("-", "").substring(0, 8);
-        long count = invoiceRepository.count() + 1;
-        return String.format("INV-%s-%06d", dateStr, count);
+    public List<Invoice> getAllInvoices() {
+        return invoiceRepository.findAll().stream()
+                .filter(invoice -> !invoice.getIsDeleted())
+                .toList();
     }
 
-    /**
-     * Get invoice summary (statistics)
-     */
-    @Transactional(readOnly = true)
+    public List<Invoice> getInvoicesByDateRange(LocalDateTime start, LocalDateTime end) {
+        return invoiceRepository.findByCreatedAtBetween(start, end).stream()
+                .filter(invoice -> !invoice.getIsDeleted())
+                .toList();
+    }
+
+    public List<Invoice> searchByJobCardNumber(String jobCardNumber) {
+        return invoiceRepository.findAll().stream()
+                .filter(invoice -> !invoice.getIsDeleted())
+                .filter(invoice -> invoice.getJobCard() != null)
+                .filter(invoice -> invoice.getJobCard().getJobNumber().toLowerCase().contains(jobCardNumber.toLowerCase()))
+                .toList();
+    }
+
+    public List<Invoice> searchByCustomerOrInvoice(String term) {
+        return invoiceRepository.searchInvoices(term).stream()
+                .filter(invoice -> !invoice.getIsDeleted())
+                .toList();
+    }
+
     public InvoiceSummary getInvoiceSummary() {
-        List<Invoice> invoices = getAllInvoices();
+        List<Invoice> allInvoices = getAllInvoices();
 
-        double totalRevenue = invoices.stream()
-                .mapToDouble(inv -> inv.getTotal() != null ? inv.getTotal() : 0)
+        Double totalRevenue = allInvoices.stream()
+                .mapToDouble(Invoice::getTotal)
                 .sum();
 
-        double totalCollected = invoices.stream()
-                .mapToDouble(inv -> inv.getPaidAmount() != null ? inv.getPaidAmount() : 0)
+        Double totalCollected = allInvoices.stream()
+                .mapToDouble(Invoice::getPaidAmount)
                 .sum();
 
-        double totalOutstanding = invoices.stream()
-                .mapToDouble(inv -> inv.getBalance() != null ? inv.getBalance() : 0)
+        Double totalOutstanding = allInvoices.stream()
+                .mapToDouble(Invoice::getBalance)
                 .sum();
 
-        long paidCount = invoices.stream()
-                .filter(inv -> PaymentStatus.PAID.equals(inv.getPaymentStatus()))
+        Long paidCount = allInvoices.stream()
+                .filter(inv -> inv.getPaymentStatus() == PaymentStatus.PAID)
                 .count();
 
-        long partialCount = invoices.stream()
-                .filter(inv -> PaymentStatus.PARTIAL.equals(inv.getPaymentStatus()))
+        Long partialCount = allInvoices.stream()
+                .filter(inv -> inv.getPaymentStatus() == PaymentStatus.PARTIAL)
                 .count();
 
-        long unpaidCount = invoices.stream()
-                .filter(inv -> PaymentStatus.UNPAID.equals(inv.getPaymentStatus()))
+        Long unpaidCount = allInvoices.stream()
+                .filter(inv -> inv.getPaymentStatus() == PaymentStatus.UNPAID)
                 .count();
 
         return new InvoiceSummary(
                 totalRevenue,
                 totalCollected,
                 totalOutstanding,
-                invoices.size(),
+                (long) allInvoices.size(),
                 paidCount,
                 partialCount,
                 unpaidCount
         );
     }
 
-    /**
-     * Inner class for invoice summary statistics
-     */
-    public static class InvoiceSummary {
-        public double totalRevenue;
-        public double totalCollected;
-        public double totalOutstanding;
-        public long totalInvoices;
-        public long paidInvoices;
-        public long partialInvoices;
-        public long unpaidInvoices;
-
-        public InvoiceSummary(double totalRevenue, double totalCollected, double totalOutstanding,
-                              long totalInvoices, long paidInvoices, long partialInvoices, long unpaidInvoices) {
-            this.totalRevenue = totalRevenue;
-            this.totalCollected = totalCollected;
-            this.totalOutstanding = totalOutstanding;
-            this.totalInvoices = totalInvoices;
-            this.paidInvoices = paidInvoices;
-            this.partialInvoices = partialInvoices;
-            this.unpaidInvoices = unpaidInvoices;
-        }
+    private String generateInvoiceNumber() {
+        return "INV-" + System.currentTimeMillis();
     }
+
+    // DTO for summary
+    public record InvoiceSummary(
+            Double totalRevenue,
+            Double totalCollected,
+            Double totalOutstanding,
+            Long totalInvoices,
+            Long paidCount,
+            Long partialCount,
+            Long unpaidCount
+    ) {}
 }
-
-
 
 
 

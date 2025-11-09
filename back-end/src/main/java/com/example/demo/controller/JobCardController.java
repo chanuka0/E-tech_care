@@ -353,7 +353,7 @@ public class JobCardController {
     }
 
     /**
-     * MODIFIED: Add a fault to an existing job card
+     * Add a fault to an existing job card
      */
     @PostMapping("/{id}/faults/{faultId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
@@ -369,7 +369,7 @@ public class JobCardController {
     }
 
     /**
-     * MODIFIED: Remove a fault from an existing job card
+     * Remove a fault from an existing job card
      */
     @DeleteMapping("/{id}/faults/{faultId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
@@ -385,7 +385,7 @@ public class JobCardController {
     }
 
     /**
-     * Add a service category to an existing job card (tag-like behavior)
+     * Add a service category to an existing job card
      */
     @PostMapping("/{id}/service-categories/{serviceCategoryId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
