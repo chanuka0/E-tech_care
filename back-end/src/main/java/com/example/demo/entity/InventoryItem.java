@@ -75,7 +75,6 @@
 //        updatedAt = LocalDateTime.now();
 //    }
 //}
-
 package com.example.demo.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -136,6 +135,7 @@ public class InventoryItem {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
 
     @PrePersist
     protected void onCreate() {
