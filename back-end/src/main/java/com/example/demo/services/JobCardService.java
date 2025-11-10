@@ -3253,7 +3253,7 @@ public class JobCardService {
             }
         }
 
-        // Handle used items - DON'T deduct stock yet, wait for completion
+        // Handle used items - DON'T deduct stock yet, wait for invoice payment
         if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
             for (UsedItem item : jobCard.getUsedItems()) {
                 item.setJobCard(jobCard);
@@ -3267,7 +3267,7 @@ public class JobCardService {
                     item.setUnitPrice(invItem.getSellingPrice());
                 }
 
-                // Validate serial numbers for serialized items
+                // Validate serial numbers for serialized items (but don't mark as SOLD yet)
                 if (invItem.getHasSerialization()) {
                     if (item.getUsedSerialNumbers() == null || item.getUsedSerialNumbers().isEmpty()) {
                         throw new RuntimeException("Serial numbers required for item: " + invItem.getName());
@@ -3276,7 +3276,7 @@ public class JobCardService {
                         throw new RuntimeException("Number of serials must match quantity for item: " + invItem.getName());
                     }
 
-                    // Validate serials are available
+                    // Validate serials are available (but don't mark as SOLD)
                     for (String serialNumber : item.getUsedSerialNumbers()) {
                         InventorySerial serial = inventoryService.getSerialByNumber(serialNumber);
                         if (serial == null) {
@@ -3285,6 +3285,7 @@ public class JobCardService {
                         if (serial.getStatus() != SerialStatus.AVAILABLE) {
                             throw new RuntimeException("Serial number not available: " + serialNumber);
                         }
+                        // NOTE: Serial remains AVAILABLE until invoice is paid
                     }
                 } else {
                     // For non-serialized items, check stock availability
@@ -3292,6 +3293,7 @@ public class JobCardService {
                         throw new RuntimeException("Not enough stock for item: " + invItem.getName() +
                                 ". Available: " + invItem.getQuantity() + ", Requested: " + item.getQuantityUsed());
                     }
+                    // NOTE: Stock remains undeducted until invoice is paid
                 }
 
                 checkInventoryAndNotify(invItem);
@@ -3353,7 +3355,7 @@ public class JobCardService {
             updateUsedItemsFromRequest(existing, updateRequest.getUsedItems());
         }
 
-        // Handle status change and completion
+        // Handle status change (REMOVED: serial marking on completion)
         handleStatusChange(existing, updateRequest.getStatus(), oldStatus);
 
         JobCard saved = jobCardRepository.save(existing);
@@ -3383,7 +3385,7 @@ public class JobCardService {
                 newUsedItem.setUnitPrice(invItem.getSellingPrice());
             }
 
-            // Handle serial numbers
+            // Handle serial numbers (validate but don't mark as SOLD)
             if (itemRequest.getUsedSerialNumbers() != null && !itemRequest.getUsedSerialNumbers().isEmpty()) {
                 newUsedItem.setUsedSerialNumbers(new ArrayList<>(itemRequest.getUsedSerialNumbers()));
 
@@ -3393,7 +3395,7 @@ public class JobCardService {
                         throw new RuntimeException("Number of serials must match quantity for item: " + invItem.getName());
                     }
 
-                    // Validate serials are available
+                    // Validate serials are available (but don't mark as SOLD)
                     for (String serialNumber : itemRequest.getUsedSerialNumbers()) {
                         InventorySerial serial = inventoryService.getSerialByNumber(serialNumber);
                         if (serial == null) {
@@ -3402,6 +3404,7 @@ public class JobCardService {
                         if (serial.getStatus() != SerialStatus.AVAILABLE) {
                             throw new RuntimeException("Serial number not available: " + serialNumber);
                         }
+                        // NOTE: Serial remains AVAILABLE until invoice is paid
                     }
                 }
             } else if (invItem.getHasSerialization()) {
@@ -3411,6 +3414,7 @@ public class JobCardService {
                 if (invItem.getQuantity() < itemRequest.getQuantityUsed()) {
                     throw new RuntimeException("Not enough stock for item: " + invItem.getName());
                 }
+                // NOTE: Stock remains undeducted until invoice is paid
             }
 
             existing.addUsedItem(newUsedItem);
@@ -3419,60 +3423,23 @@ public class JobCardService {
     }
 
     /**
-     * Handle status change and mark serials as sold when job is completed
+     * Handle status change - REMOVED serial marking on completion
      */
     private void handleStatusChange(JobCard jobCard, JobStatus newStatus, JobStatus oldStatus) {
         if (newStatus != null) {
             jobCard.setStatus(newStatus);
 
-            // Handle completion - mark serials as SOLD
+            // Handle completion - BUT DON'T mark serials as SOLD anymore
             if (newStatus == JobStatus.COMPLETED && oldStatus != JobStatus.COMPLETED) {
                 jobCard.setCompletedAt(LocalDateTime.now());
-
-                // Mark used items' serial numbers as SOLD
-                deductStockForCompletedJob(jobCard);
 
                 String priorityInfo = jobCard.getOneDayService() ? " 🚨 ONE DAY SERVICE COMPLETED" : "";
                 notificationService.sendNotification(
                         NotificationType.JOB_COMPLETED,
-                        "Job completed: " + jobCard.getJobNumber() + priorityInfo,
+                        "Job completed: " + jobCard.getJobNumber() + priorityInfo +
+                                " (Serials will be marked as SOLD when invoice is paid)",
                         jobCard
                 );
-            }
-        }
-    }
-
-    /**
-     * Deduct stock and mark serials as SOLD when job is completed
-     */
-    private void deductStockForCompletedJob(JobCard jobCard) {
-        if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
-            for (UsedItem usedItem : jobCard.getUsedItems()) {
-                InventoryItem inventoryItem = usedItem.getInventoryItem();
-
-                if (inventoryItem.getHasSerialization()) {
-                    // For serialized items, mark specific serials as SOLD
-                    if (usedItem.getUsedSerialNumbers() != null && !usedItem.getUsedSerialNumbers().isEmpty()) {
-                        inventoryService.deductStockForJobCard(
-                                inventoryItem.getId(),
-                                usedItem.getQuantityUsed(),
-                                usedItem.getUsedSerialNumbers(),
-                                jobCard.getId(),
-                                jobCard.getJobNumber(),
-                                "Job card completed"
-                        );
-                    }
-                } else {
-                    // For non-serialized items, deduct quantity
-                    inventoryService.deductStockForJobCard(
-                            inventoryItem.getId(),
-                            usedItem.getQuantityUsed(),
-                            null,
-                            jobCard.getId(),
-                            jobCard.getJobNumber(),
-                            "Job card completed"
-                    );
-                }
             }
         }
     }
@@ -3526,31 +3493,6 @@ public class JobCardService {
         return null;
     }
 
-    private void updateFaultsFromIds(JobCard existing, List<Long> faultIds) {
-        existing.clearFaults();
-        for (Long faultId : faultIds) {
-            Fault dbFault = faultRepository.findById(faultId)
-                    .orElseThrow(() -> new RuntimeException("Fault not found: " + faultId));
-            if (!dbFault.getIsActive()) {
-                throw new RuntimeException("Selected fault is inactive: " + dbFault.getFaultName());
-            }
-            existing.addFault(dbFault);
-        }
-    }
-
-    private void updateServiceCategoriesFromIds(JobCard existing, List<Long> serviceCategoryIds) {
-        existing.clearServiceCategories();
-        for (Long serviceCategoryId : serviceCategoryIds) {
-            ServiceCategory dbService = serviceCategoryRepository.findById(serviceCategoryId)
-                    .orElseThrow(() -> new RuntimeException("Service category not found: " + serviceCategoryId));
-            if (!dbService.getIsActive()) {
-                throw new RuntimeException("Selected service category is inactive: " + dbService.getName());
-            }
-            existing.addServiceCategory(dbService);
-        }
-        existing.calculateTotalServicePrice();
-    }
-
     // Original helper methods for entity loading
     private Brand loadBrand(Brand brand) {
         if (brand != null && brand.getId() != null) {
@@ -3578,6 +3520,31 @@ public class JobCardService {
             return loadDeviceConditionById(condition.getId());
         }
         return null;
+    }
+
+    private void updateFaultsFromIds(JobCard existing, List<Long> faultIds) {
+        existing.clearFaults();
+        for (Long faultId : faultIds) {
+            Fault dbFault = faultRepository.findById(faultId)
+                    .orElseThrow(() -> new RuntimeException("Fault not found: " + faultId));
+            if (!dbFault.getIsActive()) {
+                throw new RuntimeException("Selected fault is inactive: " + dbFault.getFaultName());
+            }
+            existing.addFault(dbFault);
+        }
+    }
+
+    private void updateServiceCategoriesFromIds(JobCard existing, List<Long> serviceCategoryIds) {
+        existing.clearServiceCategories();
+        for (Long serviceCategoryId : serviceCategoryIds) {
+            ServiceCategory dbService = serviceCategoryRepository.findById(serviceCategoryId)
+                    .orElseThrow(() -> new RuntimeException("Service category not found: " + serviceCategoryId));
+            if (!dbService.getIsActive()) {
+                throw new RuntimeException("Selected service category is inactive: " + dbService.getName());
+            }
+            existing.addServiceCategory(dbService);
+        }
+        existing.calculateTotalServicePrice();
     }
 
     /**

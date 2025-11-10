@@ -405,6 +405,68 @@ public class InventoryService {
 
         checkLowStock(item);
     }
+    /**
+     * Deduct stock and mark serials as SOLD for invoice payment
+     */
+    @Transactional
+    public void deductStockForInvoice(Long itemId, Integer quantity, List<String> serialNumbers,
+                                      Long invoiceId, String invoiceNumber, String notes) {
+        InventoryItem item = inventoryItemRepository.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Item not found"));
+
+        int oldQty = item.getQuantity();
+
+        if (item.getHasSerialization()) {
+            if (serialNumbers == null || serialNumbers.isEmpty()) {
+                throw new RuntimeException("Serial numbers required for serialized item");
+            }
+
+            for (String serial : serialNumbers) {
+                InventorySerial invSerial = inventorySerialRepository.findBySerialNumber(serial)
+                        .orElseThrow(() -> new RuntimeException("Serial not found: " + serial));
+
+                if (invSerial.getStatus() != SerialStatus.AVAILABLE) {
+                    throw new RuntimeException("Serial not available: " + serial);
+                }
+
+                // Mark serial as SOLD with invoice reference
+                invSerial.setStatus(SerialStatus.SOLD);
+                invSerial.setUsedAt(LocalDateTime.now());
+                invSerial.setUsedBy(getCurrentUsername());
+                invSerial.setUsedInReferenceType("INVOICE");
+                invSerial.setUsedInReferenceId(invoiceId);
+                invSerial.setUsedInReferenceNumber(invoiceNumber);
+                invSerial.setNotes(notes);
+                inventorySerialRepository.save(invSerial);
+
+                // Record movement for each serial
+                recordStockMovement(item, MovementType.OUT, 1, "INVOICE", invoiceId, invoiceNumber,
+                        "Sold via invoice", serial, oldQty, oldQty - 1);
+                oldQty--;
+            }
+
+            item.setQuantity(item.getQuantity() - serialNumbers.size());
+        } else {
+            if (item.getQuantity() < quantity) {
+                throw new RuntimeException("Not enough stock for item: " + item.getName());
+            }
+
+            item.setQuantity(item.getQuantity() - quantity);
+
+            recordStockMovement(item, MovementType.OUT, quantity, "INVOICE", invoiceId, invoiceNumber,
+                    "Sold via invoice", notes, oldQty, item.getQuantity());
+        }
+
+        inventoryItemRepository.save(item);
+
+        notificationService.sendNotification(
+                NotificationType.STOCK_UPDATE,
+                "Stock deducted for invoice: " + item.getName() + " | Qty: " + quantity,
+                item
+        );
+
+        checkLowStock(item);
+    }
 
     @Transactional
     public void deductStockForJobCard(Long itemId, Integer quantity, List<String> serialNumbers,
@@ -556,6 +618,5 @@ public class InventoryService {
         );
     }
 
-    public void deductStockForInvoice(Long id, Integer quantity, List<String> serialNumbers, Long id1, String invoiceNumber, String s) {
-    }
+
 }
