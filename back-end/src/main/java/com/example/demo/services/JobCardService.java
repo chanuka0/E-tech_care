@@ -2595,13 +2595,573 @@
 //}
 
 
+//package com.example.demo.services;
+//
+//import com.example.demo.entity.*;
+//import com.example.demo.repositories.*;
+//import lombok.RequiredArgsConstructor;
+//import org.springframework.stereotype.Service;
+//import org.springframework.transaction.annotation.Transactional;
+//import java.time.LocalDateTime;
+//import java.util.ArrayList;
+//import java.util.List;
+//
+//@Service
+//@RequiredArgsConstructor
+//public class JobCardService {
+//    private final JobCardRepository jobCardRepository;
+//    private final FaultRepository faultRepository;
+//    private final InventoryItemRepository inventoryItemRepository;
+//    private final ServiceCategoryRepository serviceCategoryRepository;
+//    private final NotificationService notificationService;
+//    private final BrandRepository brandRepository;
+//    private final ModelRepository modelRepository;
+//    private final ProcessorRepository processorRepository;
+//    private final DeviceConditionRepository deviceConditionRepository;
+//
+//    /**
+//     * Create a new job card
+//     */
+//    @Transactional
+//    public JobCard createJobCard(JobCard jobCard) {
+//        // Validate at least one fault is provided
+//        if (jobCard.getFaults() == null || jobCard.getFaults().isEmpty()) {
+//            throw new RuntimeException("At least one fault must be selected");
+//        }
+//
+//        // Load and validate faults from database - only active ones
+//        List<Fault> validFaults = new ArrayList<>();
+//        for (Fault fault : jobCard.getFaults()) {
+//            if (fault.getId() == null) {
+//                throw new RuntimeException("Invalid fault");
+//            }
+//
+//            Fault dbFault = faultRepository.findById(fault.getId())
+//                    .orElseThrow(() -> new RuntimeException("Fault not found or inactive"));
+//
+//            if (!dbFault.getIsActive()) {
+//                throw new RuntimeException("Selected fault is inactive: " + dbFault.getFaultName());
+//            }
+//
+//            validFaults.add(dbFault);
+//        }
+//
+//        // Validate service categories are provided and are active
+//        if (jobCard.getServiceCategories() == null || jobCard.getServiceCategories().isEmpty()) {
+//            throw new RuntimeException("At least one service category must be selected");
+//        }
+//
+//        // Load and validate service categories from database - only active ones
+//        List<ServiceCategory> validServices = new ArrayList<>();
+//        for (ServiceCategory service : jobCard.getServiceCategories()) {
+//            if (service.getId() == null) {
+//                throw new RuntimeException("Invalid service category");
+//            }
+//
+//            ServiceCategory dbService = serviceCategoryRepository.findById(service.getId())
+//                    .orElseThrow(() -> new RuntimeException("Service category not found: " + service.getId()));
+//
+//            if (!dbService.getIsActive()) {
+//                throw new RuntimeException("Selected service category is inactive: " + dbService.getName());
+//            }
+//
+//            validServices.add(dbService);
+//        }
+//
+//        // Load and validate Brand
+//        if (jobCard.getBrand() != null && jobCard.getBrand().getId() != null) {
+//            Brand dbBrand = brandRepository.findById(jobCard.getBrand().getId())
+//                    .orElseThrow(() -> new RuntimeException("Brand not found: " + jobCard.getBrand().getId()));
+//
+//            if (!dbBrand.getIsActive()) {
+//                throw new RuntimeException("Selected brand is inactive: " + dbBrand.getBrandName());
+//            }
+//
+//            jobCard.setBrand(dbBrand);
+//        } else {
+//            jobCard.setBrand(null);
+//        }
+//
+//        // Load and validate Model
+//        if (jobCard.getModel() != null && jobCard.getModel().getId() != null) {
+//            Model dbModel = modelRepository.findById(jobCard.getModel().getId())
+//                    .orElseThrow(() -> new RuntimeException("Model not found: " + jobCard.getModel().getId()));
+//
+//            if (!dbModel.getIsActive()) {
+//                throw new RuntimeException("Selected model is inactive: " + dbModel.getModelName());
+//            }
+//
+//            jobCard.setModel(dbModel);
+//        } else {
+//            jobCard.setModel(null);
+//        }
+//
+//        // Load and validate Processor
+//        if (jobCard.getProcessor() != null && jobCard.getProcessor().getId() != null) {
+//            Processor dbProcessor = processorRepository.findById(jobCard.getProcessor().getId())
+//                    .orElseThrow(() -> new RuntimeException("Processor not found: " + jobCard.getProcessor().getId()));
+//
+//            if (!dbProcessor.getIsActive()) {
+//                throw new RuntimeException("Selected processor is inactive: " + dbProcessor.getProcessorName());
+//            }
+//
+//            jobCard.setProcessor(dbProcessor);
+//        } else {
+//            jobCard.setProcessor(null);
+//        }
+//
+//        // Load and validate Device Condition
+//        if (jobCard.getDeviceCondition() != null && jobCard.getDeviceCondition().getId() != null) {
+//            DeviceCondition dbCondition = deviceConditionRepository.findById(jobCard.getDeviceCondition().getId())
+//                    .orElseThrow(() -> new RuntimeException("Device condition not found: " + jobCard.getDeviceCondition().getId()));
+//
+//            if (!dbCondition.getIsActive()) {
+//                throw new RuntimeException("Selected device condition is inactive: " + dbCondition.getConditionName());
+//            }
+//
+//            jobCard.setDeviceCondition(dbCondition);
+//        } else {
+//            jobCard.setDeviceCondition(null);
+//        }
+//
+//        // Set fault and service references
+//        jobCard.setFaults(validFaults);
+//        jobCard.setServiceCategories(validServices);
+//        jobCard.setJobNumber(generateJobNumber());
+//        jobCard.setStatus(JobStatus.PENDING);
+//
+//        // Ensure oneDayService is not null
+//        if (jobCard.getOneDayService() == null) {
+//            jobCard.setOneDayService(false);
+//        }
+//
+//        // Calculate total service price
+//        jobCard.calculateTotalServicePrice();
+//
+//        // Set bidirectional relationships for serials
+//        if (jobCard.getSerials() != null && !jobCard.getSerials().isEmpty()) {
+//            for (JobCardSerial serial : jobCard.getSerials()) {
+//                serial.setJobCard(jobCard);
+//            }
+//        }
+//
+//        // Set bidirectional relationships for used items and ensure prices are set
+//        if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
+//            for (UsedItem item : jobCard.getUsedItems()) {
+//                item.setJobCard(jobCard);
+//
+//                // If unit price not provided, get from inventory
+//                if (item.getUnitPrice() == null || item.getUnitPrice() == 0) {
+//                    InventoryItem invItem = inventoryItemRepository.findById(item.getInventoryItem().getId())
+//                            .orElseThrow(() -> new RuntimeException("Inventory item not found"));
+//                    item.setUnitPrice(invItem.getSellingPrice());
+//                }
+//
+//                checkInventoryAndNotify(item.getInventoryItem());
+//            }
+//        }
+//
+//        JobCard saved = jobCardRepository.save(jobCard);
+//
+//        // Get fault names
+//        String faultNames = saved.getFaults().stream()
+//                .map(Fault::getFaultName)
+//                .reduce((a, b) -> a + ", " + b)
+//                .orElse("No faults");
+//
+//        String serviceNames = saved.getServiceCategories().stream()
+//                .map(ServiceCategory::getName)
+//                .reduce((a, b) -> a + ", " + b)
+//                .orElse("No services");
+//
+//        // Include One Day Service in notification if enabled
+//        String priorityInfo = saved.getOneDayService() ? " 🚨 ONE DAY SERVICE" : "";
+//
+//        notificationService.sendNotification(
+//                NotificationType.PENDING_JOB,
+//                "New job card created: " + saved.getJobNumber() +
+//                        " - Faults: " + faultNames +
+//                        " - Services: " + serviceNames +
+//                        " - Total Service Price: " + saved.getTotalServicePrice() +
+//                        priorityInfo,
+//                saved
+//        );
+//
+//        return saved;
+//    }
+//
+//    /**
+//     * Update existing job card
+//     */
+//    @Transactional
+//    public JobCard updateJobCard(Long id, JobCard updates) {
+//        JobCard existing = jobCardRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        // Update basic customer information
+//        existing.setCustomerName(updates.getCustomerName());
+//        existing.setCustomerPhone(updates.getCustomerPhone());
+//        existing.setCustomerEmail(updates.getCustomerEmail());
+//        existing.setDeviceType(updates.getDeviceType());
+//
+//        // Update Brand
+//        if (updates.getBrand() != null && updates.getBrand().getId() != null) {
+//            Brand dbBrand = brandRepository.findById(updates.getBrand().getId())
+//                    .orElseThrow(() -> new RuntimeException("Brand not found: " + updates.getBrand().getId()));
+//
+//            if (!dbBrand.getIsActive()) {
+//                throw new RuntimeException("Selected brand is inactive: " + dbBrand.getBrandName());
+//            }
+//
+//            existing.setBrand(dbBrand);
+//        } else {
+//            existing.setBrand(null);
+//        }
+//
+//        // Update Model
+//        if (updates.getModel() != null && updates.getModel().getId() != null) {
+//            Model dbModel = modelRepository.findById(updates.getModel().getId())
+//                    .orElseThrow(() -> new RuntimeException("Model not found: " + updates.getModel().getId()));
+//
+//            if (!dbModel.getIsActive()) {
+//                throw new RuntimeException("Selected model is inactive: " + dbModel.getModelName());
+//            }
+//
+//            existing.setModel(dbModel);
+//        } else {
+//            existing.setModel(null);
+//        }
+//
+//        // Update Processor
+//        if (updates.getProcessor() != null && updates.getProcessor().getId() != null) {
+//            Processor dbProcessor = processorRepository.findById(updates.getProcessor().getId())
+//                    .orElseThrow(() -> new RuntimeException("Processor not found: " + updates.getProcessor().getId()));
+//
+//            if (!dbProcessor.getIsActive()) {
+//                throw new RuntimeException("Selected processor is inactive: " + dbProcessor.getProcessorName());
+//            }
+//
+//            existing.setProcessor(dbProcessor);
+//        } else {
+//            existing.setProcessor(null);
+//        }
+//
+//        // Update Device Condition
+//        if (updates.getDeviceCondition() != null && updates.getDeviceCondition().getId() != null) {
+//            DeviceCondition dbCondition = deviceConditionRepository.findById(updates.getDeviceCondition().getId())
+//                    .orElseThrow(() -> new RuntimeException("Device condition not found: " + updates.getDeviceCondition().getId()));
+//
+//            if (!dbCondition.getIsActive()) {
+//                throw new RuntimeException("Selected device condition is inactive: " + dbCondition.getConditionName());
+//            }
+//
+//            existing.setDeviceCondition(dbCondition);
+//        } else {
+//            existing.setDeviceCondition(null);
+//        }
+//
+//        // Update oneDayService field
+//        if (updates.getOneDayService() != null) {
+//            existing.setOneDayService(updates.getOneDayService());
+//        }
+//
+//        // Update faults if provided
+//        if (updates.getFaults() != null && !updates.getFaults().isEmpty()) {
+//            existing.clearFaults();
+//
+//            for (Fault fault : updates.getFaults()) {
+//                if (fault.getId() == null) {
+//                    throw new RuntimeException("Invalid fault");
+//                }
+//
+//                Fault dbFault = faultRepository.findById(fault.getId())
+//                        .orElseThrow(() -> new RuntimeException("Fault not found: " + fault.getId()));
+//
+//                if (!dbFault.getIsActive()) {
+//                    throw new RuntimeException("Selected fault is inactive: " + dbFault.getFaultName());
+//                }
+//
+//                existing.addFault(dbFault);
+//            }
+//        }
+//
+//        // Update service categories if provided
+//        if (updates.getServiceCategories() != null && !updates.getServiceCategories().isEmpty()) {
+//            existing.clearServiceCategories();
+//
+//            for (ServiceCategory service : updates.getServiceCategories()) {
+//                if (service.getId() == null) {
+//                    throw new RuntimeException("Invalid service category");
+//                }
+//
+//                ServiceCategory dbService = serviceCategoryRepository.findById(service.getId())
+//                        .orElseThrow(() -> new RuntimeException("Service category not found: " + service.getId()));
+//
+//                if (!dbService.getIsActive()) {
+//                    throw new RuntimeException("Selected service category is inactive: " + dbService.getName());
+//                }
+//
+//                existing.addServiceCategory(dbService);
+//            }
+//
+//            // Recalculate total service price
+//            existing.calculateTotalServicePrice();
+//        }
+//
+//        existing.setFaultDescription(updates.getFaultDescription());
+//        existing.setNotes(updates.getNotes());
+//        existing.setEstimatedCost(updates.getEstimatedCost());
+//        existing.setAdvancePayment(updates.getAdvancePayment());
+//
+//        // Update serials if provided
+//        if (updates.getSerials() != null) {
+//            existing.getSerials().clear();
+//            for (JobCardSerial serial : updates.getSerials()) {
+//                existing.addSerial(serial);
+//            }
+//        }
+//
+//        // Update used items
+//        if (updates.getUsedItems() != null) {
+//            existing.getUsedItems().clear();
+//
+//            for (UsedItem item : updates.getUsedItems()) {
+//                InventoryItem invItem = inventoryItemRepository.findById(item.getInventoryItem().getId())
+//                        .orElseThrow(() -> new RuntimeException("Inventory item not found: " + item.getInventoryItem().getId()));
+//
+//                UsedItem newUsedItem = new UsedItem();
+//                newUsedItem.setInventoryItem(invItem);
+//                newUsedItem.setQuantityUsed(item.getQuantityUsed());
+//
+//                if (item.getUnitPrice() != null && item.getUnitPrice() > 0) {
+//                    newUsedItem.setUnitPrice(item.getUnitPrice());
+//                } else {
+//                    newUsedItem.setUnitPrice(invItem.getSellingPrice());
+//                }
+//
+//                existing.addUsedItem(newUsedItem);
+//
+//                checkInventoryAndNotify(invItem);
+//            }
+//        }
+//
+//        // Update status
+//        if (updates.getStatus() != null) {
+//            JobStatus oldStatus = existing.getStatus();
+//            existing.setStatus(updates.getStatus());
+//
+//            // Handle completion
+//            if (updates.getStatus() == JobStatus.COMPLETED && oldStatus != JobStatus.COMPLETED) {
+//                existing.setCompletedAt(LocalDateTime.now());
+//
+//                String priorityInfo = existing.getOneDayService() ? " 🚨 ONE DAY SERVICE COMPLETED" : "";
+//
+//                notificationService.sendNotification(
+//                        NotificationType.JOB_COMPLETED,
+//                        "Job completed: " + existing.getJobNumber() + priorityInfo,
+//                        existing
+//                );
+//            }
+//        }
+//
+//        JobCard saved = jobCardRepository.save(existing);
+//        jobCardRepository.flush();
+//
+//        return saved;
+//    }
+//
+//    /**
+//     * Cancel a job card with reason, fee, and who cancelled it
+//     */
+//    @Transactional
+//    public JobCard cancelJobCard(Long id, String cancelledBy, Long cancelledByUserId,
+//                                 String reason, Double fee) {
+//        JobCard jobCard = jobCardRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        if (jobCard.getStatus() == JobStatus.CANCELLED) {
+//            throw new RuntimeException("Job card is already cancelled");
+//        }
+//
+//        jobCard.setStatus(JobStatus.CANCELLED);
+//        jobCard.setCancelledBy(cancelledBy);
+//        jobCard.setCancelledByUserId(cancelledByUserId);
+//        jobCard.setCancellationReason(reason);
+//        jobCard.setCancellationFee(fee);
+//
+//        JobCard saved = jobCardRepository.save(jobCard);
+//
+//        String cancellerInfo = "CUSTOMER".equals(cancelledBy) ? "Customer" : "Technician";
+//
+//        String priorityInfo = saved.getOneDayService() ? " 🚨 ONE DAY SERVICE CANCELLED" : "";
+//
+//        notificationService.sendNotification(
+//                NotificationType.JOB_CANCELLED,
+//                "Job cancelled by " + cancellerInfo + ": " + saved.getJobNumber() + priorityInfo,
+//                saved
+//        );
+//
+//        return saved;
+//    }
+//
+//    /**
+//     * Add a serial to an existing job card
+//     */
+//    @Transactional
+//    public JobCard addSerialToJobCard(Long jobCardId, JobCardSerial serial) {
+//        JobCard jobCard = jobCardRepository.findById(jobCardId)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        jobCard.addSerial(serial);
+//        return jobCardRepository.save(jobCard);
+//    }
+//
+//    /**
+//     * Add fault to an existing job card
+//     */
+//    @Transactional
+//    public JobCard addFaultToJobCard(Long jobCardId, Long faultId) {
+//        JobCard jobCard = jobCardRepository.findById(jobCardId)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        Fault fault = faultRepository.findById(faultId)
+//                .orElseThrow(() -> new RuntimeException("Fault not found"));
+//
+//        if (!fault.getIsActive()) {
+//            throw new RuntimeException("Fault is inactive");
+//        }
+//
+//        jobCard.addFault(fault);
+//        return jobCardRepository.save(jobCard);
+//    }
+//
+//    /**
+//     * Remove fault from an existing job card
+//     */
+//    @Transactional
+//    public JobCard removeFaultFromJobCard(Long jobCardId, Long faultId) {
+//        JobCard jobCard = jobCardRepository.findById(jobCardId)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        Fault fault = faultRepository.findById(faultId)
+//                .orElseThrow(() -> new RuntimeException("Fault not found"));
+//
+//        jobCard.removeFault(fault);
+//        return jobCardRepository.save(jobCard);
+//    }
+//
+//    /**
+//     * Add service category to an existing job card
+//     */
+//    @Transactional
+//    public JobCard addServiceCategoryToJobCard(Long jobCardId, Long serviceCategoryId) {
+//        JobCard jobCard = jobCardRepository.findById(jobCardId)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        ServiceCategory service = serviceCategoryRepository.findById(serviceCategoryId)
+//                .orElseThrow(() -> new RuntimeException("Service category not found"));
+//
+//        if (!service.getIsActive()) {
+//            throw new RuntimeException("Service category is inactive");
+//        }
+//
+//        jobCard.addServiceCategory(service);
+//        jobCard.calculateTotalServicePrice();
+//        return jobCardRepository.save(jobCard);
+//    }
+//
+//    /**
+//     * Remove service category from an existing job card
+//     */
+//    @Transactional
+//    public JobCard removeServiceCategoryFromJobCard(Long jobCardId, Long serviceCategoryId) {
+//        JobCard jobCard = jobCardRepository.findById(jobCardId)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        ServiceCategory service = serviceCategoryRepository.findById(serviceCategoryId)
+//                .orElseThrow(() -> new RuntimeException("Service category not found"));
+//
+//        jobCard.removeServiceCategory(service);
+//        jobCard.calculateTotalServicePrice();
+//        return jobCardRepository.save(jobCard);
+//    }
+//
+//    /**
+//     * Check inventory level and send notification if low stock
+//     */
+//    private void checkInventoryAndNotify(InventoryItem item) {
+//        if (item.getQuantity() <= item.getMinThreshold()) {
+//            notificationService.sendNotification(
+//                    NotificationType.LOW_STOCK,
+//                    "Low stock alert: " + item.getName() + " (Qty: " + item.getQuantity() + ")",
+//                    item
+//            );
+//        }
+//    }
+//
+//    /**
+//     * Get all job cards
+//     */
+//    public List<JobCard> getAllJobCards() {
+//        return jobCardRepository.findAll();
+//    }
+//
+//    /**
+//     * Get job card by ID
+//     */
+//    public JobCard getJobCardById(Long id) {
+//        return jobCardRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//    }
+//
+//    /**
+//     * Get job card by job number
+//     */
+//    public JobCard getJobCardByNumber(String jobNumber) {
+//        return jobCardRepository.findByJobNumber(jobNumber)
+//                .orElseThrow(() -> new RuntimeException("Job card not found: " + jobNumber));
+//    }
+//
+//    /**
+//     * Get job cards filtered by status
+//     */
+//    public List<JobCard> getJobCardsByStatus(JobStatus status) {
+//        return jobCardRepository.findByStatus(status);
+//    }
+//
+//    /**
+//     * Get job cards by service category
+//     */
+//    public List<JobCard> getJobCardsByServiceCategory(Long serviceCategoryId) {
+//        return jobCardRepository.findByServiceCategoriesId(serviceCategoryId);
+//    }
+//
+//    /**
+//     * Get pending job cards older than specified days (for alerts)
+//     */
+//    public List<JobCard> getPendingJobsOlderThanDays(int days) {
+//        LocalDateTime threshold = LocalDateTime.now().minusDays(days);
+//        return jobCardRepository.findPendingJobsOlderThan(threshold);
+//    }
+//
+//    /**
+//     * Generate unique job number
+//     */
+//    private String generateJobNumber() {
+//        return "JOB-" + System.currentTimeMillis();
+//    }
+//}
+
+
 package com.example.demo.services;
 
+import com.example.demo.dto.JobCardUpdateRequest;
 import com.example.demo.entity.*;
 import com.example.demo.repositories.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -2618,18 +3178,19 @@ public class JobCardService {
     private final ModelRepository modelRepository;
     private final ProcessorRepository processorRepository;
     private final DeviceConditionRepository deviceConditionRepository;
+    private final InventoryService inventoryService;
 
     /**
      * Create a new job card
      */
     @Transactional
     public JobCard createJobCard(JobCard jobCard) {
-        // Validate at least one fault is provided
+        // Validate at least one fault is selected
         if (jobCard.getFaults() == null || jobCard.getFaults().isEmpty()) {
             throw new RuntimeException("At least one fault must be selected");
         }
 
-        // Load and validate faults from database - only active ones
+        // Load and validate faults
         List<Fault> validFaults = new ArrayList<>();
         for (Fault fault : jobCard.getFaults()) {
             if (fault.getId() == null) {
@@ -2637,21 +3198,19 @@ public class JobCardService {
             }
 
             Fault dbFault = faultRepository.findById(fault.getId())
-                    .orElseThrow(() -> new RuntimeException("Fault not found or inactive"));
+                    .orElseThrow(() -> new RuntimeException("Fault not found"));
 
             if (!dbFault.getIsActive()) {
                 throw new RuntimeException("Selected fault is inactive: " + dbFault.getFaultName());
             }
-
             validFaults.add(dbFault);
         }
 
-        // Validate service categories are provided and are active
+        // Validate service categories
         if (jobCard.getServiceCategories() == null || jobCard.getServiceCategories().isEmpty()) {
             throw new RuntimeException("At least one service category must be selected");
         }
 
-        // Load and validate service categories from database - only active ones
         List<ServiceCategory> validServices = new ArrayList<>();
         for (ServiceCategory service : jobCard.getServiceCategories()) {
             if (service.getId() == null) {
@@ -2664,73 +3223,22 @@ public class JobCardService {
             if (!dbService.getIsActive()) {
                 throw new RuntimeException("Selected service category is inactive: " + dbService.getName());
             }
-
             validServices.add(dbService);
         }
 
-        // Load and validate Brand
-        if (jobCard.getBrand() != null && jobCard.getBrand().getId() != null) {
-            Brand dbBrand = brandRepository.findById(jobCard.getBrand().getId())
-                    .orElseThrow(() -> new RuntimeException("Brand not found: " + jobCard.getBrand().getId()));
+        // Load and validate related entities
+        jobCard.setBrand(loadBrand(jobCard.getBrand()));
+        jobCard.setModel(loadModel(jobCard.getModel()));
+        jobCard.setProcessor(loadProcessor(jobCard.getProcessor()));
+        jobCard.setDeviceCondition(loadDeviceCondition(jobCard.getDeviceCondition()));
 
-            if (!dbBrand.getIsActive()) {
-                throw new RuntimeException("Selected brand is inactive: " + dbBrand.getBrandName());
-            }
-
-            jobCard.setBrand(dbBrand);
-        } else {
-            jobCard.setBrand(null);
-        }
-
-        // Load and validate Model
-        if (jobCard.getModel() != null && jobCard.getModel().getId() != null) {
-            Model dbModel = modelRepository.findById(jobCard.getModel().getId())
-                    .orElseThrow(() -> new RuntimeException("Model not found: " + jobCard.getModel().getId()));
-
-            if (!dbModel.getIsActive()) {
-                throw new RuntimeException("Selected model is inactive: " + dbModel.getModelName());
-            }
-
-            jobCard.setModel(dbModel);
-        } else {
-            jobCard.setModel(null);
-        }
-
-        // Load and validate Processor
-        if (jobCard.getProcessor() != null && jobCard.getProcessor().getId() != null) {
-            Processor dbProcessor = processorRepository.findById(jobCard.getProcessor().getId())
-                    .orElseThrow(() -> new RuntimeException("Processor not found: " + jobCard.getProcessor().getId()));
-
-            if (!dbProcessor.getIsActive()) {
-                throw new RuntimeException("Selected processor is inactive: " + dbProcessor.getProcessorName());
-            }
-
-            jobCard.setProcessor(dbProcessor);
-        } else {
-            jobCard.setProcessor(null);
-        }
-
-        // Load and validate Device Condition
-        if (jobCard.getDeviceCondition() != null && jobCard.getDeviceCondition().getId() != null) {
-            DeviceCondition dbCondition = deviceConditionRepository.findById(jobCard.getDeviceCondition().getId())
-                    .orElseThrow(() -> new RuntimeException("Device condition not found: " + jobCard.getDeviceCondition().getId()));
-
-            if (!dbCondition.getIsActive()) {
-                throw new RuntimeException("Selected device condition is inactive: " + dbCondition.getConditionName());
-            }
-
-            jobCard.setDeviceCondition(dbCondition);
-        } else {
-            jobCard.setDeviceCondition(null);
-        }
-
-        // Set fault and service references
+        // Set validated collections
         jobCard.setFaults(validFaults);
         jobCard.setServiceCategories(validServices);
         jobCard.setJobNumber(generateJobNumber());
         jobCard.setStatus(JobStatus.PENDING);
 
-        // Ensure oneDayService is not null
+        // Set defaults
         if (jobCard.getOneDayService() == null) {
             jobCard.setOneDayService(false);
         }
@@ -2738,236 +3246,338 @@ public class JobCardService {
         // Calculate total service price
         jobCard.calculateTotalServicePrice();
 
-        // Set bidirectional relationships for serials
-        if (jobCard.getSerials() != null && !jobCard.getSerials().isEmpty()) {
+        // Handle serials
+        if (jobCard.getSerials() != null) {
             for (JobCardSerial serial : jobCard.getSerials()) {
                 serial.setJobCard(jobCard);
             }
         }
 
-        // Set bidirectional relationships for used items and ensure prices are set
+        // Handle used items - DON'T deduct stock yet, wait for completion
         if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
             for (UsedItem item : jobCard.getUsedItems()) {
                 item.setJobCard(jobCard);
 
-                // If unit price not provided, get from inventory
-                if (item.getUnitPrice() == null || item.getUnitPrice() == 0) {
-                    InventoryItem invItem = inventoryItemRepository.findById(item.getInventoryItem().getId())
-                            .orElseThrow(() -> new RuntimeException("Inventory item not found"));
-                    item.setUnitPrice(invItem.getSellingPrice());
-                }
-
-                checkInventoryAndNotify(item.getInventoryItem());
-            }
-        }
-
-        JobCard saved = jobCardRepository.save(jobCard);
-
-        // Get fault names
-        String faultNames = saved.getFaults().stream()
-                .map(Fault::getFaultName)
-                .reduce((a, b) -> a + ", " + b)
-                .orElse("No faults");
-
-        String serviceNames = saved.getServiceCategories().stream()
-                .map(ServiceCategory::getName)
-                .reduce((a, b) -> a + ", " + b)
-                .orElse("No services");
-
-        // Include One Day Service in notification if enabled
-        String priorityInfo = saved.getOneDayService() ? " 🚨 ONE DAY SERVICE" : "";
-
-        notificationService.sendNotification(
-                NotificationType.PENDING_JOB,
-                "New job card created: " + saved.getJobNumber() +
-                        " - Faults: " + faultNames +
-                        " - Services: " + serviceNames +
-                        " - Total Service Price: " + saved.getTotalServicePrice() +
-                        priorityInfo,
-                saved
-        );
-
-        return saved;
-    }
-
-    /**
-     * Update existing job card
-     */
-    @Transactional
-    public JobCard updateJobCard(Long id, JobCard updates) {
-        JobCard existing = jobCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job card not found"));
-
-        // Update basic customer information
-        existing.setCustomerName(updates.getCustomerName());
-        existing.setCustomerPhone(updates.getCustomerPhone());
-        existing.setCustomerEmail(updates.getCustomerEmail());
-        existing.setDeviceType(updates.getDeviceType());
-
-        // Update Brand
-        if (updates.getBrand() != null && updates.getBrand().getId() != null) {
-            Brand dbBrand = brandRepository.findById(updates.getBrand().getId())
-                    .orElseThrow(() -> new RuntimeException("Brand not found: " + updates.getBrand().getId()));
-
-            if (!dbBrand.getIsActive()) {
-                throw new RuntimeException("Selected brand is inactive: " + dbBrand.getBrandName());
-            }
-
-            existing.setBrand(dbBrand);
-        } else {
-            existing.setBrand(null);
-        }
-
-        // Update Model
-        if (updates.getModel() != null && updates.getModel().getId() != null) {
-            Model dbModel = modelRepository.findById(updates.getModel().getId())
-                    .orElseThrow(() -> new RuntimeException("Model not found: " + updates.getModel().getId()));
-
-            if (!dbModel.getIsActive()) {
-                throw new RuntimeException("Selected model is inactive: " + dbModel.getModelName());
-            }
-
-            existing.setModel(dbModel);
-        } else {
-            existing.setModel(null);
-        }
-
-        // Update Processor
-        if (updates.getProcessor() != null && updates.getProcessor().getId() != null) {
-            Processor dbProcessor = processorRepository.findById(updates.getProcessor().getId())
-                    .orElseThrow(() -> new RuntimeException("Processor not found: " + updates.getProcessor().getId()));
-
-            if (!dbProcessor.getIsActive()) {
-                throw new RuntimeException("Selected processor is inactive: " + dbProcessor.getProcessorName());
-            }
-
-            existing.setProcessor(dbProcessor);
-        } else {
-            existing.setProcessor(null);
-        }
-
-        // Update Device Condition
-        if (updates.getDeviceCondition() != null && updates.getDeviceCondition().getId() != null) {
-            DeviceCondition dbCondition = deviceConditionRepository.findById(updates.getDeviceCondition().getId())
-                    .orElseThrow(() -> new RuntimeException("Device condition not found: " + updates.getDeviceCondition().getId()));
-
-            if (!dbCondition.getIsActive()) {
-                throw new RuntimeException("Selected device condition is inactive: " + dbCondition.getConditionName());
-            }
-
-            existing.setDeviceCondition(dbCondition);
-        } else {
-            existing.setDeviceCondition(null);
-        }
-
-        // Update oneDayService field
-        if (updates.getOneDayService() != null) {
-            existing.setOneDayService(updates.getOneDayService());
-        }
-
-        // Update faults if provided
-        if (updates.getFaults() != null && !updates.getFaults().isEmpty()) {
-            existing.clearFaults();
-
-            for (Fault fault : updates.getFaults()) {
-                if (fault.getId() == null) {
-                    throw new RuntimeException("Invalid fault");
-                }
-
-                Fault dbFault = faultRepository.findById(fault.getId())
-                        .orElseThrow(() -> new RuntimeException("Fault not found: " + fault.getId()));
-
-                if (!dbFault.getIsActive()) {
-                    throw new RuntimeException("Selected fault is inactive: " + dbFault.getFaultName());
-                }
-
-                existing.addFault(dbFault);
-            }
-        }
-
-        // Update service categories if provided
-        if (updates.getServiceCategories() != null && !updates.getServiceCategories().isEmpty()) {
-            existing.clearServiceCategories();
-
-            for (ServiceCategory service : updates.getServiceCategories()) {
-                if (service.getId() == null) {
-                    throw new RuntimeException("Invalid service category");
-                }
-
-                ServiceCategory dbService = serviceCategoryRepository.findById(service.getId())
-                        .orElseThrow(() -> new RuntimeException("Service category not found: " + service.getId()));
-
-                if (!dbService.getIsActive()) {
-                    throw new RuntimeException("Selected service category is inactive: " + dbService.getName());
-                }
-
-                existing.addServiceCategory(dbService);
-            }
-
-            // Recalculate total service price
-            existing.calculateTotalServicePrice();
-        }
-
-        existing.setFaultDescription(updates.getFaultDescription());
-        existing.setNotes(updates.getNotes());
-        existing.setEstimatedCost(updates.getEstimatedCost());
-        existing.setAdvancePayment(updates.getAdvancePayment());
-
-        // Update serials if provided
-        if (updates.getSerials() != null) {
-            existing.getSerials().clear();
-            for (JobCardSerial serial : updates.getSerials()) {
-                existing.addSerial(serial);
-            }
-        }
-
-        // Update used items
-        if (updates.getUsedItems() != null) {
-            existing.getUsedItems().clear();
-
-            for (UsedItem item : updates.getUsedItems()) {
+                // Validate inventory item exists
                 InventoryItem invItem = inventoryItemRepository.findById(item.getInventoryItem().getId())
                         .orElseThrow(() -> new RuntimeException("Inventory item not found: " + item.getInventoryItem().getId()));
 
-                UsedItem newUsedItem = new UsedItem();
-                newUsedItem.setInventoryItem(invItem);
-                newUsedItem.setQuantityUsed(item.getQuantityUsed());
-
-                if (item.getUnitPrice() != null && item.getUnitPrice() > 0) {
-                    newUsedItem.setUnitPrice(item.getUnitPrice());
-                } else {
-                    newUsedItem.setUnitPrice(invItem.getSellingPrice());
+                // Set unit price if not provided
+                if (item.getUnitPrice() == null || item.getUnitPrice() == 0) {
+                    item.setUnitPrice(invItem.getSellingPrice());
                 }
 
-                existing.addUsedItem(newUsedItem);
+                // Validate serial numbers for serialized items
+                if (invItem.getHasSerialization()) {
+                    if (item.getUsedSerialNumbers() == null || item.getUsedSerialNumbers().isEmpty()) {
+                        throw new RuntimeException("Serial numbers required for item: " + invItem.getName());
+                    }
+                    if (item.getUsedSerialNumbers().size() != item.getQuantityUsed()) {
+                        throw new RuntimeException("Number of serials must match quantity for item: " + invItem.getName());
+                    }
+
+                    // Validate serials are available
+                    for (String serialNumber : item.getUsedSerialNumbers()) {
+                        InventorySerial serial = inventoryService.getSerialByNumber(serialNumber);
+                        if (serial == null) {
+                            throw new RuntimeException("Serial number not found: " + serialNumber);
+                        }
+                        if (serial.getStatus() != SerialStatus.AVAILABLE) {
+                            throw new RuntimeException("Serial number not available: " + serialNumber);
+                        }
+                    }
+                } else {
+                    // For non-serialized items, check stock availability
+                    if (invItem.getQuantity() < item.getQuantityUsed()) {
+                        throw new RuntimeException("Not enough stock for item: " + invItem.getName() +
+                                ". Available: " + invItem.getQuantity() + ", Requested: " + item.getQuantityUsed());
+                    }
+                }
 
                 checkInventoryAndNotify(invItem);
             }
         }
 
-        // Update status
-        if (updates.getStatus() != null) {
-            JobStatus oldStatus = existing.getStatus();
-            existing.setStatus(updates.getStatus());
+        JobCard saved = jobCardRepository.save(jobCard);
 
-            // Handle completion
-            if (updates.getStatus() == JobStatus.COMPLETED && oldStatus != JobStatus.COMPLETED) {
-                existing.setCompletedAt(LocalDateTime.now());
+        // Send notification
+        sendJobCreatedNotification(saved);
 
-                String priorityInfo = existing.getOneDayService() ? " 🚨 ONE DAY SERVICE COMPLETED" : "";
+        return saved;
+    }
 
-                notificationService.sendNotification(
-                        NotificationType.JOB_COMPLETED,
-                        "Job completed: " + existing.getJobNumber() + priorityInfo,
-                        existing
-                );
-            }
+    /**
+     * Update job card using DTO to avoid detached entity issues
+     */
+    @Transactional
+    public JobCard updateJobCard(Long id, JobCardUpdateRequest updateRequest) {
+        JobCard existing = jobCardRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job card not found"));
+
+        // Store old status for completion check
+        JobStatus oldStatus = existing.getStatus();
+
+        // Update basic fields
+        existing.setCustomerName(updateRequest.getCustomerName());
+        existing.setCustomerPhone(updateRequest.getCustomerPhone());
+        existing.setCustomerEmail(updateRequest.getCustomerEmail());
+        existing.setDeviceType(updateRequest.getDeviceType());
+        existing.setFaultDescription(updateRequest.getFaultDescription());
+        existing.setNotes(updateRequest.getNotes());
+        existing.setEstimatedCost(updateRequest.getEstimatedCost());
+        existing.setAdvancePayment(updateRequest.getAdvancePayment());
+
+        // Update related entities
+        existing.setBrand(loadBrandById(updateRequest.getBrandId()));
+        existing.setModel(loadModelById(updateRequest.getModelId()));
+        existing.setProcessor(loadProcessorById(updateRequest.getProcessorId()));
+        existing.setDeviceCondition(loadDeviceConditionById(updateRequest.getDeviceConditionId()));
+
+        // Update oneDayService
+        if (updateRequest.getOneDayService() != null) {
+            existing.setOneDayService(updateRequest.getOneDayService());
         }
+
+        // Update faults
+        if (updateRequest.getFaultIds() != null) {
+            updateFaultsFromIds(existing, updateRequest.getFaultIds());
+        }
+
+        // Update service categories
+        if (updateRequest.getServiceCategoryIds() != null) {
+            updateServiceCategoriesFromIds(existing, updateRequest.getServiceCategoryIds());
+        }
+
+        // Update used items
+        if (updateRequest.getUsedItems() != null) {
+            updateUsedItemsFromRequest(existing, updateRequest.getUsedItems());
+        }
+
+        // Handle status change and completion
+        handleStatusChange(existing, updateRequest.getStatus(), oldStatus);
 
         JobCard saved = jobCardRepository.save(existing);
         jobCardRepository.flush();
 
         return saved;
+    }
+
+    /**
+     * Update used items from DTO request
+     */
+    private void updateUsedItemsFromRequest(JobCard existing, List<JobCardUpdateRequest.UsedItemRequest> usedItems) {
+        existing.getUsedItems().clear();
+
+        for (JobCardUpdateRequest.UsedItemRequest itemRequest : usedItems) {
+            InventoryItem invItem = inventoryItemRepository.findById(itemRequest.getInventoryItemId())
+                    .orElseThrow(() -> new RuntimeException("Inventory item not found: " + itemRequest.getInventoryItemId()));
+
+            UsedItem newUsedItem = new UsedItem();
+            newUsedItem.setInventoryItem(invItem);
+            newUsedItem.setQuantityUsed(itemRequest.getQuantityUsed());
+
+            // Set unit price
+            if (itemRequest.getUnitPrice() != null && itemRequest.getUnitPrice() > 0) {
+                newUsedItem.setUnitPrice(itemRequest.getUnitPrice());
+            } else {
+                newUsedItem.setUnitPrice(invItem.getSellingPrice());
+            }
+
+            // Handle serial numbers
+            if (itemRequest.getUsedSerialNumbers() != null && !itemRequest.getUsedSerialNumbers().isEmpty()) {
+                newUsedItem.setUsedSerialNumbers(new ArrayList<>(itemRequest.getUsedSerialNumbers()));
+
+                // Validate serial numbers for serialized items
+                if (invItem.getHasSerialization()) {
+                    if (itemRequest.getUsedSerialNumbers().size() != itemRequest.getQuantityUsed()) {
+                        throw new RuntimeException("Number of serials must match quantity for item: " + invItem.getName());
+                    }
+
+                    // Validate serials are available
+                    for (String serialNumber : itemRequest.getUsedSerialNumbers()) {
+                        InventorySerial serial = inventoryService.getSerialByNumber(serialNumber);
+                        if (serial == null) {
+                            throw new RuntimeException("Serial number not found: " + serialNumber);
+                        }
+                        if (serial.getStatus() != SerialStatus.AVAILABLE) {
+                            throw new RuntimeException("Serial number not available: " + serialNumber);
+                        }
+                    }
+                }
+            } else if (invItem.getHasSerialization()) {
+                throw new RuntimeException("Serial numbers required for item: " + invItem.getName());
+            } else {
+                // For non-serialized items, check stock
+                if (invItem.getQuantity() < itemRequest.getQuantityUsed()) {
+                    throw new RuntimeException("Not enough stock for item: " + invItem.getName());
+                }
+            }
+
+            existing.addUsedItem(newUsedItem);
+            checkInventoryAndNotify(invItem);
+        }
+    }
+
+    /**
+     * Handle status change and mark serials as sold when job is completed
+     */
+    private void handleStatusChange(JobCard jobCard, JobStatus newStatus, JobStatus oldStatus) {
+        if (newStatus != null) {
+            jobCard.setStatus(newStatus);
+
+            // Handle completion - mark serials as SOLD
+            if (newStatus == JobStatus.COMPLETED && oldStatus != JobStatus.COMPLETED) {
+                jobCard.setCompletedAt(LocalDateTime.now());
+
+                // Mark used items' serial numbers as SOLD
+                deductStockForCompletedJob(jobCard);
+
+                String priorityInfo = jobCard.getOneDayService() ? " 🚨 ONE DAY SERVICE COMPLETED" : "";
+                notificationService.sendNotification(
+                        NotificationType.JOB_COMPLETED,
+                        "Job completed: " + jobCard.getJobNumber() + priorityInfo,
+                        jobCard
+                );
+            }
+        }
+    }
+
+    /**
+     * Deduct stock and mark serials as SOLD when job is completed
+     */
+    private void deductStockForCompletedJob(JobCard jobCard) {
+        if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
+            for (UsedItem usedItem : jobCard.getUsedItems()) {
+                InventoryItem inventoryItem = usedItem.getInventoryItem();
+
+                if (inventoryItem.getHasSerialization()) {
+                    // For serialized items, mark specific serials as SOLD
+                    if (usedItem.getUsedSerialNumbers() != null && !usedItem.getUsedSerialNumbers().isEmpty()) {
+                        inventoryService.deductStockForJobCard(
+                                inventoryItem.getId(),
+                                usedItem.getQuantityUsed(),
+                                usedItem.getUsedSerialNumbers(),
+                                jobCard.getId(),
+                                jobCard.getJobNumber(),
+                                "Job card completed"
+                        );
+                    }
+                } else {
+                    // For non-serialized items, deduct quantity
+                    inventoryService.deductStockForJobCard(
+                            inventoryItem.getId(),
+                            usedItem.getQuantityUsed(),
+                            null,
+                            jobCard.getId(),
+                            jobCard.getJobNumber(),
+                            "Job card completed"
+                    );
+                }
+            }
+        }
+    }
+
+    // Helper methods for loading related entities by ID
+    private Brand loadBrandById(Long brandId) {
+        if (brandId != null) {
+            Brand dbBrand = brandRepository.findById(brandId)
+                    .orElseThrow(() -> new RuntimeException("Brand not found: " + brandId));
+            if (!dbBrand.getIsActive()) {
+                throw new RuntimeException("Selected brand is inactive: " + dbBrand.getBrandName());
+            }
+            return dbBrand;
+        }
+        return null;
+    }
+
+    private Model loadModelById(Long modelId) {
+        if (modelId != null) {
+            Model dbModel = modelRepository.findById(modelId)
+                    .orElseThrow(() -> new RuntimeException("Model not found: " + modelId));
+            if (!dbModel.getIsActive()) {
+                throw new RuntimeException("Selected model is inactive: " + dbModel.getModelName());
+            }
+            return dbModel;
+        }
+        return null;
+    }
+
+    private Processor loadProcessorById(Long processorId) {
+        if (processorId != null) {
+            Processor dbProcessor = processorRepository.findById(processorId)
+                    .orElseThrow(() -> new RuntimeException("Processor not found: " + processorId));
+            if (!dbProcessor.getIsActive()) {
+                throw new RuntimeException("Selected processor is inactive: " + dbProcessor.getProcessorName());
+            }
+            return dbProcessor;
+        }
+        return null;
+    }
+
+    private DeviceCondition loadDeviceConditionById(Long deviceConditionId) {
+        if (deviceConditionId != null) {
+            DeviceCondition dbCondition = deviceConditionRepository.findById(deviceConditionId)
+                    .orElseThrow(() -> new RuntimeException("Device condition not found: " + deviceConditionId));
+            if (!dbCondition.getIsActive()) {
+                throw new RuntimeException("Selected device condition is inactive: " + dbCondition.getConditionName());
+            }
+            return dbCondition;
+        }
+        return null;
+    }
+
+    private void updateFaultsFromIds(JobCard existing, List<Long> faultIds) {
+        existing.clearFaults();
+        for (Long faultId : faultIds) {
+            Fault dbFault = faultRepository.findById(faultId)
+                    .orElseThrow(() -> new RuntimeException("Fault not found: " + faultId));
+            if (!dbFault.getIsActive()) {
+                throw new RuntimeException("Selected fault is inactive: " + dbFault.getFaultName());
+            }
+            existing.addFault(dbFault);
+        }
+    }
+
+    private void updateServiceCategoriesFromIds(JobCard existing, List<Long> serviceCategoryIds) {
+        existing.clearServiceCategories();
+        for (Long serviceCategoryId : serviceCategoryIds) {
+            ServiceCategory dbService = serviceCategoryRepository.findById(serviceCategoryId)
+                    .orElseThrow(() -> new RuntimeException("Service category not found: " + serviceCategoryId));
+            if (!dbService.getIsActive()) {
+                throw new RuntimeException("Selected service category is inactive: " + dbService.getName());
+            }
+            existing.addServiceCategory(dbService);
+        }
+        existing.calculateTotalServicePrice();
+    }
+
+    // Original helper methods for entity loading
+    private Brand loadBrand(Brand brand) {
+        if (brand != null && brand.getId() != null) {
+            return loadBrandById(brand.getId());
+        }
+        return null;
+    }
+
+    private Model loadModel(Model model) {
+        if (model != null && model.getId() != null) {
+            return loadModelById(model.getId());
+        }
+        return null;
+    }
+
+    private Processor loadProcessor(Processor processor) {
+        if (processor != null && processor.getId() != null) {
+            return loadProcessorById(processor.getId());
+        }
+        return null;
+    }
+
+    private DeviceCondition loadDeviceCondition(DeviceCondition condition) {
+        if (condition != null && condition.getId() != null) {
+            return loadDeviceConditionById(condition.getId());
+        }
+        return null;
     }
 
     /**
@@ -2992,7 +3602,6 @@ public class JobCardService {
         JobCard saved = jobCardRepository.save(jobCard);
 
         String cancellerInfo = "CUSTOMER".equals(cancelledBy) ? "Customer" : "Technician";
-
         String priorityInfo = saved.getOneDayService() ? " 🚨 ONE DAY SERVICE CANCELLED" : "";
 
         notificationService.sendNotification(
@@ -3097,6 +3706,33 @@ public class JobCardService {
                     item
             );
         }
+    }
+
+    /**
+     * Send job created notification
+     */
+    private void sendJobCreatedNotification(JobCard jobCard) {
+        String faultNames = jobCard.getFaults().stream()
+                .map(Fault::getFaultName)
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("No faults");
+
+        String serviceNames = jobCard.getServiceCategories().stream()
+                .map(ServiceCategory::getName)
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("No services");
+
+        String priorityInfo = jobCard.getOneDayService() ? " 🚨 ONE DAY SERVICE" : "";
+
+        notificationService.sendNotification(
+                NotificationType.PENDING_JOB,
+                "New job card created: " + jobCard.getJobNumber() +
+                        " - Faults: " + faultNames +
+                        " - Services: " + serviceNames +
+                        " - Total Service Price: " + jobCard.getTotalServicePrice() +
+                        priorityInfo,
+                jobCard
+        );
     }
 
     /**

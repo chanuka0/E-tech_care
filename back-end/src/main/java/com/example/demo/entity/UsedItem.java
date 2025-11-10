@@ -1,3 +1,15 @@
+package com.example.demo.entity;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 ////package com.example.demo.entity;
 ////
 ////import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -127,16 +139,67 @@
 //    }
 //}
 
-package com.example.demo.entity;
-
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+//package com.example.demo.entity;
+//
+//import com.fasterxml.jackson.annotation.JsonBackReference;
+//import jakarta.persistence.*;
+//import lombok.AllArgsConstructor;
+//import lombok.Data;
+//import lombok.NoArgsConstructor;
+//import java.time.LocalDateTime;
+//import java.util.ArrayList;
+//import java.util.List;
+//
+//@Entity
+//@Table(name = "used_items")
+//@Data
+//@NoArgsConstructor
+//@AllArgsConstructor
+//public class UsedItem {
+//    @Id
+//    @GeneratedValue(strategy = GenerationType.IDENTITY)
+//    private Long id;
+//
+//    @ManyToOne(fetch = FetchType.EAGER)
+//    @JoinColumn(name = "job_card_id", nullable = false)
+//    @JsonBackReference
+//    private JobCard jobCard;
+//
+//    @ManyToOne(fetch = FetchType.EAGER)
+//    @JoinColumn(name = "inventory_item_id", nullable = false)
+//    private InventoryItem inventoryItem;
+//
+//    @Column(name = "quantity_used", nullable = false)
+//    private Integer quantityUsed;
+//
+//    @Column(name = "unit_price")
+//    private Double unitPrice;
+//
+//    // NEW: Track which serial numbers were used
+//    @ElementCollection(fetch = FetchType.EAGER)
+//    @CollectionTable(name = "used_item_serials", joinColumns = @JoinColumn(name = "used_item_id"))
+//    @Column(name = "serial_number")
+//    private List<String> usedSerialNumbers = new ArrayList<>();
+//
+//    // NEW: Warranty information for this specific usage
+//    @Column(name = "warranty_period")
+//    private String warrantyPeriod; // e.g., "30 days", "6 months", "1 year"
+//
+//    @Column(name = "created_at", nullable = false)
+//    private LocalDateTime createdAt;
+//
+//    @PrePersist
+//    protected void onCreate() {
+//        createdAt = LocalDateTime.now();
+//        if (usedSerialNumbers == null) {
+//            usedSerialNumbers = new ArrayList<>();
+//        }
+//    }
+//
+//    public Double getTotalPrice() {
+//        return (unitPrice != null && quantityUsed != null) ? unitPrice * quantityUsed : 0.0;
+//    }
+//}
 
 @Entity
 @Table(name = "used_items")
@@ -148,7 +211,7 @@ public class UsedItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_card_id", nullable = false)
     @JsonBackReference
     private JobCard jobCard;
@@ -163,15 +226,17 @@ public class UsedItem {
     @Column(name = "unit_price")
     private Double unitPrice;
 
-    // NEW: Track which serial numbers were used
+    // This will auto-create the used_item_serials table
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "used_item_serials", joinColumns = @JoinColumn(name = "used_item_id"))
+    @CollectionTable(
+            name = "used_item_serials",
+            joinColumns = @JoinColumn(name = "used_item_id")
+    )
     @Column(name = "serial_number")
     private List<String> usedSerialNumbers = new ArrayList<>();
 
-    // NEW: Warranty information for this specific usage
     @Column(name = "warranty_period")
-    private String warrantyPeriod; // e.g., "30 days", "6 months", "1 year"
+    private String warrantyPeriod;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

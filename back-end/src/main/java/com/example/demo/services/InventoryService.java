@@ -483,6 +483,13 @@ public class InventoryService {
     public List<InventoryItem> getLowStockItems() {
         return inventoryItemRepository.findLowStockItems();
     }
+    /**
+     * Get serial by serial number
+     */
+    public InventorySerial getSerialByNumber(String serialNumber) {
+        return inventorySerialRepository.findBySerialNumber(serialNumber)
+                .orElse(null);
+    }
 
     public InventoryItem getItemById(Long id) {
         return inventoryItemRepository.findById(id)
