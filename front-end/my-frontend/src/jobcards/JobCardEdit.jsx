@@ -4283,7 +4283,15 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
   const [originalData, setOriginalData] = useState(null);
 
   const deviceTypes = ['LAPTOP', 'DESKTOP', 'PRINTER', 'PROJECTOR'];
-  const statusOptions = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'DELIVERED'];
+  // UPDATED: Include new statuses
+  const statusOptions = [
+    'PENDING', 
+    'IN_PROGRESS', 
+    'WAITING_FOR_PARTS',      // NEW
+    'WAITING_FOR_APPROVAL',   // NEW
+    'COMPLETED', 
+    'DELIVERED'
+  ];
 
   // Fetch all data
   useEffect(() => {
@@ -4748,7 +4756,11 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
                   required
                 >
                   {statusOptions.map(status => (
-                    <option key={status} value={status}>{status.replace('_', ' ')}</option>
+                    <option key={status} value={status}>
+                      {status === 'WAITING_FOR_PARTS' ? '⏳ Waiting for Parts' :
+                       status === 'WAITING_FOR_APPROVAL' ? '👥 Waiting for Approval' :
+                       status.replace('_', ' ')}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -4766,10 +4778,28 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
                 </button>
               </div>
             </div>
+            
+            {/* Status Help Text */}
+            {formData.status === 'WAITING_FOR_PARTS' && (
+              <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-sm text-orange-800">
+                  ⏳ This job is paused waiting for parts. Update when parts arrive.
+                </p>
+              </div>
+            )}
+            
+            {formData.status === 'WAITING_FOR_APPROVAL' && (
+              <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <p className="text-sm text-purple-800">
+                  👥 This job is paused waiting for customer approval. Contact customer for confirmation.
+                </p>
+              </div>
+            )}
+            
             {formData.status === 'COMPLETED' && (
               <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-sm text-green-800">
-                  ℹ️ Marking as COMPLETED will record the completion timestamp and deduct inventory.
+                  ℹ️ Marking as COMPLETED will record the completion timestamp.
                 </p>
               </div>
             )}
