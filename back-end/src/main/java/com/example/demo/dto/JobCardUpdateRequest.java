@@ -31,5 +31,7 @@ public class JobCardUpdateRequest {
         private Integer quantityUsed;
         private Double unitPrice;
         private List<String> usedSerialNumbers;
+        // ADD WARRANTY FIELD
+        private String warranty;
     }
 }

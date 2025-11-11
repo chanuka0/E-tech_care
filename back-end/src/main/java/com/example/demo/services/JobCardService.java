@@ -3267,6 +3267,11 @@ public class JobCardService {
                     item.setUnitPrice(invItem.getSellingPrice());
                 }
 
+                // Set default warranty if not provided
+                if (item.getWarrantyPeriod() == null) {
+                    item.setWarrantyPeriod("No Warranty");
+                }
+
                 // Validate serial numbers for serialized items (but don't mark as SOLD yet)
                 if (invItem.getHasSerialization()) {
                     if (item.getUsedSerialNumbers() == null || item.getUsedSerialNumbers().isEmpty()) {
@@ -3365,7 +3370,7 @@ public class JobCardService {
     }
 
     /**
-     * Update used items from DTO request
+     * Update used items from DTO request - ADD WARRANTY SUPPORT
      */
     private void updateUsedItemsFromRequest(JobCard existing, List<JobCardUpdateRequest.UsedItemRequest> usedItems) {
         existing.getUsedItems().clear();
@@ -3377,6 +3382,9 @@ public class JobCardService {
             UsedItem newUsedItem = new UsedItem();
             newUsedItem.setInventoryItem(invItem);
             newUsedItem.setQuantityUsed(itemRequest.getQuantityUsed());
+
+            // SET WARRANTY PERIOD
+            newUsedItem.setWarrantyPeriod(itemRequest.getWarranty() != null ? itemRequest.getWarranty() : "No Warranty");
 
             // Set unit price
             if (itemRequest.getUnitPrice() != null && itemRequest.getUnitPrice() > 0) {

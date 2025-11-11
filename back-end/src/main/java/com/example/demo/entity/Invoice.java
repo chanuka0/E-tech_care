@@ -321,4 +321,7 @@ public class Invoice {
     public String getCustomerEmail() {
         return "";
     }
+
+    public void setCustomerEmail(String customerEmail) {
+    }
 }

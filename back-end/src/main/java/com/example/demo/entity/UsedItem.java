@@ -201,6 +201,17 @@ import java.util.List;
 //    }
 //}
 
+//package com.example.demo.entity;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "used_items")
 @Data
@@ -226,7 +237,6 @@ public class UsedItem {
     @Column(name = "unit_price")
     private Double unitPrice;
 
-    // This will auto-create the used_item_serials table
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "used_item_serials",
@@ -235,6 +245,7 @@ public class UsedItem {
     @Column(name = "serial_number")
     private List<String> usedSerialNumbers = new ArrayList<>();
 
+    // WARRANTY FIELD - Make sure this exists
     @Column(name = "warranty_period")
     private String warrantyPeriod;
 
@@ -246,6 +257,9 @@ public class UsedItem {
         createdAt = LocalDateTime.now();
         if (usedSerialNumbers == null) {
             usedSerialNumbers = new ArrayList<>();
+        }
+        if (warrantyPeriod == null) {
+            warrantyPeriod = "No Warranty";
         }
     }
 

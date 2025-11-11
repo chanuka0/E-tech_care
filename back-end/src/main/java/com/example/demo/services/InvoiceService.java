@@ -1519,7 +1519,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -1529,6 +1531,7 @@ public class InvoiceService {
     private final JobCardRepository jobCardRepository;
     private final InventoryItemRepository inventoryItemRepository;
     private final InventorySerialRepository inventorySerialRepository;
+    private final StockMovementRepository stockMovementRepository;
     private final NotificationService notificationService;
     private final InventoryService inventoryService;
 
@@ -1540,10 +1543,15 @@ public class InvoiceService {
         // Set payment status based on paid amount
         updatePaymentStatus(invoice);
 
+        // Auto-populate used items from job card if not already provided
+        if (invoice.getJobCard() != null && (invoice.getItems() == null || invoice.getItems().isEmpty())) {
+            autoPopulateItemsFromJobCard(invoice);
+        }
+
         // Calculate totals
         calculateInvoiceTotals(invoice);
 
-        // NEW: Validate serial numbers before creating invoice
+        // Validate serial numbers before creating invoice
         validateInvoiceSerials(invoice);
 
         // Set bidirectional relationships for items
@@ -1551,8 +1559,8 @@ public class InvoiceService {
             for (InvoiceItem item : invoice.getItems()) {
                 item.setInvoice(invoice);
 
-                // NEW: Deduct inventory stock when invoice is created
-                if (item.getInventoryItem() != null) {
+                // Deduct inventory stock when invoice is created (for direct invoices only)
+                if (item.getInventoryItem() != null && invoice.getJobCard() == null) {
                     deductInventoryForInvoiceItem(invoice, item);
                 }
             }
@@ -1560,12 +1568,12 @@ public class InvoiceService {
 
         Invoice saved = invoiceRepository.save(invoice);
 
-        // NEW: If invoice is created as PAID (full payment upfront), mark serials as SOLD immediately
+        // If invoice is created as PAID (full payment upfront), process stock
         if (saved.getPaymentStatus() == PaymentStatus.PAID) {
-            markSerialsAsSoldForInvoice(saved);
+            processStockForPaidInvoice(saved);
         }
 
-        // CRITICAL: Update job card status if invoice is fully paid
+        // Update job card status if invoice is fully paid
         if (saved.getJobCard() != null && saved.getPaymentStatus() == PaymentStatus.PAID) {
             updateJobCardStatusToDelivered(saved.getJobCard().getId());
         }
@@ -1582,7 +1590,44 @@ public class InvoiceService {
     }
 
     /**
-     * NEW: Validate that serial numbers are available for invoice items
+     * Auto-populate invoice items from job card used items with serial numbers
+     */
+    private void autoPopulateItemsFromJobCard(Invoice invoice) {
+        if (invoice.getJobCard() == null) return;
+
+        JobCard jobCard = jobCardRepository.findById(invoice.getJobCard().getId())
+                .orElseThrow(() -> new RuntimeException("Job card not found"));
+
+        if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
+            List<InvoiceItem> invoiceItems = new ArrayList<>();
+
+            for (UsedItem usedItem : jobCard.getUsedItems()) {
+                InvoiceItem invoiceItem = new InvoiceItem();
+                invoiceItem.setInvoice(invoice);
+                invoiceItem.setInventoryItem(usedItem.getInventoryItem());
+                invoiceItem.setItemName(usedItem.getInventoryItem().getName());
+                invoiceItem.setQuantity(usedItem.getQuantityUsed());
+                invoiceItem.setUnitPrice(usedItem.getUnitPrice());
+                invoiceItem.setTotal(usedItem.getQuantityUsed() * usedItem.getUnitPrice());
+                invoiceItem.setWarranty(usedItem.getWarrantyPeriod() != null ?
+                        usedItem.getWarrantyPeriod() : "No Warranty");
+
+                // Transfer serial numbers from used item to invoice item
+                if (usedItem.getUsedSerialNumbers() != null && !usedItem.getUsedSerialNumbers().isEmpty()) {
+                    invoiceItem.setSerialNumbers(new ArrayList<>(usedItem.getUsedSerialNumbers()));
+                } else {
+                    invoiceItem.setSerialNumbers(new ArrayList<>());
+                }
+
+                invoiceItems.add(invoiceItem);
+            }
+
+            invoice.setItems(invoiceItems);
+        }
+    }
+
+    /**
+     * Validate that serial numbers are available for invoice items
      */
     private void validateInvoiceSerials(Invoice invoice) {
         if (invoice.getItems() != null) {
@@ -1609,6 +1654,7 @@ public class InvoiceService {
             }
         }
     }
+
     @Transactional
     public Invoice addPayment(Long invoiceId, Double amount, PaymentMethod method) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
@@ -1639,9 +1685,9 @@ public class InvoiceService {
 
         Invoice saved = invoiceRepository.save(invoice);
 
-        // NEW: Mark serials as SOLD when invoice becomes fully paid
+        // Process stock when invoice becomes fully paid
         if (saved.getPaymentStatus() == PaymentStatus.PAID && oldStatus != PaymentStatus.PAID) {
-            markSerialsAsSoldForInvoice(saved);
+            processStockForPaidInvoice(saved);
         }
 
         notificationService.sendNotification(
@@ -1651,7 +1697,7 @@ public class InvoiceService {
                 saved
         );
 
-        // CRITICAL: Update job card status to DELIVERED if invoice is now fully paid
+        // Update job card status to DELIVERED if invoice is now fully paid
         if (saved.getJobCard() != null && saved.getPaymentStatus() == PaymentStatus.PAID) {
             updateJobCardStatusToDelivered(saved.getJobCard().getId());
         }
@@ -1660,65 +1706,131 @@ public class InvoiceService {
     }
 
     /**
-     * NEW: Mark serial numbers as SOLD when invoice is fully paid
-     * This handles both direct invoices and job card invoices
+     * Process stock for paid invoice (mark serials as SOLD and update quantities)
      */
-    private void markSerialsAsSoldForInvoice(Invoice invoice) {
+    private void processStockForPaidInvoice(Invoice invoice) {
         if (invoice.getItems() != null) {
             for (InvoiceItem item : invoice.getItems()) {
-                if (item.getInventoryItem() != null && item.getInventoryItem().getHasSerialization()) {
-                    // For serialized items, mark the serials as SOLD
-                    if (item.getSerialNumbers() != null && !item.getSerialNumbers().isEmpty()) {
-                        for (String serialNumber : item.getSerialNumbers()) {
-                            try {
-                                InventorySerial inventorySerial = inventorySerialRepository.findBySerialNumber(serialNumber)
-                                        .orElseThrow(() -> new RuntimeException("Serial number not found: " + serialNumber));
-
-                                // Only mark as SOLD if not already sold
-                                if (inventorySerial.getStatus() == SerialStatus.AVAILABLE) {
-                                    inventorySerial.setStatus(SerialStatus.SOLD);
-                                    inventorySerial.setUsedAt(LocalDateTime.now());
-                                    inventorySerial.setUsedBy(getCurrentUsername());
-                                    inventorySerial.setUsedInReferenceType("INVOICE");
-                                    inventorySerial.setUsedInReferenceId(invoice.getId());
-                                    inventorySerial.setUsedInReferenceNumber(invoice.getInvoiceNumber());
-                                    inventorySerial.setNotes("Sold via invoice payment");
-                                    inventorySerialRepository.save(inventorySerial);
-
-                                    // Record stock movement
-                                    recordStockMovementForInvoiceSerial(invoice, item, serialNumber);
-                                }
-                            } catch (Exception e) {
-                                // Log error but don't fail the entire payment process
-                                System.err.println("Failed to mark serial as SOLD: " + serialNumber + " - " + e.getMessage());
-                            }
+                if (item.getInventoryItem() != null) {
+                    if (item.getInventoryItem().getHasSerialization()) {
+                        // For serialized items, mark serials as SOLD
+                        if (item.getSerialNumbers() != null && !item.getSerialNumbers().isEmpty()) {
+                            markSerialsAsSoldForInvoice(item, invoice);
                         }
                     }
+
+                    // Update inventory quantity for both serialized and non-serialized items
+                    updateInventoryQuantityForInvoiceItem(item, invoice);
                 }
             }
         }
     }
 
     /**
-     * NEW: Record stock movement for serial sold via invoice
+     * Mark serial numbers as SOLD for invoice
      */
-    private void recordStockMovementForInvoiceSerial(Invoice invoice, InvoiceItem item, String serialNumber) {
-        StockMovement movement = new StockMovement();
-        movement.setInventoryItem(item.getInventoryItem());
-        movement.setMovementType(MovementType.OUT);
-        movement.setQuantity(1);
-        movement.setReferenceType("INVOICE");
-        movement.setReferenceId(invoice.getId());
-        movement.setReferenceNumber(invoice.getInvoiceNumber());
-        movement.setReason("Serial sold via invoice payment");
-        movement.setSerialNumber(serialNumber);
-        movement.setPerformedBy(getCurrentUsername());
-        movement.setPreviousQuantity(item.getInventoryItem().getQuantity() + 1); // +1 because we're deducting 1
-        movement.setNewQuantity(item.getInventoryItem().getQuantity());
-        movement.setCreatedAt(LocalDateTime.now());
+    private void markSerialsAsSoldForInvoice(InvoiceItem item, Invoice invoice) {
+        for (String serialNumber : item.getSerialNumbers()) {
+            try {
+                InventorySerial inventorySerial = inventorySerialRepository.findBySerialNumber(serialNumber)
+                        .orElseThrow(() -> new RuntimeException("Serial number not found: " + serialNumber));
 
-        // You'll need to inject StockMovementRepository or use existing inventory service method
-        // stockMovementRepository.save(movement);
+                // Only mark as SOLD if not already sold
+                if (inventorySerial.getStatus() == SerialStatus.AVAILABLE) {
+                    inventorySerial.setStatus(SerialStatus.SOLD);
+                    inventorySerial.setUsedAt(LocalDateTime.now());
+                    inventorySerial.setUsedBy(getCurrentUsername());
+                    inventorySerial.setUsedInReferenceType("INVOICE");
+                    inventorySerial.setUsedInReferenceId(invoice.getId());
+                    inventorySerial.setUsedInReferenceNumber(invoice.getInvoiceNumber());
+                    inventorySerial.setNotes("Sold via invoice payment");
+                    inventorySerialRepository.save(inventorySerial);
+
+                    // Record stock movement for serial
+                    recordStockMovementForSerial(item.getInventoryItem(), invoice, serialNumber);
+                }
+            } catch (Exception e) {
+                // Log error but don't fail the entire payment process
+                System.err.println("Failed to mark serial as SOLD: " + serialNumber + " - " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Update inventory quantity for invoice items
+     */
+    private void updateInventoryQuantityForInvoiceItem(InvoiceItem item, Invoice invoice) {
+        try {
+            InventoryItem invItem = inventoryItemRepository.findById(item.getInventoryItem().getId())
+                    .orElseThrow(() -> new RuntimeException("Inventory item not found"));
+
+            int quantityToDeduct = item.getQuantity();
+            int previousQuantity = invItem.getQuantity();
+            int newQuantity = previousQuantity - quantityToDeduct;
+
+            if (newQuantity < 0) {
+                throw new RuntimeException("Not enough stock for item: " + invItem.getName());
+            }
+
+            invItem.setQuantity(newQuantity);
+            inventoryItemRepository.save(invItem);
+
+            // Record stock movement for quantity update
+            recordStockMovementForQuantity(invItem, invoice, quantityToDeduct, previousQuantity, newQuantity);
+
+        } catch (Exception e) {
+            System.err.println("Failed to update inventory quantity for item: " + item.getItemName() + " - " + e.getMessage());
+        }
+    }
+
+    /**
+     * Record stock movement for serial
+     */
+    private void recordStockMovementForSerial(InventoryItem item, Invoice invoice, String serialNumber) {
+        try {
+            StockMovement movement = new StockMovement();
+            movement.setInventoryItem(item);
+            movement.setMovementType(MovementType.OUT);
+            movement.setQuantity(1);
+            movement.setReferenceType("INVOICE");
+            movement.setReferenceId(invoice.getId());
+            movement.setReferenceNumber(invoice.getInvoiceNumber());
+            movement.setReason("Serial sold via invoice payment");
+            movement.setSerialNumber(serialNumber);
+            movement.setPerformedBy(getCurrentUsername());
+            movement.setPreviousQuantity(item.getQuantity() + 1);
+            movement.setNewQuantity(item.getQuantity());
+            movement.setCreatedAt(LocalDateTime.now());
+
+            stockMovementRepository.save(movement);
+        } catch (Exception e) {
+            System.err.println("Failed to record stock movement for serial: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Record stock movement for quantity update
+     */
+    private void recordStockMovementForQuantity(InventoryItem item, Invoice invoice, Integer quantity,
+                                                Integer previousQuantity, Integer newQuantity) {
+        try {
+            StockMovement movement = new StockMovement();
+            movement.setInventoryItem(item);
+            movement.setMovementType(MovementType.OUT);
+            movement.setQuantity(quantity);
+            movement.setReferenceType("INVOICE");
+            movement.setReferenceId(invoice.getId());
+            movement.setReferenceNumber(invoice.getInvoiceNumber());
+            movement.setReason("Quantity sold via invoice payment");
+            movement.setPerformedBy(getCurrentUsername());
+            movement.setPreviousQuantity(previousQuantity);
+            movement.setNewQuantity(newQuantity);
+            movement.setCreatedAt(LocalDateTime.now());
+
+            stockMovementRepository.save(movement);
+        } catch (Exception e) {
+            System.err.println("Failed to record stock movement: " + e.getMessage());
+        }
     }
 
     /**
@@ -1744,7 +1856,7 @@ public class InvoiceService {
         // Update basic fields
         existing.setCustomerName(updates.getCustomerName());
         existing.setCustomerPhone(updates.getCustomerPhone());
-        existing.setCustomerName(updates.getCustomerEmail());
+        existing.setCustomerEmail(updates.getCustomerEmail());
         existing.setDiscount(updates.getDiscount());
         existing.setTax(updates.getTax());
         existing.setPaymentMethod(updates.getPaymentMethod());
@@ -1765,7 +1877,7 @@ public class InvoiceService {
 
         Invoice saved = invoiceRepository.save(existing);
 
-        // CRITICAL: Update job card status if invoice is now fully paid
+        // Update job card status if invoice is now fully paid
         if (saved.getJobCard() != null && saved.getPaymentStatus() == PaymentStatus.PAID) {
             updateJobCardStatusToDelivered(saved.getJobCard().getId());
         }
@@ -1773,51 +1885,9 @@ public class InvoiceService {
         return saved;
     }
 
-//    @Transactional
-//    public Invoice addPayment(Long invoiceId, Double amount, PaymentMethod method) {
-//        Invoice invoice = invoiceRepository.findById(invoiceId)
-//                .orElseThrow(() -> new RuntimeException("Invoice not found"));
-//
-//        if (invoice.getPaymentStatus() == PaymentStatus.PAID) {
-//            throw new RuntimeException("Invoice is already fully paid");
-//        }
-//
-//        if (amount <= 0) {
-//            throw new RuntimeException("Payment amount must be greater than 0");
-//        }
-//
-//        if (amount > invoice.getBalance()) {
-//            throw new RuntimeException("Payment amount cannot exceed balance due");
-//        }
-//
-//        // Update paid amount
-//        invoice.setPaidAmount(invoice.getPaidAmount() + amount);
-//        invoice.setBalance(invoice.getTotal() - invoice.getPaidAmount());
-//        invoice.setPaymentMethod(method);
-//
-//        // Update payment status
-//        updatePaymentStatus(invoice);
-//
-//        Invoice saved = invoiceRepository.save(invoice);
-//
-//        notificationService.sendNotification(
-//                NotificationType.PAYMENT_RECEIVED,
-//                "Payment received: Rs." + amount + " for Invoice " + saved.getInvoiceNumber() +
-//                        " | New Balance: Rs." + saved.getBalance(),
-//                saved
-//        );
-//
-//        // CRITICAL: Update job card status to DELIVERED if invoice is now fully paid
-//        if (saved.getJobCard() != null && saved.getPaymentStatus() == PaymentStatus.PAID) {
-//            updateJobCardStatusToDelivered(saved.getJobCard().getId());
-//        }
-//
-//        return saved;
-//    }
-//
-//    /**
-//     * CRITICAL METHOD: Update job card status to DELIVERED when invoice is fully paid
-//     */
+    /**
+     * Update job card status to DELIVERED when invoice is fully paid
+     */
     @Transactional
     protected void updateJobCardStatusToDelivered(Long jobCardId) {
         JobCard jobCard = jobCardRepository.findById(jobCardId)
@@ -1837,46 +1907,34 @@ public class InvoiceService {
     }
 
     /**
-     * Deduct inventory stock for invoice items
+     * Deduct inventory stock for invoice items (for direct invoices only)
      */
     private void deductInventoryForInvoiceItem(Invoice invoice, InvoiceItem item) {
         InventoryItem invItem = inventoryItemRepository.findById(item.getInventoryItem().getId())
                 .orElseThrow(() -> new RuntimeException("Inventory item not found"));
 
-        // Check if this is a job card invoice - if yes, skip deduction (already deducted in job card)
-        if (invoice.getJobCard() != null) {
-            // Stock already deducted when job card was created with used items
-            // But we still need to validate serials are available
-            if (invItem.getHasSerialization() && item.getSerialNumbers() != null) {
-                for (String serialNumber : item.getSerialNumbers()) {
-                    InventorySerial serial = inventorySerialRepository.findBySerialNumber(serialNumber)
-                            .orElseThrow(() -> new RuntimeException("Serial number not found: " + serialNumber));
+        // Only deduct for direct invoices (job card invoices are handled when paid)
+        if (invoice.getJobCard() == null) {
+            List<String> serialNumbers = item.getSerialNumbers();
 
-                    if (serial.getStatus() != SerialStatus.AVAILABLE) {
-                        throw new RuntimeException("Serial number not available: " + serialNumber);
-                    }
-                }
-            }
-            return;
+            inventoryService.deductStockForInvoice(
+                    invItem.getId(),
+                    item.getQuantity(),
+                    serialNumbers,
+                    invoice.getId(),
+                    invoice.getInvoiceNumber(),
+                    "Sold via invoice: " + invoice.getInvoiceNumber()
+            );
         }
-
-        // For direct invoices (no job card), deduct stock immediately
-        List<String> serialNumbers = item.getSerialNumbers();
-
-        inventoryService.deductStockForInvoice(
-                invItem.getId(),
-                item.getQuantity(),
-                serialNumbers,
-                invoice.getId(),
-                invoice.getInvoiceNumber(),
-                "Sold via invoice: " + invoice.getInvoiceNumber()
-        );
     }
 
     private void calculateInvoiceTotals(Invoice invoice) {
-        Double itemsSubtotal = invoice.getItems().stream()
-                .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
-                .sum();
+        Double itemsSubtotal = 0.0;
+        if (invoice.getItems() != null) {
+            itemsSubtotal = invoice.getItems().stream()
+                    .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
+                    .sum();
+        }
 
         // If invoice has a job card, add service categories total
         Double serviceTotal = 0.0;
@@ -1887,8 +1945,11 @@ public class InvoiceService {
         }
 
         Double subtotal = itemsSubtotal + serviceTotal;
-        Double total = subtotal - invoice.getDiscount() + invoice.getTax();
-        Double balance = total - invoice.getPaidAmount();
+        Double discount = invoice.getDiscount() != null ? invoice.getDiscount() : 0.0;
+        Double tax = invoice.getTax() != null ? invoice.getTax() : 0.0;
+        Double total = subtotal - discount + tax;
+        Double paidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0.0;
+        Double balance = total - paidAmount;
 
         invoice.setSubtotal(subtotal);
         invoice.setTotal(total);
@@ -1896,10 +1957,13 @@ public class InvoiceService {
     }
 
     private void updatePaymentStatus(Invoice invoice) {
-        if (invoice.getPaidAmount() >= invoice.getTotal()) {
+        Double paidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0.0;
+        Double total = invoice.getTotal() != null ? invoice.getTotal() : 0.0;
+
+        if (paidAmount >= total) {
             invoice.setPaymentStatus(PaymentStatus.PAID);
             invoice.setBalance(0.0);
-        } else if (invoice.getPaidAmount() > 0) {
+        } else if (paidAmount > 0) {
             invoice.setPaymentStatus(PaymentStatus.PARTIAL);
         } else {
             invoice.setPaymentStatus(PaymentStatus.UNPAID);
@@ -1930,7 +1994,7 @@ public class InvoiceService {
     }
 
     /**
-     * Get invoice by ID with items loaded (uses EAGER fetch from entity)
+     * Get invoice by ID with items loaded
      */
     public Invoice getInvoiceByIdWithItems(Long id) {
         return invoiceRepository.findById(id)
@@ -1967,15 +2031,15 @@ public class InvoiceService {
         List<Invoice> allInvoices = getAllInvoices();
 
         Double totalRevenue = allInvoices.stream()
-                .mapToDouble(Invoice::getTotal)
+                .mapToDouble(inv -> inv.getTotal() != null ? inv.getTotal() : 0.0)
                 .sum();
 
         Double totalCollected = allInvoices.stream()
-                .mapToDouble(Invoice::getPaidAmount)
+                .mapToDouble(inv -> inv.getPaidAmount() != null ? inv.getPaidAmount() : 0.0)
                 .sum();
 
         Double totalOutstanding = allInvoices.stream()
-                .mapToDouble(Invoice::getBalance)
+                .mapToDouble(inv -> inv.getBalance() != null ? inv.getBalance() : 0.0)
                 .sum();
 
         Long paidCount = allInvoices.stream()
@@ -2016,6 +2080,5 @@ public class InvoiceService {
             Long unpaidCount
     ) {}
 }
-
 
 
