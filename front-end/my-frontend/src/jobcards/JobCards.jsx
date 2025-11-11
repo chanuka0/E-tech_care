@@ -1347,7 +1347,14 @@ const JobCards = ({ onCreateNew }) => {
 
   // Filter job cards by status, search term, AND new filters
   const filteredJobCards = jobCards.filter(job => {
-    const statusMatch = filterStatus === 'ALL' || job.status === filterStatus;
+    // Handle ONE_DAY_SERVICE filter separately since it's a boolean flag
+    if (filterStatus === 'ONE_DAY_SERVICE') {
+      if (!job.oneDayService) return false;
+    } else {
+      const statusMatch = filterStatus === 'ALL' || job.status === filterStatus;
+      if (!statusMatch) return false;
+    }
+    
     const searchMatch = searchTerm === '' || 
       job.jobNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1360,7 +1367,7 @@ const JobCards = ({ onCreateNew }) => {
     const processorMatch = filterProcessor === '' || job.processor?.id === parseInt(filterProcessor);
     const conditionMatch = filterDeviceCondition === '' || job.deviceCondition?.id === parseInt(filterDeviceCondition);
 
-    return statusMatch && searchMatch && brandMatch && modelMatch && processorMatch && conditionMatch;
+    return searchMatch && brandMatch && modelMatch && processorMatch && conditionMatch;
   });
 
   // Get only the visible job cards (first N items)
@@ -1394,6 +1401,7 @@ const JobCards = ({ onCreateNew }) => {
         COMPLETED: 'bg-green-500 text-white shadow-md',
         DELIVERED: 'bg-indigo-500 text-white shadow-md',
         CANCELLED: 'bg-red-500 text-white shadow-md',
+        ONE_DAY_SERVICE: 'bg-red-600 text-white shadow-md',
       };
       return `${baseStyle} ${activeStyles[status]}`;
     }
@@ -1492,10 +1500,10 @@ const JobCards = ({ onCreateNew }) => {
         </div>
       </div>
 
-      {/* Status Filter Buttons - SIMPLIFIED WITH JUST NAMES */}
+      {/* Status Filter Buttons - INCLUDING ONE DAY SERVICE */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex flex-wrap gap-2">
-          {['ALL', 'PENDING', 'IN_PROGRESS', 'WAITING_FOR_PARTS', 'WAITING_FOR_APPROVAL', 'COMPLETED', 'DELIVERED', 'CANCELLED'].map(status => (
+          {['ALL', 'PENDING', 'IN_PROGRESS', 'WAITING_FOR_PARTS', 'WAITING_FOR_APPROVAL', 'COMPLETED', 'DELIVERED', 'CANCELLED', 'ONE_DAY_SERVICE'].map(status => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
@@ -1609,15 +1617,15 @@ const JobCards = ({ onCreateNew }) => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-blue-800">
             Showing {filteredJobCards.length} of {jobCards.length} job card{filteredJobCards.length !== 1 ? 's' : ''}
-            {filterStatus !== 'ALL' && ` with status "${filterStatus.replace(/_/g, ' ')}"`}
+            {filterStatus !== 'ALL' && ` with ${filterStatus === 'ONE_DAY_SERVICE' ? 'one day service' : `status "${filterStatus.replace(/_/g, ' ')}"`}`}
             {searchTerm && ` matching "${searchTerm}"`}
             {(filterBrand || filterModel || filterProcessor || filterDeviceCondition) && ' with selected filters'}
           </p>
         </div>
       )}
 
-      {/* One Day Service Summary */}
-      {filteredJobCards.some(job => job.oneDayService) && (
+      {/* One Day Service Summary - Only show when not already filtered by one day service */}
+      {filterStatus !== 'ONE_DAY_SERVICE' && filteredJobCards.some(job => job.oneDayService) && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center">
             <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
