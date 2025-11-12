@@ -3449,7 +3449,136 @@ public class JobCardService {
                         jobCard
                 );
             }
+
+            // Handle status change notifications for new statuses
+            if ((newStatus == JobStatus.WAITING_FOR_PARTS || newStatus == JobStatus.WAITING_FOR_APPROVAL)
+                    && oldStatus != newStatus) {
+                String priorityInfo = jobCard.getOneDayService() ? " 🚨 ONE DAY SERVICE" : "";
+                notificationService.sendNotification(
+                        NotificationType.JOB_STATUS_CHANGED,
+                        "Job status changed to " + newStatus + ": " + jobCard.getJobNumber() + priorityInfo,
+                        jobCard
+                );
+            }
         }
+    }
+
+    /**
+     * Mark job card as waiting for parts
+     */
+    @Transactional
+    public JobCard markWaitingForParts(Long id) {
+        JobCard jobCard = jobCardRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job card not found"));
+
+        if (jobCard.getStatus() == JobStatus.CANCELLED) {
+            throw new RuntimeException("Cannot update cancelled job card");
+        }
+
+        if (jobCard.getStatus() == JobStatus.WAITING_FOR_PARTS) {
+            throw new RuntimeException("Job card is already waiting for parts");
+        }
+
+        jobCard.markWaitingForParts();
+        JobCard saved = jobCardRepository.save(jobCard);
+
+        String priorityInfo = saved.getOneDayService() ? " 🚨 ONE DAY SERVICE" : "";
+        notificationService.sendNotification(
+                NotificationType.JOB_STATUS_CHANGED,
+                "Job card " + saved.getJobNumber() + " is waiting for parts" + priorityInfo,
+                saved
+        );
+
+        return saved;
+    }
+
+    /**
+     * Mark job card as waiting for approval
+     */
+    @Transactional
+    public JobCard markWaitingForApproval(Long id) {
+        JobCard jobCard = jobCardRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job card not found"));
+
+        if (jobCard.getStatus() == JobStatus.CANCELLED) {
+            throw new RuntimeException("Cannot update cancelled job card");
+        }
+
+        if (jobCard.getStatus() == JobStatus.WAITING_FOR_APPROVAL) {
+            throw new RuntimeException("Job card is already waiting for approval");
+        }
+
+        jobCard.markWaitingForApproval();
+        JobCard saved = jobCardRepository.save(jobCard);
+
+        String priorityInfo = saved.getOneDayService() ? " 🚨 ONE DAY SERVICE" : "";
+        notificationService.sendNotification(
+                NotificationType.JOB_STATUS_CHANGED,
+                "Job card " + saved.getJobNumber() + " is waiting for approval" + priorityInfo,
+                saved
+        );
+
+        return saved;
+    }
+
+    /**
+     * Mark job card as in progress
+     */
+    @Transactional
+    public JobCard markInProgress(Long id) {
+        JobCard jobCard = jobCardRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job card not found"));
+
+        if (jobCard.getStatus() == JobStatus.CANCELLED) {
+            throw new RuntimeException("Cannot update cancelled job card");
+        }
+
+        if (jobCard.getStatus() == JobStatus.IN_PROGRESS) {
+            throw new RuntimeException("Job card is already in progress");
+        }
+
+        jobCard.markInProgress();
+        JobCard saved = jobCardRepository.save(jobCard);
+
+        String priorityInfo = saved.getOneDayService() ? " 🚨 ONE DAY SERVICE" : "";
+        notificationService.sendNotification(
+                NotificationType.JOB_STATUS_CHANGED,
+                "Job card " + saved.getJobNumber() + " is back in progress" + priorityInfo,
+                saved
+        );
+
+        return saved;
+    }
+
+    /**
+     * Mark job card as pending
+     */
+    @Transactional
+    public JobCard markPending(Long id) {
+        JobCard jobCard = jobCardRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job card not found"));
+
+        if (jobCard.getStatus() == JobStatus.CANCELLED) {
+            throw new RuntimeException("Cannot update cancelled job card");
+        }
+
+        if (jobCard.getStatus() == JobStatus.PENDING) {
+            throw new RuntimeException("Job card is already pending");
+        }
+
+        jobCard.setStatus(JobStatus.PENDING);
+        jobCard.setUpdatedAt(LocalDateTime.now());
+
+        JobCard saved = jobCardRepository.save(jobCard);
+
+        String priorityInfo = saved.getOneDayService() ? " 🚨 ONE DAY SERVICE" : "";
+        notificationService.sendNotification(
+                NotificationType.JOB_STATUS_CHANGED,
+                "Job card " + saved.getJobNumber() + " marked as pending" + priorityInfo,
+                saved
+        );
+
+        return saved;
     }
 
     // Helper methods for loading related entities by ID
@@ -3756,9 +3885,67 @@ public class JobCardService {
     }
 
     /**
+     * Get job cards waiting for parts
+     */
+    public List<JobCard> getJobsWaitingForParts() {
+        return jobCardRepository.findByStatus(JobStatus.WAITING_FOR_PARTS);
+    }
+
+    /**
+     * Get job cards waiting for approval
+     */
+    public List<JobCard> getJobsWaitingForApproval() {
+        return jobCardRepository.findByStatus(JobStatus.WAITING_FOR_APPROVAL);
+    }
+
+    /**
      * Generate unique job number
      */
     private String generateJobNumber() {
         return "JOB-" + System.currentTimeMillis();
+    }
+
+    /**
+     * Get job card statistics
+     */
+    public JobCardStatistics getJobCardStatistics() {
+        Long total = jobCardRepository.count();
+        Long pending = jobCardRepository.countByStatus(JobStatus.PENDING);
+        Long inProgress = jobCardRepository.countByStatus(JobStatus.IN_PROGRESS);
+        Long waitingForParts = jobCardRepository.countByStatus(JobStatus.WAITING_FOR_PARTS);
+        Long waitingForApproval = jobCardRepository.countByStatus(JobStatus.WAITING_FOR_APPROVAL);
+        Long completed = jobCardRepository.countByStatus(JobStatus.COMPLETED);
+        Long delivered = jobCardRepository.countByStatus(JobStatus.DELIVERED);
+        Long cancelled = jobCardRepository.countByStatus(JobStatus.CANCELLED);
+
+        return new JobCardStatistics(total, pending, inProgress, waitingForParts,
+                waitingForApproval, completed, delivered, cancelled);
+    }
+
+    /**
+     * Statistics DTO
+     */
+    public static class JobCardStatistics {
+        public final Long total;
+        public final Long pending;
+        public final Long inProgress;
+        public final Long waitingForParts;
+        public final Long waitingForApproval;
+        public final Long completed;
+        public final Long delivered;
+        public final Long cancelled;
+
+        public JobCardStatistics(Long total, Long pending, Long inProgress,
+                                 Long waitingForParts, Long waitingForApproval,
+                                 Long completed, Long delivered, Long cancelled) {
+            this.total = total;
+            this.pending = pending;
+            this.inProgress = inProgress;
+            this.waitingForParts = waitingForParts;
+            this.waitingForApproval = waitingForApproval;
+            this.completed = completed;
+            this.delivered = delivered;
+            this.cancelled = cancelled;
+        }
     }
 }

@@ -592,6 +592,38 @@ public class JobCardController {
                     .body(new ErrorResponse(e.getMessage()));
         }
     }
+    @PostMapping("/{id}/waiting-for-parts")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<?> markWaitingForParts(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(jobCardService.markWaitingForParts(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/waiting-for-approval")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<?> markWaitingForApproval(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(jobCardService.markWaitingForApproval(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/in-progress")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<?> markInProgress(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(jobCardService.markInProgress(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
 
     @GetMapping("/by-number/{jobNumber}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")

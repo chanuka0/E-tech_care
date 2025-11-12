@@ -705,6 +705,21 @@ public class JobCard {
             faults.clear();
         }
     }
+    // Helper methods for status transitions
+    public void markWaitingForParts() {
+        this.status = JobStatus.WAITING_FOR_PARTS;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void markWaitingForApproval() {
+        this.status = JobStatus.WAITING_FOR_APPROVAL;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void markInProgress() {
+        this.status = JobStatus.IN_PROGRESS;
+        this.updatedAt = LocalDateTime.now();
+    }
 
     public void addServiceCategory(ServiceCategory serviceCategory) {
         if (serviceCategories == null) {
