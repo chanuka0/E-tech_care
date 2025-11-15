@@ -1655,7 +1655,7 @@ public class InvoiceService {
     private final StockMovementRepository stockMovementRepository;
     private final NotificationService notificationService;
     private final InventoryService inventoryService;
-    private final PaymentRepository paymentRepository; // NEW: Payment repository
+    private final PaymentRepository paymentRepository;
 
     @Transactional
     public Invoice createInvoice(Invoice invoice) {
@@ -1673,20 +1673,6 @@ public class InvoiceService {
         // Set payment status based on paid amount
         updatePaymentStatus(invoice);
 
-        // If paid amount > 0, set first payment date
-        if (invoice.getPaidAmount() != null && invoice.getPaidAmount() > 0) {
-            invoice.setFirstPaymentDate(LocalDateTime.now());
-            invoice.setLastPaymentDate(LocalDateTime.now());
-
-            // If fully paid, set fully paid date
-            if (invoice.getPaymentStatus() == PaymentStatus.PAID) {
-                invoice.setFullyPaidDate(LocalDateTime.now());
-            }
-
-            // Create payment record for initial payment
-            createPaymentRecord(invoice, invoice.getPaidAmount(), invoice.getPaymentMethod(), "Initial payment");
-        }
-
         // Validate serial numbers before creating invoice
         validateInvoiceSerials(invoice);
 
@@ -1694,43 +1680,77 @@ public class InvoiceService {
         if (invoice.getItems() != null) {
             for (InvoiceItem item : invoice.getItems()) {
                 item.setInvoice(invoice);
+            }
+        }
 
-                // Deduct inventory stock when invoice is created (for direct invoices only)
-                if (item.getInventoryItem() != null && invoice.getJobCard() == null) {
-                    deductInventoryForInvoiceItem(invoice, item);
+        // STEP 1: Save the invoice first (without payments) to get an ID
+        Invoice savedInvoice = invoiceRepository.save(invoice);
+
+        // STEP 2: Now create payment record if there's an initial payment
+        if (savedInvoice.getPaidAmount() != null && savedInvoice.getPaidAmount() > 0) {
+            savedInvoice.setFirstPaymentDate(LocalDateTime.now());
+            savedInvoice.setLastPaymentDate(LocalDateTime.now());
+
+            // If fully paid, set fully paid date
+            if (savedInvoice.getPaymentStatus() == PaymentStatus.PAID) {
+                savedInvoice.setFullyPaidDate(LocalDateTime.now());
+            }
+
+            // Create payment record for initial payment (invoice now has ID)
+            Payment payment = createPaymentRecord(savedInvoice, savedInvoice.getPaidAmount(),
+                    savedInvoice.getPaymentMethod(), "Initial payment");
+
+            // Add payment to invoice's payment list
+            if (savedInvoice.getPayments() == null) {
+                savedInvoice.setPayments(new ArrayList<>());
+            }
+            savedInvoice.getPayments().add(payment);
+
+            // Update the invoice with payment info
+            savedInvoice = invoiceRepository.save(savedInvoice);
+        }
+
+        // Deduct inventory stock when invoice is created (for direct invoices only)
+        if (savedInvoice.getItems() != null) {
+            for (InvoiceItem item : savedInvoice.getItems()) {
+                if (item.getInventoryItem() != null && savedInvoice.getJobCard() == null) {
+                    deductInventoryForInvoiceItem(savedInvoice, item);
                 }
             }
         }
 
-        Invoice saved = invoiceRepository.save(invoice);
-
         // If invoice is created as PAID (full payment upfront), process stock
-        if (saved.getPaymentStatus() == PaymentStatus.PAID) {
-            processStockForPaidInvoice(saved);
+        if (savedInvoice.getPaymentStatus() == PaymentStatus.PAID) {
+            processStockForPaidInvoice(savedInvoice);
         }
 
         // Update job card status if invoice is fully paid
-        if (saved.getJobCard() != null && saved.getPaymentStatus() == PaymentStatus.PAID) {
-            updateJobCardStatusToDelivered(saved.getJobCard().getId());
+        if (savedInvoice.getJobCard() != null && savedInvoice.getPaymentStatus() == PaymentStatus.PAID) {
+            updateJobCardStatusToDelivered(savedInvoice.getJobCard().getId());
         }
 
         notificationService.sendNotification(
                 NotificationType.INVOICE_CREATED,
-                "Invoice created: " + saved.getInvoiceNumber() +
-                        " | Amount: Rs." + saved.getTotal() +
-                        " | Status: " + saved.getPaymentStatus(),
-                saved
+                "Invoice created: " + savedInvoice.getInvoiceNumber() +
+                        " | Amount: Rs." + savedInvoice.getTotal() +
+                        " | Status: " + savedInvoice.getPaymentStatus(),
+                savedInvoice
         );
 
-        return saved;
+        return savedInvoice;
     }
 
     /**
      * Create payment record for tracking individual payments
      */
     private Payment createPaymentRecord(Invoice invoice, Double amount, PaymentMethod method, String notes) {
+        // Ensure invoice has been persisted and has an ID
+        if (invoice.getId() == null) {
+            throw new RuntimeException("Cannot create payment for unsaved invoice");
+        }
+
         Payment payment = new Payment();
-        payment.setInvoice(invoice);
+        payment.setInvoice(invoice); // This invoice should already be persisted
         payment.setAmount(amount);
         payment.setPaymentMethod(method);
         payment.setNotes(notes);
@@ -1796,7 +1816,13 @@ public class InvoiceService {
         updatePaymentStatus(invoice);
 
         // CREATE PAYMENT RECORD
-        createPaymentRecord(invoice, amount, method, "Payment received");
+        Payment payment = createPaymentRecord(invoice, amount, method, "Payment received");
+
+        // Add to invoice's payment list
+        if (invoice.getPayments() == null) {
+            invoice.setPayments(new ArrayList<>());
+        }
+        invoice.getPayments().add(payment);
 
         Invoice saved = invoiceRepository.save(invoice);
 
@@ -1832,7 +1858,8 @@ public class InvoiceService {
      * Get total paid amount from payment records (for verification)
      */
     public Double getVerifiedPaidAmount(Long invoiceId) {
-        return paymentRepository.getTotalPaidAmountByInvoiceId(invoiceId);
+        Double verifiedAmount = paymentRepository.getTotalPaidAmountByInvoiceId(invoiceId);
+        return verifiedAmount != null ? verifiedAmount : 0.0;
     }
 
     @Transactional
@@ -1894,9 +1921,22 @@ public class InvoiceService {
             // First payment
             invoice.setFirstPaymentDate(now);
             invoice.setLastPaymentDate(now);
+
+            // Create payment record for the initial payment
+            if (invoice.getId() != null) {
+                createPaymentRecord(invoice, invoice.getPaidAmount(),
+                        invoice.getPaymentMethod(), "Initial payment (via update)");
+            }
         } else if (invoice.getPaidAmount() > oldPaidAmount) {
             // Additional payment
             invoice.setLastPaymentDate(now);
+
+            // Create payment record for additional payment
+            if (invoice.getId() != null) {
+                Double additionalAmount = invoice.getPaidAmount() - oldPaidAmount;
+                createPaymentRecord(invoice, additionalAmount,
+                        invoice.getPaymentMethod(), "Additional payment (via update)");
+            }
         }
 
         // Check if fully paid
@@ -1906,8 +1946,6 @@ public class InvoiceService {
             invoice.setFullyPaidDate(null);
         }
     }
-
-    // ... [REST OF THE METHODS REMAIN THE SAME AS BEFORE - autoPopulateItemsFromJobCard, validateInvoiceSerials, etc.]
 
     /**
      * Auto-populate invoice items from job card used items with serial numbers

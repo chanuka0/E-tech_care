@@ -336,6 +336,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -361,7 +362,12 @@ public class Invoice {
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     @JsonManagedReference
-    private List<InvoiceItem> items;
+    private List<InvoiceItem> items = new ArrayList<>();
+
+    // NEW: Payment relationship
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<Payment> payments = new ArrayList<>();
 
     // NEW: Service categories total
     private Double serviceTotal = 0.0;
@@ -412,5 +418,8 @@ public class Invoice {
         if (total == null) total = 0.0;
         if (paidAmount == null) paidAmount = 0.0;
         if (balance == null) balance = 0.0;
+        if (paymentStatus == null) paymentStatus = PaymentStatus.UNPAID;
+        if (items == null) items = new ArrayList<>();
+        if (payments == null) payments = new ArrayList<>();
     }
 }
