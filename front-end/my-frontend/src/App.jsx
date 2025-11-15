@@ -148,7 +148,6 @@
 
 
 
-
 import { useState } from 'react';
 import AuthProvider, { useAuth } from './auth/AuthProvider';
 import LoginForm from './auth/LoginForm';
@@ -161,8 +160,8 @@ import InventoryManagement from './inventory/InventoryManagement';
 import InvoiceList from './invoices/InvoiceList';
 import Settings from './faults/Settings';
 import ExpenseManagement from './expenses/ExpenseManagement';
-//import ReportsDashboard from './inventory/ReportsDashboard'; // Your existing reports
-import StockReport from './inventory/StockReport'; // New stock report
+import StockReport from './inventory/StockReport';
+import IncomeExpenseReport from './faults/IncomeExpenseReport'; // NEW: Import the income/expenses report
 
 const MainContent = () => {
   const { user } = useAuth();
@@ -175,8 +174,9 @@ const MainContent = () => {
     inventory: { component: InventoryManagement, title: 'Inventory' },
     invoices: { component: InvoiceList, title: 'Invoices' },
     expenses: { component: ExpenseManagement, title: 'Expenses' },
-   // reports: { component: ReportsDashboard, title: 'Reports Dashboard' },
-    'stock-report': { component: StockReport, title: 'Stock In/Out Report' }, // NEW
+    reports: { component: Dashboard, title: 'Reports Dashboard' }, // You can create a dedicated reports dashboard later
+    'income-expense-report': { component: IncomeExpenseReport, title: 'Income vs Expenses Report' }, // NEW
+    'stock-report': { component: StockReport, title: 'Stock In/Out Report' },
     settings: { component: Settings, title: 'Settings' }
   };
 

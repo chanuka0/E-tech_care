@@ -2118,7 +2118,6 @@
 
 // export default JobCardCreate;
 
-
 import { useState, useEffect, useRef } from 'react';
 import { useApi } from '../services/apiService';
 import { BrowserMultiFormatReader } from '@zxing/browser';
@@ -2170,7 +2169,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
   });
 
   const deviceTypes = ['LAPTOP', 'DESKTOP', 'PRINTER', 'PROJECTOR', 'OTHER'];
-  const serialTypes = ['RAM_01_SERIAL', 'RAM_02_SERIAL', 'RAM_03_SERIAL', 'RAM_04_SERIAL', 'CPU_SERIAL', 'HDD_01_SERIAL', 'HDD_02_SERIAL', 'SSD_01_SERIAL', 'SSD_02_SERIAL', 'ADAPTOR_SERIAL', 'BATTERY_SERIAL'];
+  const serialTypes = ['RAM_01_SERIAL', 'RAM_02_SERIAL', 'RAM_03_SERIAL', 'RAM_04_SERIAL', 'HDD_01_SERIAL', 'HDD_02_SERIAL', 'SSD_01_SERIAL', 'SSD_02_SERIAL', 'ADAPTOR_SERIAL', 'BATTERY_SERIAL'];
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -2369,9 +2368,9 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
         deviceBarcode: ''
       }));
       setError('');
-      showSuccessMessage('Device barcode added successfully!');
+      showSuccessMessage('Device serial added successfully!');
     } else {
-      setError('Please enter or scan a device barcode');
+      setError('Please enter or scan a device serial');
     }
   };
 
@@ -2476,7 +2475,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     }
 
     if (formData.deviceBarcodes.length === 0) {
-      setError('At least one device barcode is required');
+      setError('At least one device Serial is required');
       setLoading(false);
       return;
     }
@@ -2671,27 +2670,9 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
                   ))}
                 </select>
               </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Device Condition
-                </label>
-                <select
-                  name="deviceConditionId"
-                  value={formData.deviceConditionId}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Condition</option>
-                  {deviceConditions.map(condition => (
-                    <option key={condition.id} value={condition.id}>{condition.conditionName}</option>
-                  ))}
-                </select>
-              </div>
             </div>
           </div>
 
-          {/* Rest of the form remains the same */}
           {/* One Day Service Toggle */}
           <div className="border-b border-gray-200 pb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -2767,7 +2748,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
           <div className="border-b border-gray-200 pb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full text-sm font-bold mr-2">1</span>
-              Device Barcode (PRIMARY)
+              Device Serial (PRIMARY)
             </h3>
             
             <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-lg">
@@ -3099,6 +3080,38 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* DEVICE CONDITION - MOVED AFTER SERVICES */}
+          <div className="border-b border-gray-200 pb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Device Condition Assessment
+            </h3>
+            
+            <div className="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-lg">
+              <div className="max-w-md">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Device Condition
+                </label>
+                <select
+                  name="deviceConditionId"
+                  value={formData.deviceConditionId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                >
+                  <option value="">Select Condition</option>
+                  {deviceConditions.map(condition => (
+                    <option key={condition.id} value={condition.id}>{condition.conditionName}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-yellow-600 mt-2">
+                  💡 Select the physical condition of the device after service assessment
+                </p>
+              </div>
             </div>
           </div>
 

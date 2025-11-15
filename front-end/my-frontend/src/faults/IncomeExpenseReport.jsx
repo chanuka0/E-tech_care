@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 
 const IncomeExpenseReport = () => {
   const { apiCall } = useApi();
@@ -32,11 +30,19 @@ const IncomeExpenseReport = () => {
     fetchReport(dateRange.startDate, dateRange.endDate);
   }, []);
 
-  const handleDateChange = (dates) => {
-    const [start, end] = dates;
-    setDateRange({ startDate: start, endDate: end });
-    if (start && end) {
-      fetchReport(start, end);
+  const handleStartDateChange = (e) => {
+    const newStartDate = new Date(e.target.value);
+    setDateRange(prev => ({ ...prev, startDate: newStartDate }));
+    if (newStartDate && dateRange.endDate) {
+      fetchReport(newStartDate, dateRange.endDate);
+    }
+  };
+
+  const handleEndDateChange = (e) => {
+    const newEndDate = new Date(e.target.value);
+    setDateRange(prev => ({ ...prev, endDate: newEndDate }));
+    if (dateRange.startDate && newEndDate) {
+      fetchReport(dateRange.startDate, newEndDate);
     }
   };
 
@@ -53,6 +59,10 @@ const IncomeExpenseReport = () => {
     start.setDate(end.getDate() - 30);
     setDateRange({ startDate: start, endDate: end });
     fetchReport(start, end);
+  };
+
+  const formatDateForInput = (date) => {
+    return date.toISOString().split('T')[0];
   };
 
   if (loading) {
@@ -84,19 +94,31 @@ const IncomeExpenseReport = () => {
         </div>
       </div>
 
-      {/* Date Picker */}
+      {/* Custom Date Picker */}
       <div className="bg-white p-4 rounded-lg shadow border">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select Date Range
         </label>
-        <DatePicker
-          selected={dateRange.startDate}
-          onChange={handleDateChange}
-          startDate={dateRange.startDate}
-          endDate={dateRange.endDate}
-          selectsRange
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <div className="flex space-x-4">
+          <div className="flex-1">
+            <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+            <input
+              type="date"
+              value={formatDateForInput(dateRange.startDate)}
+              onChange={handleStartDateChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-gray-500 mb-1">End Date</label>
+            <input
+              type="date"
+              value={formatDateForInput(dateRange.endDate)}
+              onChange={handleEndDateChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
       </div>
 
       {report && (
@@ -182,7 +204,7 @@ const IncomeExpenseReport = () => {
             </div>
           </div>
 
-          {/* Daily Breakdown Table */}
+          {/* Daily Breakdown */}
           <div className="bg-white rounded-lg shadow border overflow-hidden">
             <div className="px-6 py-4 border-b bg-gray-50">
               <h2 className="text-xl font-semibold text-gray-900">Daily Breakdown</h2>

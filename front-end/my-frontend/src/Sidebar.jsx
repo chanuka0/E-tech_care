@@ -176,7 +176,7 @@ import { useAuth } from './auth/AuthProvider';
 const Sidebar = ({ currentPage, onNavigate }) => {
   const { user, logout, isAdmin } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [reportsOpen, setReportsOpen] = useState(false); // NEW: For reports submenu
+  const [reportsOpen, setReportsOpen] = useState(false);
 
   const menuItems = [
     { 
@@ -224,7 +224,7 @@ const Sidebar = ({ currentPage, onNavigate }) => {
         </svg>
       )
     },
-    // NEW: Reports menu with submenu
+    // UPDATED: Reports menu with submenu including Income vs Expenses
     { 
       id: 'reports-menu',
       label: 'Reports',
@@ -235,7 +235,8 @@ const Sidebar = ({ currentPage, onNavigate }) => {
         </svg>
       ),
       submenu: [
-        { id: 'reports', label: 'Dashboard' },
+        { id: 'reports', label: 'Dashboard Reports' },
+        { id: 'income-expense-report', label: 'Income vs Expenses' },
         { id: 'stock-report', label: 'Stock In/Out' }
       ]
     },
@@ -297,7 +298,7 @@ const Sidebar = ({ currentPage, onNavigate }) => {
                     }
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
-                    (currentPage === 'reports' || currentPage === 'stock-report')
+                    (currentPage === 'reports' || currentPage === 'income-expense-report' || currentPage === 'stock-report')
                       ? 'bg-blue-600 shadow-lg'
                       : 'hover:bg-blue-700'
                   }`}
