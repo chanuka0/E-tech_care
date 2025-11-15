@@ -235,7 +235,7 @@ const Sidebar = ({ currentPage, onNavigate }) => {
         </svg>
       ),
       submenu: [
-        { id: 'reports', label: 'Dashboard Reports' },
+       // { id: 'reports', label: 'Dashboard Reports' },
         { id: 'income-expense-report', label: 'Income vs Expenses' },
         { id: 'stock-report', label: 'Stock In/Out' }
       ]
