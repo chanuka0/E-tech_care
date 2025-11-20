@@ -34,4 +34,7 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
 
     @Query("SELECT sm FROM StockMovement sm WHERE sm.inventoryItem.name LIKE %:search% OR sm.inventoryItem.sku LIKE %:search% OR sm.serialNumber LIKE %:search% OR sm.referenceNumber LIKE %:search%")
     List<StockMovement> searchMovements(@Param("search") String search);
+
+
+
 }
