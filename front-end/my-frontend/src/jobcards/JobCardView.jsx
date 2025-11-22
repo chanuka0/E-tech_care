@@ -2802,6 +2802,57 @@ const JobCardView = ({ jobCardId, onClose, onEdit, onStatusChange, onNavigate })
             </div>
           </div>
 
+          {/* Device Serials - MOVED HERE (After Device Information) */}
+          {deviceSerials.length > 0 && (
+            <div className="border-b border-gray-200 pb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Device Serial (PRIMARY)
+              </h2>
+              <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-lg">
+                <div className="space-y-2">
+                  {deviceSerials.map((serial, index) => (
+                    <div key={index} className="flex items-center justify-between bg-white p-3 rounded border-2 border-blue-400">
+                      <div className="flex items-center">
+                        <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded mr-3">DEVICE_SERIAL</span>
+                        <span className="text-gray-700 font-semibold text-lg">{serial.serialValue}</span>
+                      </div>
+                      <span className="text-blue-600 text-sm font-medium">🔹 Primary</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Other Serials - MOVED HERE (After Device Information) */}
+          {otherSerials.length > 0 && (
+            <div className="border-b border-gray-200 pb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+                Other Serials (IMEI, etc.)
+              </h2>
+              <div className="bg-purple-50 border-2 border-purple-300 p-4 rounded-lg">
+                <div className="space-y-2">
+                  {otherSerials.map((serial, index) => (
+                    <div key={index} className="flex items-center justify-between bg-white p-3 rounded border-2 border-purple-300">
+                      <div className="flex items-center">
+                        <span className={`px-2 py-1 text-xs font-bold rounded mr-3 ${getSerialTypeColor(serial.serialType)}`}>
+                          {serial.serialType}
+                        </span>
+                        <span className="text-gray-700 font-semibold">{serial.serialValue}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* One Day Service Information */}
           {jobCard.oneDayService && (
             <div className="border-b border-gray-200 pb-6">
@@ -2824,6 +2875,27 @@ const JobCardView = ({ jobCardId, onClose, onEdit, onStatusChange, onNavigate })
                       This job is prioritized for 24-hour completion. Urgent attention required!
                     </p>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Device Conditions */}
+          {jobCard.deviceConditions && jobCard.deviceConditions.length > 0 && (
+            <div className="border-b border-gray-200 pb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Device Conditions ({jobCard.deviceConditions.length})
+              </h2>
+              <div className="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-lg">
+                <div className="flex flex-wrap gap-2">
+                  {jobCard.deviceConditions.map(condition => (
+                    <div key={condition.id} className="flex items-center gap-2 bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full">
+                      <span className="font-medium">{condition.conditionName}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -2889,63 +2961,12 @@ const JobCardView = ({ jobCardId, onClose, onEdit, onStatusChange, onNavigate })
             </div>
           )}
 
-          {/* Device Serials */}
-          {deviceSerials.length > 0 && (
-            <div className="border-b border-gray-200 pb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Device Serial (PRIMARY)
-              </h2>
-              <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-lg">
-                <div className="space-y-2">
-                  {deviceSerials.map((serial, index) => (
-                    <div key={index} className="flex items-center justify-between bg-white p-3 rounded border-2 border-blue-400">
-                      <div className="flex items-center">
-                        <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded mr-3">DEVICE_SERIAL</span>
-                        <span className="text-gray-700 font-semibold text-lg">{serial.serialValue}</span>
-                      </div>
-                      <span className="text-blue-600 text-sm font-medium">🔹 Primary</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Other Serials */}
-          {otherSerials.length > 0 && (
-            <div className="border-b border-gray-200 pb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                <svg className="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                </svg>
-                Other Serials (IMEI, etc.)
-              </h2>
-              <div className="bg-purple-50 border-2 border-purple-300 p-4 rounded-lg">
-                <div className="space-y-2">
-                  {otherSerials.map((serial, index) => (
-                    <div key={index} className="flex items-center justify-between bg-white p-3 rounded border-2 border-purple-300">
-                      <div className="flex items-center">
-                        <span className={`px-2 py-1 text-xs font-bold rounded mr-3 ${getSerialTypeColor(serial.serialType)}`}>
-                          {serial.serialType}
-                        </span>
-                        <span className="text-gray-700 font-semibold">{serial.serialValue}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Used Items / Parts */}
           {jobCard.usedItems && jobCard.usedItems.length > 0 && (
             <div className="border-b border-gray-200 pb-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                 <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M8 15h8" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
                 Used Items / Parts ({jobCard.usedItems.length})
               </h2>
