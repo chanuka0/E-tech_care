@@ -1617,7 +1617,7 @@ const Dashboard = ({ onNavigate }) => {
       const jobDate = new Date(job.createdAt);
       return jobDate >= startOfMonth;
     });
-
+//
     // Count by status
     const pendingJobs = jobCards.filter(job => job.status === 'PENDING').length;
     const inProgressJobs = jobCards.filter(job => job.status === 'IN_PROGRESS').length;
