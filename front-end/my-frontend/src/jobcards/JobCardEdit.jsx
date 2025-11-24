@@ -1,6 +1,5 @@
 
 
-
 // import { useState, useEffect } from 'react';
 // import { useApi } from '../services/apiService';
 // import CancelOrderModal from './CancelOrderModal';
@@ -27,7 +26,7 @@
 //     brandId: '',
 //     modelId: '',
 //     processorId: '',
-//     deviceConditionId: '',
+//     deviceConditionIds: [],
 //     faultDescription: '',
 //     notes: '',
 //     advancePayment: 0,
@@ -42,12 +41,11 @@
 //   const [originalData, setOriginalData] = useState(null);
 
 //   const deviceTypes = ['LAPTOP', 'DESKTOP', 'PRINTER', 'PROJECTOR'];
-//   // UPDATED: Include new statuses
 //   const statusOptions = [
 //     'PENDING', 
 //     'IN_PROGRESS', 
-//     'WAITING_FOR_PARTS',      // NEW
-//     'WAITING_FOR_APPROVAL',   // NEW
+//     'WAITING_FOR_PARTS',
+//     'WAITING_FOR_APPROVAL',
 //     'COMPLETED', 
 //     'DELIVERED'
 //   ];
@@ -86,9 +84,11 @@
 //         setFetchLoading(true);
 //         const data = await apiCall(`/api/jobcards/${jobCardId}`);
         
-//         // Extract fault IDs and service objects
+//         console.log('Fetched job card data:', data);
+        
 //         const faultIds = data.faults?.map(f => f.id) || [];
 //         const serviceObjs = data.serviceCategories || [];
+//         const deviceConditionIds = data.deviceConditions?.map(dc => dc.id) || [];
 
 //         setFormData({
 //           customerName: data.customerName || '',
@@ -98,7 +98,7 @@
 //           brandId: data.brand?.id || '',
 //           modelId: data.model?.id || '',
 //           processorId: data.processor?.id || '',
-//           deviceConditionId: data.deviceCondition?.id || '',
+//           deviceConditionIds: deviceConditionIds,
 //           faultDescription: data.faultDescription || '',
 //           notes: data.notes || '',
 //           advancePayment: data.advancePayment || 0,
@@ -115,6 +115,7 @@
 //         setOriginalData(data);
 //       } catch (err) {
 //         setError('Failed to load job card');
+//         console.error('Error fetching job card:', err);
 //       } finally {
 //         setFetchLoading(false);
 //       }
@@ -133,7 +134,6 @@
 //     }));
 //   };
 
-//   // Handle oneDayService toggle separately
 //   const handleOneDayServiceToggle = (checked) => {
 //     setFormData(prev => ({
 //       ...prev,
@@ -195,11 +195,37 @@
 //     }));
 //   };
 
+//   // DEVICE CONDITION MANAGEMENT
+//   const addDeviceCondition = (conditionId) => {
+//     if (!conditionId) {
+//       setError('Please select a device condition');
+//       return;
+//     }
+    
+//     if (formData.deviceConditionIds.includes(parseInt(conditionId))) {
+//       setError('This device condition is already selected');
+//       return;
+//     }
+
+//     setFormData(prev => ({
+//       ...prev,
+//       deviceConditionIds: [...prev.deviceConditionIds, parseInt(conditionId)]
+//     }));
+//     setError('');
+//   };
+
+//   const removeDeviceCondition = (conditionId) => {
+//     setFormData(prev => ({
+//       ...prev,
+//       deviceConditionIds: prev.deviceConditionIds.filter(id => id !== conditionId)
+//     }));
+//   };
+
 //   const calculateTotalServicePrice = () => {
 //     return formData.selectedServices.reduce((sum, service) => sum + (service.servicePrice || 0), 0);
 //   };
 
-//   // UPDATED: addUsedItem with serial number support
+//   // USED ITEMS MANAGEMENT
 //   const addUsedItem = (itemId, quantity, serialNumbers = []) => {
 //     if (!itemId || !quantity) {
 //       setError('Please select item and quantity');
@@ -212,7 +238,6 @@
 //       return;
 //     }
 
-//     // For serialized items, validate serial numbers
 //     if (item.hasSerialization) {
 //       if (serialNumbers.length === 0) {
 //         setError('Please select serial numbers for this item');
@@ -223,7 +248,6 @@
 //         return;
 //       }
 //     } else {
-//       // For non-serialized items, check stock
 //       if (parseInt(quantity) > item.quantity) {
 //         setError(`Only ${item.quantity} available in stock`);
 //         return;
@@ -235,7 +259,7 @@
 //       inventoryItem: item,
 //       quantityUsed: parseInt(quantity),
 //       unitPrice: item.sellingPrice,
-//       usedSerialNumbers: serialNumbers // Add serial numbers to the item
+//       usedSerialNumbers: serialNumbers
 //     };
 
 //     setFormData(prev => ({
@@ -263,26 +287,13 @@
 //       return;
 //     }
 
-//     if (formData.selectedFaults.length === 0) {
-//       setError('Please select at least one fault');
-//       setLoading(false);
-//       return;
-//     }
-
-//     if (formData.selectedServices.length === 0) {
-//       setError('Please select at least one service');
-//       setLoading(false);
-//       return;
-//     }
-
-//     if (!formData.faultDescription.trim()) {
-//       setError('Fault description is required');
+//     if (!formData.customerPhone.trim()) {
+//       setError('Customer phone is required');
 //       setLoading(false);
 //       return;
 //     }
 
 //     try {
-//       // Format used items for the API - UPDATED to match DTO
 //       const usedItems = formData.usedItems.map(item => ({
 //         id: item.id || null,
 //         inventoryItemId: item.inventoryItem.id,
@@ -291,7 +302,6 @@
 //         usedSerialNumbers: item.usedSerialNumbers || []
 //       }));
 
-//       // UPDATED: Use DTO structure to avoid detached entity issues
 //       const payload = {
 //         customerName: formData.customerName,
 //         customerPhone: formData.customerPhone,
@@ -300,7 +310,7 @@
 //         brandId: formData.brandId ? parseInt(formData.brandId) : null,
 //         modelId: formData.modelId ? parseInt(formData.modelId) : null,
 //         processorId: formData.processorId ? parseInt(formData.processorId) : null,
-//         deviceConditionId: formData.deviceConditionId ? parseInt(formData.deviceConditionId) : null,
+//         deviceConditionIds: formData.deviceConditionIds,
 //         faultIds: formData.selectedFaults,
 //         serviceCategoryIds: formData.selectedServices.map(s => s.id),
 //         faultDescription: formData.faultDescription,
@@ -311,6 +321,8 @@
 //         usedItems: usedItems,
 //         oneDayService: formData.oneDayService
 //       };
+
+//       console.log('Sending payload:', payload);
 
 //       const response = await apiCall(`/api/jobcards/${jobCardId}`, {
 //         method: 'PUT',
@@ -481,21 +493,6 @@
 //                   ))}
 //                 </select>
 //               </div>
-
-//               <div className="md:col-span-2">
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">Device Condition</label>
-//                 <select
-//                   name="deviceConditionId"
-//                   value={formData.deviceConditionId}
-//                   onChange={handleChange}
-//                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//                 >
-//                   <option value="">Select Condition</option>
-//                   {deviceConditions.map(condition => (
-//                     <option key={condition.id} value={condition.id}>{condition.conditionName}</option>
-//                   ))}
-//                 </select>
-//               </div>
 //             </div>
 //           </div>
 
@@ -537,31 +534,6 @@
 //                 </button>
 //               </div>
 //             </div>
-            
-//             {/* Status Help Text */}
-//             {formData.status === 'WAITING_FOR_PARTS' && (
-//               <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-//                 <p className="text-sm text-orange-800">
-//                   ⏳ This job is paused waiting for parts. Update when parts arrive.
-//                 </p>
-//               </div>
-//             )}
-            
-//             {formData.status === 'WAITING_FOR_APPROVAL' && (
-//               <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-//                 <p className="text-sm text-purple-800">
-//                   👥 This job is paused waiting for customer approval. Contact customer for confirmation.
-//                 </p>
-//               </div>
-//             )}
-            
-//             {formData.status === 'COMPLETED' && (
-//               <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-//                 <p className="text-sm text-green-800">
-//                   ℹ️ Marking as COMPLETED will record the completion timestamp.
-//                 </p>
-//               </div>
-//             )}
 //           </div>
 
 //           {/* One Day Service Toggle */}
@@ -589,30 +561,53 @@
 //                 <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-yellow-600"></div>
 //               </label>
 //             </div>
-            
-//             {formData.oneDayService && (
-//               <div className="mt-3 p-3 bg-yellow-100 border border-yellow-400 rounded-lg">
-//                 <div className="flex items-center">
-//                   <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-//                   </svg>
-//                   <span className="text-sm font-medium text-yellow-800">
-//                     🚨 One Day Service Enabled - This job will be prioritized for 24-hour completion
-//                   </span>
-//                 </div>
-//               </div>
-//             )}
 //           </div>
 
-//           {/* FAULTS SECTION */}
+//           {/* Device Condition */}
 //           <div className="border-b border-gray-200 pb-6">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-//               <svg className="w-6 h-6 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-//               </svg>
-//               Select Faults <span className="text-red-500">*</span>
-//             </h3>
-            
+//             <h3 className="text-lg font-semibold text-gray-900 mb-4">Device Condition (Multiple)</h3>
+//             <div className="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-lg">
+//               <div className="mb-4">
+//                 <label className="block text-sm font-medium text-gray-700 mb-2">Add Device Condition</label>
+//                 <select
+//                   onChange={(e) => addDeviceCondition(e.target.value)}
+//                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+//                 >
+//                   <option value="">-- Select a device condition --</option>
+//                   {deviceConditions.map(condition => (
+//                     <option key={condition.id} value={condition.id}>{condition.conditionName}</option>
+//                   ))}
+//                 </select>
+//               </div>
+
+//               {formData.deviceConditionIds.length > 0 && (
+//                 <div>
+//                   <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Device Conditions:</h4>
+//                   <div className="flex flex-wrap gap-2">
+//                     {formData.deviceConditionIds.map(conditionId => {
+//                       const condition = deviceConditions.find(c => c.id === conditionId);
+//                       return (
+//                         <div key={conditionId} className="flex items-center gap-2 bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full">
+//                           <span className="font-medium">{condition?.conditionName}</span>
+//                           <button
+//                             type="button"
+//                             onClick={() => removeDeviceCondition(conditionId)}
+//                             className="text-yellow-600 hover:text-yellow-900 font-bold"
+//                           >
+//                             ✕
+//                           </button>
+//                         </div>
+//                       );
+//                     })}
+//                   </div>
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+
+//           {/* Faults Section */}
+//           <div className="border-b border-gray-200 pb-6">
+//             <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Faults (Optional)</h3>
 //             <div className="bg-red-50 border-2 border-red-300 p-4 rounded-lg">
 //               <div className="mb-4">
 //                 <label className="block text-sm font-medium text-gray-700 mb-2">Add Fault Type</label>
@@ -620,7 +615,7 @@
 //                   onChange={(e) => addFault(e.target.value)}
 //                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
 //                 >
-//                   <option value="">-- Select a fault --</option>
+//                   <option value="">-- Select a fault (Optional) --</option>
 //                   {faults.map(fault => (
 //                     <option key={fault.id} value={fault.id}>
 //                       {fault.faultName}
@@ -654,15 +649,9 @@
 //             </div>
 //           </div>
 
-//           {/* SERVICES SECTION */}
+//           {/* Services Section */}
 //           <div className="border-b border-gray-200 pb-6">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-//               <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-//               </svg>
-//               Select Services <span className="text-red-500">*</span>
-//             </h3>
-            
+//             <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Services (Optional)</h3>
 //             <div className="bg-green-50 border-2 border-green-300 p-4 rounded-lg">
 //               <div className="mb-4">
 //                 <label className="block text-sm font-medium text-gray-700 mb-2">Add Service</label>
@@ -670,7 +659,7 @@
 //                   onChange={(e) => addService(e.target.value)}
 //                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
 //                 >
-//                   <option value="">-- Select a service --</option>
+//                   <option value="">-- Select a service (Optional) --</option>
 //                   {services.map(service => (
 //                     <option key={service.id} value={service.id}>
 //                       {service.name} - Rs.{service.servicePrice?.toFixed(2) || '0.00'}
@@ -712,21 +701,21 @@
 //             </div>
 //           </div>
 
-//           {/* Service Details - Fault List & Notes */}
+//           {/* Service Details */}
 //           <div className="border-b border-gray-200 pb-6">
 //             <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Details</h3>
 //             <div className="space-y-4">
 //               <div>
 //                 <label className="block text-sm font-medium text-gray-700 mb-2">
-//                   Fault Description <span className="text-red-500">*</span>
+//                   Fault Description (Optional)
 //                 </label>
 //                 <textarea
 //                   name="faultDescription"
 //                   value={formData.faultDescription}
 //                   onChange={handleChange}
 //                   rows="3"
+//                   placeholder="Detailed description of the fault (optional)..."
 //                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//                   required
 //                 />
 //               </div>
 
@@ -745,7 +734,7 @@
 //             </div>
 //           </div>
 
-//           {/* Used Items (Parts) - UPDATED WITH SERIAL NUMBER SUPPORT */}
+//           {/* Used Items */}
 //           <div className="border-b border-gray-200 pb-6">
 //             <h3 className="text-lg font-semibold text-gray-900 mb-4">Used Items / Parts</h3>
 //             <UsedItemsSection
@@ -792,24 +781,6 @@
 //             </div>
 //           </div>
 
-//           {/* Serial Numbers Display */}
-//           {originalData?.serials && originalData.serials.length > 0 && (
-//             <div className="pb-6">
-//               <h3 className="text-lg font-semibold text-gray-900 mb-4">Serial Numbers</h3>
-//               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-//                 {originalData.serials.map((serial, index) => (
-//                   <div key={index} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
-//                     <div>
-//                       <span className="font-medium text-gray-900">{serial.serialType}:</span>
-//                       <span className="ml-2 text-gray-700">{serial.serialValue}</span>
-//                     </div>
-//                     <span className="text-xs text-gray-500">Read-only</span>
-//                   </div>
-//                 ))}
-//               </div>
-//             </div>
-//           )}
-
 //           {/* Form Actions */}
 //           <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
 //             {onCancel && (
@@ -847,7 +818,7 @@
 //   );
 // };
 
-// // UPDATED: UsedItemsSection Component with Serial Number Support and Search/Scanner
+// // COMPLETE UsedItemsSection Component
 // const UsedItemsSection = ({ items, usedItems, onAdd, onRemove }) => {
 //   const { apiCall } = useApi();
 //   const [selectedItem, setSelectedItem] = useState('');
@@ -905,14 +876,12 @@
 //     );
 
 //     if (serial) {
-//       // If serial is not already selected, select it
 //       if (!selectedSerials.includes(serial.serialNumber)) {
 //         if (selectedSerials.length < parseInt(quantity) || !quantity) {
 //           setSelectedSerials(prev => [...prev, serial.serialNumber]);
 //         }
 //       }
 //     }
-//     // Clear barcode input after processing
 //     setTimeout(() => setBarcodeInput(''), 100);
 //   };
 
@@ -930,7 +899,6 @@
 //       return;
 //     }
 
-//     // Validate serial numbers for serialized items
 //     if (selectedItemData?.hasSerialization) {
 //       if (selectedSerials.length === 0) {
 //         alert('Please select at least one serial number for this item');
@@ -951,13 +919,10 @@
 //     setBarcodeInput('');
 //   };
 
-//   // Select all/deselect all functionality
 //   const toggleSelectAll = () => {
 //     if (selectedSerials.length === filteredSerials.length) {
-//       // Deselect all
 //       setSelectedSerials([]);
 //     } else {
-//       // Select all available filtered serials
 //       const maxSelectable = parseInt(quantity) || filteredSerials.length;
 //       const serialsToSelect = filteredSerials.slice(0, maxSelectable).map(s => s.serialNumber);
 //       setSelectedSerials(serialsToSelect);
@@ -1030,11 +995,10 @@
 //           </div>
 //         )}
 
-//         {/* Serial Number Selection for Serialized Items */}
+//         {/* Serial Number Selection */}
 //         {selectedItemData?.hasSerialization && availableSerials.length > 0 && (
 //           <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
 //             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-//               {/* Serial Search Bar */}
 //               <div>
 //                 <label className="block text-xs font-medium text-yellow-700 mb-1">
 //                   Search Serial Numbers
@@ -1058,7 +1022,6 @@
 //                 </div>
 //               </div>
 
-//               {/* Barcode Scanner Input */}
 //               <div>
 //                 <label className="block text-xs font-medium text-yellow-700 mb-1">
 //                   Barcode Scanner
@@ -1078,7 +1041,6 @@
 //               </div>
 //             </div>
 
-//             {/* Serial Numbers List Header */}
 //             <div className="flex items-center justify-between mb-2">
 //               <label className="block text-xs font-medium text-yellow-700">
 //                 Available Serial Numbers ({selectedSerials.length} selected of {quantity || 0} required)
@@ -1094,7 +1056,6 @@
 //               )}
 //             </div>
 
-//             {/* Serial Numbers List */}
 //             <div className="max-h-40 overflow-y-auto space-y-2 border border-yellow-200 rounded bg-white p-2">
 //               {loadingSerials ? (
 //                 <div className="text-center py-2">
@@ -1131,7 +1092,6 @@
 //               )}
 //             </div>
 
-//             {/* Selected Serials Summary */}
 //             {selectedSerials.length > 0 && (
 //               <div className="mt-3 p-2 bg-green-50 rounded border border-green-200">
 //                 <div className="flex justify-between items-center">
@@ -1166,7 +1126,6 @@
 //               </div>
 //             )}
 
-//             {/* Selection Help Text */}
 //             {selectedItemData?.hasSerialization && quantity && (
 //               <div className="mt-2 text-xs text-yellow-600">
 //                 💡 Select exactly {quantity} serial number(s). Use search or barcode scanner for quick selection.
@@ -1211,7 +1170,6 @@
 //                   </button>
 //                 </div>
                 
-//                 {/* Show used serial numbers */}
 //                 {item.usedSerialNumbers && item.usedSerialNumbers.length > 0 && (
 //                   <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
 //                     <p className="text-xs text-blue-700 font-medium mb-1">Serial Numbers Used:</p>
@@ -1239,6 +1197,8 @@
 // };
 
 // export default JobCardEdit;
+
+
 
 import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
@@ -2101,29 +2061,24 @@ const UsedItemsSection = ({ items, usedItems, onAdd, onRemove }) => {
     fetchAvailableSerials();
   }, [selectedItemData]);
 
-  // Handle barcode scanner input
+  // Handle barcode scanner input - ONLY populate text field
   useEffect(() => {
     if (barcodeInput && selectedItemData?.hasSerialization) {
-      handleBarcodeScan(barcodeInput);
-    }
-  }, [barcodeInput]);
+      // ONLY add to selectedSerials state, don't auto-update job card
+      const serial = availableSerials.find(s => 
+        s.serialNumber === barcodeInput.trim()
+      );
 
-  const handleBarcodeScan = (barcode) => {
-    if (!selectedItemData?.hasSerialization) return;
-
-    const serial = availableSerials.find(s => 
-      s.serialNumber === barcode.trim()
-    );
-
-    if (serial) {
-      if (!selectedSerials.includes(serial.serialNumber)) {
-        if (selectedSerials.length < parseInt(quantity) || !quantity) {
-          setSelectedSerials(prev => [...prev, serial.serialNumber]);
+      if (serial) {
+        if (!selectedSerials.includes(serial.serialNumber)) {
+          if (selectedSerials.length < parseInt(quantity) || !quantity) {
+            setSelectedSerials(prev => [...prev, serial.serialNumber]);
+          }
         }
       }
+      setTimeout(() => setBarcodeInput(''), 100);
     }
-    setTimeout(() => setBarcodeInput(''), 100);
-  };
+  }, [barcodeInput]);
 
   const handleSerialSelection = (serialNumber, isSelected) => {
     if (isSelected) {
