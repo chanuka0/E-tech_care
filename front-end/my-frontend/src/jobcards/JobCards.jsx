@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
 import JobCardEdit from './JobCardEdit';
 import JobCardView from './JobCardView';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 const JobCards = ({ onCreateNew }) => {
   const { apiCall } = useApi();
@@ -598,6 +600,16 @@ const JobCards = ({ onCreateNew }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
+            {/* ........................................................................................................*/}
+            <button 
+              onClick={() => downloadJobCardPDF(job)}
+              className="text-indigo-600 hover:text-indigo-900 transition-colors px-2 py-1 rounded hover:bg-indigo-50"
+              title="Download Job Card"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </button>
           </div>
         )}
 
@@ -633,6 +645,7 @@ const JobCards = ({ onCreateNew }) => {
               >
                 Create Your First Job Card
               </button>
+              
             )}
           </div>
         )}

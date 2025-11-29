@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
 import CancelOrderModal from './CancelOrderModal';
 import CreateInvoiceModal from "../invoices/CreateInvoiceModal";
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
+
+
+const COMPANY_LOGO_BASE64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAQDAwQDAwQEAwQFBAQFBgoHBgYGBg0JCggKDw0QEA8NDw4RExgUERIXEg4PFRwVFxkZGxsbEBQdHx0aHxgaGxr/2wBDAQQFBQYFBgwHBwwaEQ8RGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhr/wAARCABlAKoDASIAAhEBAxEB/8QAHQAAAgIDAQEBAAAAAAAAAAAAAAgGBwMEBQECCf/EAEsQAAEDAwMABQYHDQYGAwAAAAERAAMABAUGEQcSIhMUITEyQVFSYXGBkQgWJDVCVJGSk6Gx0hczNlVicnOCssJDV4Oiw9Hh/8QAGgEAAwEBAQEAAAAAAAAAAAAAAAQFAwIGAP/EADgRAAEDAgIHBAkCBwAAAAAAAAIAAQMEEgURExQhIjFBUTJSkZIVQmFicXKBoeGxwSMkM0NTorL/2gAMAwEAAhEDEQA/AH4f8Ce9WvWw/wCBPerXoQiiihEIvDQhFFe8SH1a8oQiiiihCKKKKEIooooQiiiihCKKKEHl4aFQh8VCEUUUUIRRRRQhFFFFCEUUUUIRRRRQhFFFFCEUUUUIRRRRQhFFFFCEUUUUIX//2Q==';
+
 
 const JobCardView = ({ jobCardId, onClose, onEdit, onStatusChange, onNavigate }) => {
   const { apiCall } = useApi();
@@ -30,6 +36,774 @@ const JobCardView = ({ jobCardId, onClose, onEdit, onStatusChange, onNavigate })
       fetchJobCard();
     }
   }, [jobCardId]);
+
+const downloadJobCard = () => {
+  try {
+    const jobCardHTML = generateJobCardHTML();
+    const printWindow = window.open('', '_blank');
+    
+    if (!printWindow) {
+      alert('Please allow pop-ups to print the job card');
+      return;
+    }
+    
+    printWindow.document.write(jobCardHTML);
+    printWindow.document.close();
+    
+    // Wait for content to fully load before printing
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 500);
+  } catch (error) {
+    console.error('Error printing job card:', error);
+    alert('Error printing job card: ' + error.message);
+  }
+};
+
+const exportJobCardPDF = () => {
+  try {
+    const jobCardHTML = generateJobCardHTML();
+    const printWindow = window.open('', '_blank');
+    
+    if (!printWindow) {
+      alert('Please allow pop-ups to download the job card');
+      return;
+    }
+    
+    printWindow.document.write(jobCardHTML);
+    printWindow.document.close();
+    
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      // Close after print dialog closes
+      printWindow.onafterprint = () => {
+        printWindow.close();
+      };
+    }, 500);
+  } catch (error) {
+    console.error('Error exporting job card PDF:', error);
+    alert('Error exporting job card: ' + error.message);
+  }
+};
+
+const generateJobCardHTML = () => {
+  if (!jobCard) return '';
+
+  // Get only DEVICE_SERIAL
+  const deviceSerial = (jobCard.serials || []).find(s => s.serialType === 'DEVICE_SERIAL');
+
+  return `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+  <meta charset="UTF-8">
+  <title>E-TechCare Job Card (A5)</title>
+  <style>
+      @page {
+          size: A5;
+          margin: 10mm;
+      }
+      body {
+          font-family: Arial, sans-serif;
+          font-size: 11px;
+          margin: 0;
+          padding: 0;
+          color: #000;
+      }
+
+      /* HEADER */
+      .header {
+          border-bottom: 2px solid #000;
+          padding-bottom: 8px;
+          margin-bottom: 10px;
+      }
+      .company-name {
+          font-size: 24px;
+          font-weight: 900;
+          margin: 0;
+          padding: 0;
+      }
+      .company-contact {
+          font-size: 9px;
+          margin: 2px 0;
+          padding: 0;
+      }
+
+      /* TITLE */
+      .title {
+          text-align: center;
+          font-size: 16px;
+          font-weight: bold;
+          margin: 8px 0;
+          text-decoration: underline;
+      }
+
+      /* JOB DETAILS */
+      .job-details {
+          margin-bottom: 8px;
+          line-height: 1.4;
+      }
+      .detail-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 3px;
+      }
+      .detail-label {
+          font-weight: bold;
+          width: 40%;
+      }
+      .detail-value {
+          width: 60%;
+      }
+
+      /* SECTION HEADER */
+      .section-header {
+          background-color: #e8e8e8;
+          font-weight: bold;
+          padding: 4px 6px;
+          margin: 8px 0 4px 0;
+          font-size: 10px;
+          border-bottom: 1px solid #000;
+      }
+
+      /* CONTENT SECTION */
+      .section-content {
+          margin-bottom: 6px;
+          line-height: 1.3;
+      }
+
+      .badge {
+          display: inline-block;
+          background-color: #ffebee;
+          color: #c62828;
+          padding: 2px 6px;
+          border-radius: 3px;
+          font-size: 9px;
+          font-weight: bold;
+          margin-top: 2px;
+      }
+
+      /* SERVICES LIST */
+      .services-list {
+          margin-bottom: 6px;
+      }
+      .service-item {
+          padding: 3px 0;
+          border-bottom: 0.5px solid #ccc;
+          font-size: 10px;
+      }
+
+      /* DEVICE INFO */
+      .device-info {
+          background-color: #f9f9f9;
+          padding: 4px;
+          border: 0.5px solid #ccc;
+          margin-bottom: 6px;
+          font-size: 10px;
+      }
+
+      /* SERIAL */
+      .serial-box {
+          background-color: #e3f2fd;
+          border: 1px solid #1976d2;
+          padding: 4px;
+          margin-bottom: 6px;
+          font-size: 10px;
+      }
+      .serial-label {
+          font-weight: bold;
+          color: #1565c0;
+      }
+      .serial-value {
+          font-size: 11px;
+          font-weight: bold;
+          margin-top: 2px;
+      }
+
+      /* PAYMENT BOX */
+      .payment-box {
+          background-color: #e8f5e9;
+          border: 1px solid #388e3c;
+          padding: 4px;
+          margin: 6px 0;
+          font-size: 10px;
+      }
+      .payment-row {
+          display: flex;
+          justify-content: space-between;
+          margin: 2px 0;
+      }
+      .payment-label {
+          font-weight: bold;
+      }
+      .payment-value {
+          text-align: right;
+      }
+
+      /* FAULTS/CONDITIONS */
+      .fault-item, .condition-item {
+          padding: 2px 0;
+          font-size: 10px;
+          border-bottom: 0.5px solid #eee;
+      }
+
+      /* NOTES */
+      .notes-box {
+          background-color: #fffde7;
+          border: 0.5px solid #f9a825;
+          padding: 4px;
+          font-size: 9px;
+          line-height: 1.3;
+          max-height: 60px;
+          overflow: hidden;
+      }
+  </style>
+  </head>
+  <body>
+
+  <!-- HEADER -->
+  <div class="header">
+      <p class="company-name">E-TECHCARE</p>
+      <p class="company-contact"><b>TEL:</b> 076 795 7125 | <b>EMAIL:</b> etechcarelh@gmail.com</p>
+  </div>
+
+  <div class="title">JOB CARD</div>
+
+  <!-- JOB DETAILS -->
+  <div class="job-details">
+      <div class="detail-row">
+          <span class="detail-label"><b>JOB #:</b></span>
+          <span class="detail-value">${jobCard.jobNumber}</span>
+      </div>
+      <div class="detail-row">
+          <span class="detail-label"><b>DATE:</b></span>
+          <span class="detail-value">${new Date(jobCard.createdAt).toLocaleDateString()}</span>
+      </div>
+      <div class="detail-row">
+          <span class="detail-label"><b>STATUS:</b></span>
+          <span class="detail-value">${jobCard.status.replace(/_/g, ' ')}</span>
+      </div>
+      ${jobCard.oneDayService ? `<div class="badge">🚨 ONE DAY SERVICE</div>` : ''}
+  </div>
+
+  <!-- CUSTOMER INFO -->
+  <div class="section-header">CUSTOMER</div>
+  <div class="section-content">
+      <div class="detail-row">
+          <span class="detail-label"><b>Name:</b></span>
+          <span class="detail-value">${jobCard.customerName}</span>
+      </div>
+      <div class="detail-row">
+          <span class="detail-label"><b>Phone:</b></span>
+          <span class="detail-value">${jobCard.customerPhone}</span>
+      </div>
+  </div>
+
+  <!-- DEVICE INFO -->
+  <div class="section-header">DEVICE</div>
+  <div class="device-info">
+      <div style="margin-bottom: 2px;"><b>${jobCard.deviceType}</b></div>
+      <div><b>Brand:</b> ${jobCard.brand?.brandName || 'N/A'}</div>
+      <div><b>Model:</b> ${jobCard.model?.modelName || 'N/A'}</div>
+      ${jobCard.processor ? `<div><b>Processor:</b> ${jobCard.processor.processorName}</div>` : ''}
+  </div>
+
+  <!-- DEVICE SERIAL -->
+  ${deviceSerial ? `
+  <div class="section-header">DEVICE SERIAL</div>
+  <div class="serial-box">
+      <div class="serial-label">Serial #:</div>
+      <div class="serial-value">${deviceSerial.serialValue}</div>
+  </div>
+  ` : ''}
+
+  <!-- DEVICE CONDITIONS -->
+  ${jobCard.deviceConditions && jobCard.deviceConditions.length > 0 ? `
+  <div class="section-header">CONDITION</div>
+  <div class="section-content">
+      ${jobCard.deviceConditions.map(c => `<div class="condition-item">• ${c.conditionName}</div>`).join('')}
+  </div>
+  ` : ''}
+
+  <!-- REPORTED FAULTS -->
+  ${jobCard.faults && jobCard.faults.length > 0 ? `
+  <div class="section-header">REPORTED FAULTS</div>
+  <div class="section-content">
+      ${jobCard.faults.map(f => `<div class="fault-item">• ${f.faultName}</div>`).join('')}
+  </div>
+  ` : ''}
+
+  <!-- FAULT DESCRIPTION -->
+  ${jobCard.faultDescription ? `
+  <div class="section-header">FAULT DETAILS</div>
+  <div class="section-content" style="font-size: 9px; line-height: 1.2; max-height: 50px; overflow: hidden;">
+      ${jobCard.faultDescription.substring(0, 200)}${jobCard.faultDescription.length > 200 ? '...' : ''}
+  </div>
+  ` : ''}
+
+  <!-- SERVICES -->
+  ${jobCard.serviceCategories && jobCard.serviceCategories.length > 0 ? `
+  <div class="section-header">SERVICES</div>
+  <div class="services-list">
+      ${jobCard.serviceCategories.map(s => `<div class="service-item">• ${s.name}</div>`).join('')}
+  </div>
+  ` : ''}
+
+  <!-- PAYMENT -->
+  <div class="payment-box">
+      <div class="payment-row">
+          <span class="payment-label">Advance Payment:</span>
+          <span class="payment-value"><b>Rs. ${jobCard.advancePayment?.toFixed(2) || '0.00'}</b></span>
+      </div>
+  </div>
+
+  <!-- NOTES -->
+  ${jobCard.notes ? `
+  <div class="section-header">NOTES</div>
+  <div class="notes-box">
+      ${jobCard.notes.substring(0, 200)}${jobCard.notes.length > 200 ? '...' : ''}
+  </div>
+  ` : ''}
+
+  </body>
+  </html>
+      `;
+};
+  // const generateJobCardHTML = () => {
+  // if (!jobCard) return '';
+
+  // // Calculate totals
+  // const totalServicePrice = calculateTotalServicePrice();
+  // const totalPartsCost = calculateUsedItemsTotal();
+  // const grandTotal = totalServicePrice + totalPartsCost;
+
+  //   // Generate services HTML
+  //   const servicesHTML = (jobCard.serviceCategories || []).map((service, index) => `
+  //     <tr>
+  //       <td>${index + 1}</td>
+  //       <td>${service.name || 'Service'}</td>
+  //       <td>${(service.servicePrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+  //       <td>${(service.servicePrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+  //     </tr>
+  //   `).join('');
+
+  //   // Generate used items HTML
+  //   const usedItemsHTML = (jobCard.usedItems || []).map((item, index) => {
+  //     const itemTotal = (item.quantityUsed || 0) * (item.unitPrice || 0);
+  //     return `
+  //       <tr>
+  //         <td>${index + 1}</td>
+  //         <td>${item.inventoryItem?.name || 'Item'}</td>
+  //         <td>${item.inventoryItem?.sku || 'N/A'}</td>
+  //         <td>${item.quantityUsed || 0}</td>
+  //         <td>${(item.unitPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+  //         <td>${itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+  //       </tr>
+  //     `;
+  //   }).join('');
+
+  //   // Generate faults HTML
+  //   const faultsHTML = (jobCard.faults || []).map((fault, index) => `
+  //     <tr>
+  //       <td>${index + 1}</td>
+  //       <td colspan="3">${fault.faultName || 'Fault'}</td>
+  //     </tr>
+  //   `).join('');
+
+  //   // Generate device conditions HTML
+  //   const conditionsHTML = (jobCard.deviceConditions || []).map((condition, index) => `
+  //     <tr>
+  //       <td>${index + 1}</td>
+  //       <td colspan="3">${condition.conditionName || 'Condition'}</td>
+  //     </tr>
+  //   `).join('');
+
+  //   // Generate serials HTML
+  //   const serialsHTML = (jobCard.serials || []).map((serial, index) => `
+  //     <tr>
+  //       <td>${index + 1}</td>
+  //       <td>${serial.serialType}</td>
+  //       <td colspan="2">${serial.serialValue}</td>
+  //     </tr>
+  //   `).join('');
+
+  //   return `
+  // <!DOCTYPE html>
+  // <html lang="en">
+  // <head>
+  // <meta charset="UTF-8">
+  // <title>E-TechCare Job Card (A5)</title>
+  // <style>
+  //     @page {
+  //         size: A5;
+  //         margin: 15mm;
+  //     }
+  //     body {
+  //         font-family: Arial, sans-serif;
+  //         font-size: 13px;
+  //         margin: 0;
+  //         padding: 0;
+  //         color: #000;
+  //     }
+
+  //     /* HEADER */
+  //     .header {
+  //         display: flex;
+  //         justify-content: space-between;
+  //         align-items: center;
+  //         border-bottom: 2px solid #000;
+  //         padding-bottom: 10px;
+  //     }
+  //     .company-info {
+  //         line-height: 1.5;
+  //     }
+  //     .company-info h1 {
+  //         font-size: 36px;
+  //         margin: 0;
+  //         font-weight: 900;
+  //         letter-spacing: 1px;
+  //         color: #111;
+  //     }
+  //     .company-info p {
+  //         margin: 2px 0;
+  //         font-size: 12px;
+  //     }
+  //     .logo img {
+  //         width: 100px;
+  //         height: auto;
+  //     }
+
+  //     /* TITLE */
+  //     h2 {
+  //         text-align: center;
+  //         text-decoration: underline;
+  //         margin: 12px 0;
+  //         font-size: 22px;
+  //         letter-spacing: 1px;
+  //     }
+
+  //     /* JOB CARD DETAILS */
+  //     .jobcard-details {
+  //         width: 100%;
+  //         border-collapse: collapse;
+  //         margin-bottom: 12px;
+  //         font-size: 12px;
+  //     }
+  //     .jobcard-details td {
+  //         padding: 4px 6px;
+  //         border: 1px solid #000;
+  //     }
+
+  //     /* SECTION HEADERS */
+  //     .section-header {
+  //         background-color: #f3f3f3;
+  //         font-weight: bold;
+  //         padding: 8px;
+  //         border: 1px solid #000;
+  //         margin-top: 15px;
+  //         margin-bottom: 8px;
+  //         font-size: 14px;
+  //     }
+
+  //     /* TABLES */
+  //     table {
+  //         width: 100%;
+  //         border-collapse: collapse;
+  //         font-size: 12px;
+  //         margin-bottom: 10px;
+  //     }
+  //     th, td {
+  //         border: 1px solid #000;
+  //         padding: 6px;
+  //         text-align: center;
+  //     }
+  //     th {
+  //         background-color: #f3f3f3;
+  //         font-weight: bold;
+  //     }
+
+  //     /* TOTAL SECTION */
+  //     .totals {
+  //         width: 100%;
+  //         border-collapse: collapse;
+  //         margin-top: 10px;
+  //         font-size: 13px;
+  //     }
+  //     .totals td {
+  //         padding: 6px;
+  //         text-align: right;
+  //         border: none;
+  //     }
+  //     .totals .label {
+  //         width: 70%;
+  //         text-align: right;
+  //         font-weight: bold;
+  //     }
+  //     .totals .value {
+  //         width: 30%;
+  //         border-bottom: 1px solid #000;
+  //     }
+  //     .totals .highlight {
+  //         background-color: #e8f4e5;
+  //         font-weight: bold;
+  //         border: 1px solid #000;
+  //     }
+
+  //     /* NOTICE */
+  //     .notice {
+  //         margin-top: 20px;
+  //         font-size: 11px;
+  //     }
+  //     .notice b {
+  //         display: block;
+  //         margin-bottom: 5px;
+  //     }
+  //     ul {
+  //         margin-top: 0;
+  //         padding-left: 20px;
+  //     }
+
+  //     /* SIGNATURES */
+  //     .signatures {
+  //         margin-top: 35px;
+  //         display: flex;
+  //         justify-content: space-between;
+  //         font-size: 12px;
+  //     }
+  //     .signatures div {
+  //         width: 45%;
+  //         text-align: center;
+  //     }
+  //     .signatures hr {
+  //         border: none;
+  //         border-top: 1px solid #000;
+  //         margin-bottom: 3px;
+  //     }
+
+  //     /* STATUS BADGE */
+  //     .status-badge {
+  //         display: inline-block;
+  //         padding: 4px 12px;
+  //         background-color: #e8f4e5;
+  //         border: 1px solid #000;
+  //         border-radius: 12px;
+  //         font-weight: bold;
+  //         font-size: 11px;
+  //         margin-left: 10px;
+  //     }
+
+  //     .urgent-badge {
+  //         background-color: #ffebee;
+  //         color: #c62828;
+  //         border-color: #c62828;
+  //     }
+
+  // </style>
+  // </head>
+  // <body>
+
+  // <div class="header">
+  //     <div class="company-info">
+  //         <h1>E - TECHCARE</h1>
+  //         <p><b>ADDRESS:</b> No.158, Wakwella Road, Galle</p>
+  //         <p><b>TEL:</b> 076 795 7125</p>
+  //         <p><b>EMAIL:</b> etechcarelh@gmail.com</p>
+  //         <p><b>WHATSAPP:</b> 076 795 7125</p>
+  //     </div>
+  //     <div class="logo">
+  //         ${COMPANY_LOGO_BASE64 ? `<img src="${COMPANY_LOGO_BASE64}" alt="TechCare Logo" onerror="this.style.display='none'">` : ''}
+  //     </div>
+  // </div>
+
+  // <h2>JOB CARD</h2>
+
+  // <table class="jobcard-details">
+  //     <tr>
+  //         <td><b>DATE :</b> ${new Date(jobCard.createdAt).toLocaleDateString()}</td>
+  //         <td><b>JOB NO :</b> ${jobCard.jobNumber}</td>
+  //         <td><b>STATUS :</b> ${jobCard.status} ${jobCard.oneDayService ? '<span class="status-badge urgent-badge">🚨 ONE DAY</span>' : ''}</td>
+  //     </tr>
+  //     <tr>
+  //         <td><b>CUSTOMER :</b> ${jobCard.customerName}</td>
+  //         <td><b>PHONE :</b> ${jobCard.customerPhone}</td>
+  //         <td><b>DEVICE :</b> ${jobCard.deviceType}</td>
+  //     </tr>
+  //     <tr>
+  //         <td colspan="3"><b>EMAIL :</b> ${jobCard.customerEmail || 'N/A'}</td>
+  //     </tr>
+  // </table>
+
+  // <!-- DEVICE INFORMATION -->
+  // <div class="section-header">DEVICE INFORMATION</div>
+  // <table class="jobcard-details">
+  //     <tr>
+  //         <td><b>BRAND :</b> ${jobCard.brand?.brandName || 'N/A'}</td>
+  //         <td><b>MODEL :</b> ${jobCard.model?.modelName || 'N/A'}</td>
+  //         <td><b>PROCESSOR :</b> ${jobCard.processor?.processorName || 'N/A'}</td>
+  //     </tr>
+  // </table>
+
+  // <!-- SERIAL NUMBERS -->
+  // ${serialsHTML ? `
+  // <div class="section-header">SERIAL NUMBERS</div>
+  // <table>
+  //     <thead>
+  //         <tr>
+  //             <th>No</th>
+  //             <th>Type</th>
+  //             <th colspan="2">Serial Value</th>
+  //         </tr>
+  //     </thead>
+  //     <tbody>
+  //         ${serialsHTML}
+  //     </tbody>
+  // </table>
+  // ` : ''}
+
+  // <!-- DEVICE CONDITIONS -->
+  // ${conditionsHTML ? `
+  // <div class="section-header">DEVICE CONDITIONS</div>
+  // <table>
+  //     <thead>
+  //         <tr>
+  //             <th>No</th>
+  //             <th colspan="3">Condition Description</th>
+  //         </tr>
+  //     </thead>
+  //     <tbody>
+  //         ${conditionsHTML}
+  //     </tbody>
+  // </table>
+  // ` : ''}
+
+  // <!-- FAULTS -->
+  // ${faultsHTML ? `
+  // <div class="section-header">REPORTED FAULTS</div>
+  // <table>
+  //     <thead>
+  //         <tr>
+  //             <th>No</th>
+  //             <th colspan="3">Fault Description</th>
+  //         </tr>
+  //     </thead>
+  //     <tbody>
+  //         ${faultsHTML}
+  //     </tbody>
+  // </table>
+  // ` : ''}
+
+  // <!-- FAULT DESCRIPTION -->
+  // ${jobCard.faultDescription ? `
+  // <div class="section-header">FAULT DETAILS</div>
+  // <table>
+  //     <tr>
+  //         <td style="text-align: left; padding: 10px;">${jobCard.faultDescription}</td>
+  //     </tr>
+  // </table>
+  // ` : ''}
+
+  // <!-- SERVICES -->
+  // ${servicesHTML ? `
+  // <div class="section-header">SERVICES</div>
+  // <table>
+  //     <thead>
+  //         <tr>
+  //             <th>No</th>
+  //             <th>Service Description</th>
+  //             <th>Unit Price</th>
+  //             <th>Amount</th>
+  //         </tr>
+  //     </thead>
+  //     <tbody>
+  //         ${servicesHTML}
+  //     </tbody>
+  // </table>
+  // ` : ''}
+
+  // <!-- USED ITEMS -->
+  // ${usedItemsHTML ? `
+  // <div class="section-header">USED ITEMS / PARTS</div>
+  // <table>
+  //     <thead>
+  //         <tr>
+  //             <th>No</th>
+  //             <th>Item Name</th>
+  //             <th>SKU</th>
+  //             <th>QTY</th>
+  //             <th>Unit Price</th>
+  //             <th>Amount</th>
+  //         </tr>
+  //     </thead>
+  //     <tbody>
+  //         ${usedItemsHTML}
+  //     </tbody>
+  // </table>
+  // ` : ''}
+
+  // <!-- PAYMENT SUMMARY -->
+  // <div class="section-header">PAYMENT SUMMARY</div>
+  // <table class="totals">
+  //     <tr>
+  //         <td class="label">Services Total:</td>
+  //         <td class="value">${totalServicePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+  //     </tr>
+  //     <tr>
+  //         <td class="label">Parts Total:</td>
+  //         <td class="value">${totalPartsCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+  //     </tr>
+  //     <tr>
+  //         <td class="label highlight">GRAND TOTAL:</td>
+  //         <td class="value highlight">${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+  //     </tr>
+  //     <tr>
+  //         <td class="label">Advance Paid:</td>
+  //         <td class="value">${jobCard.advancePayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+  //     </tr>
+  //     <tr>
+  //         <td class="label">Balance Due:</td>
+  //         <td class="value">${(grandTotal - jobCard.advancePayment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+  //     </tr>
+  // </table>
+
+  // <!-- TECHNICIAN NOTES -->
+  // ${jobCard.notes ? `
+  // <div class="section-header">TECHNICIAN NOTES</div>
+  // <table>
+  //     <tr>
+  //         <td style="text-align: left; padding: 10px;">${jobCard.notes}</td>
+  //     </tr>
+  // </table>
+  // ` : ''}
+
+  // <div class="notice">
+  //     <b>Important Notice</b>
+  //     <ul>
+  //         <li>Warranty period one year less than 14 working days.</li>
+  //         <li>Warranty covers only manufacturer's defects. Damages or defects due to misuse, negligence, or power issues are not covered.</li>
+  //         <li>Repairs or replacements may include labor or material costs.</li>
+  //         <li>No warranty for cartridges, power adaptors, some battery types, and software.</li>
+  //         <li>Device must be collected within 30 days after completion notification.</li>
+  //         <li>Backup your data before service. We are not responsible for data loss.</li>
+  //     </ul>
+  // </div>
+
+  // <div class="signatures">
+  //     <div>
+  //         <hr>
+  //         <p>Technician Signature</p>
+  //     </div>
+  //     <div>
+  //         <hr>
+  //         <p>Customer Signature</p>
+  //     </div>
+  // </div>
+
+  // </body>
+  // </html>
+  //     `;
+  // };
 
   const handleCancelSuccess = (response) => {
     setJobCard(response);
@@ -168,6 +942,7 @@ const JobCardView = ({ jobCardId, onClose, onEdit, onStatusChange, onNavigate })
     const usedItemsPrice = calculateUsedItemsTotal();
     return servicePrice + usedItemsPrice;
   };
+  
 
   if (loading) {
     return (
@@ -779,7 +1554,26 @@ const JobCardView = ({ jobCardId, onClose, onEdit, onStatusChange, onNavigate })
                     <span>Generate Invoice</span>
                   </button>
                 )}
+                  {/* Download Job Card Buttons */}
+                  <button
+                    onClick={downloadJobCard}
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Print Job Card</span>
+                  </button>
 
+                  <button
+                    onClick={exportJobCardPDF}
+                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Download PDF</span>
+                  </button>
                 {/* Edit Button */}
                 {!isDelivered && (
                   <button
