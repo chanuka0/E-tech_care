@@ -20,10 +20,10 @@ public class ServiceCategoryController {
     private final ServiceCategoryService serviceCategoryService;
 
     /**
-     * Get all service categories (Admin only)
+     * Get all service categories
      */
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN', 'USER')")
     public ResponseEntity<List<ServiceCategory>> getAllServiceCategories() {
         return ResponseEntity.ok(serviceCategoryService.getAllServiceCategories());
     }
