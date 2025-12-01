@@ -1,6 +1,5 @@
 package com.example.demo.controller;
 
-
 import com.example.demo.entity.Model;
 import com.example.demo.services.ModelService;
 import lombok.RequiredArgsConstructor;
@@ -15,11 +14,10 @@ import java.util.List;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class ModelController {
-
     private final ModelService modelService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Model> createModel(@RequestBody Model model) {
         return ResponseEntity.ok(modelService.createModel(model));
     }
@@ -27,19 +25,13 @@ public class ModelController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<Model>> getAllModels() {
-        return ResponseEntity.ok(modelService.getAllModels());
+        return ResponseEntity.ok(modelService.getAllActiveModels());
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<Model> getModelById(@PathVariable Long id) {
         return ResponseEntity.ok(modelService.getModelById(id));
-    }
-
-    @GetMapping("/brand/{brandId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<List<Model>> getModelsByBrandId(@PathVariable Long brandId) {
-        return ResponseEntity.ok(modelService.getModelsByBrandId(brandId));
     }
 
     @PutMapping("/{id}")

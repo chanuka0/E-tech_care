@@ -20,7 +20,8 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
-      console.log('Checking saved auth:', { savedToken: !!savedToken, savedUser: !!savedUser }); // Debug
+    console.log('Checking saved auth:', { savedToken: !!savedToken, savedUser: !!savedUser });
+    
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
@@ -45,16 +46,23 @@ const AuthProvider = ({ children }) => {
           roles: data.roles
         };
         
+        console.log('Login successful, saving token:', data.token); // Debug
+        
+        // Set state first
         setToken(data.token);
         setUser(userData);
+        
+        // Then save to localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(userData));
+        
         return { success: true };
       } else {
         const error = await response.json();
         return { success: false, message: error.error || 'Login failed' };
       }
     } catch (error) {
+      console.error('Login error:', error);
       return { success: false, message: 'Network error. Please try again.' };
     }
   };
@@ -76,11 +84,13 @@ const AuthProvider = ({ children }) => {
         return { success: false, message: error.error || 'Registration failed' };
       }
     } catch (error) {
+      console.error('Registration error:', error);
       return { success: false, message: 'Network error. Please try again.' };
     }
   };
 
   const logout = () => {
+    console.log('Logging out...');
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
@@ -107,4 +117,5 @@ const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-export default AuthProvider
+
+export default AuthProvider;

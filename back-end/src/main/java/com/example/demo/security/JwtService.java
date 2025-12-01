@@ -62,4 +62,8 @@ public class JwtService {
         final Date expiration = extractClaim(token, Claims::getExpiration);
         return expiration.before(new Date());
     }
+
+    public boolean isTokenValid(String jwt, UserDetails userDetails) {
+        return false;
+    }
 }

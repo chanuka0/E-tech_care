@@ -1,21 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApi } from '../services/apiService';
-import { useAuth } from '../auth/AuthProvider';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 
 const JobCardCreate = ({ onSuccess, onCancel }) => {
   const { apiCall } = useApi();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDeviceBarcodeScanner, setShowDeviceBarcodeScanner] = useState(false);
   const [showOtherSerialScanner, setShowOtherSerialScanner] = useState(false);
-  const [faults, setFaults] = useState([]);
   
   const deviceBarcodeVideoRef = useRef(null);
   const otherSerialVideoRef = useRef(null);
   const deviceBarcodeReaderRef = useRef(null);
   const otherSerialReaderRef = useRef(null);
+  
+  const [faults, setFaults] = useState([]);
+  const [services, setServices] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [models, setModels] = useState([]);
+  const [processors, setProcessors] = useState([]);
+  const [deviceConditions, setDeviceConditions] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   const [formData, setFormData] = useState({
     customerName: '',
@@ -24,14 +29,18 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     deviceType: 'LAPTOP',
     brandId: '',
     modelId: '',
-    faultId: '',  // Store fault ID from dropdown
+    processorId: '',
+    deviceConditionIds: [], // CHANGED: Now an array for multiple conditions
     faultDescription: '',
     notes: '',
     advancePayment: 0,
     estimatedCost: 0,
     deviceBarcode: '',
     deviceBarcodes: [],
-    otherSerials: []
+    otherSerials: [],
+    selectedFaults: [], // Can be empty now
+    selectedServices: [], // Can be empty now
+    oneDayService: false,
   });
 
   const [currentOtherSerial, setCurrentOtherSerial] = useState({
@@ -39,76 +48,103 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     serialValue: ''
   });
 
-  const deviceTypes = ['LAPTOP', 'DESKTOP', 'PRINTER', 'PROJECTOR','OTHER'];
-  const serialTypes = ['RAM_01_SERIAL', 'RAM_02_SERIAL','RAM 03_SERIAL','RAM_04_SERIAL','CPU_SERIAL','HDD_01_SERIAL','HDD_02_SERIAL','SSD_01_SERIAL','SSD_02_SERIAL','ADAPTOR_SERIAL','BATTERY_SERIAL'];
-  const brands = ['HP', 'Dell', 'Lenovo', 'Acer', 'Asus', 'Apple', 'Samsung', 'Canon', 'Epson', 'Brother'];
-  const models = ['Model A', 'Model B', 'Model C', 'Model D', 'Model E'];
+  const deviceTypes = ['LAPTOP', 'DESKTOP', 'PRINTER', 'PROJECTOR', 'OTHER'];
+  const serialTypes = ['RAM_01_SERIAL', 'RAM_02_SERIAL', 'RAM_03_SERIAL', 'RAM_04_SERIAL', 'HDD_01_SERIAL', 'HDD_02_SERIAL', 'SSD_01_SERIAL', 'SSD_02_SERIAL', 'ADAPTOR_SERIAL', 'BATTERY_SERIAL'];
 
-  // Fetch faults on component mount
+  // Fetch all data on component mount
   useEffect(() => {
-    const fetchFaults = async () => {
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      if (dataLoaded) return;
+      
       try {
-        const faultsData = await apiCall('/api/faults');
-        setFaults(faultsData);
+        const [faultsData, servicesData, brandsData, modelsData, processorsData, conditionsData] = await Promise.all([
+          apiCall('/api/faults'),
+          apiCall('/api/service-categories'),
+          apiCall('/api/brands'),
+          apiCall('/api/models'),
+          apiCall('/api/processors'),
+          apiCall('/api/device-conditions')
+        ]);
+        
+        if (isMounted) {
+          setFaults(faultsData || []);
+          setServices(servicesData || []);
+          setBrands(brandsData || []);
+          setModels(modelsData || []);
+          setProcessors(processorsData || []);
+          setDeviceConditions(conditionsData || []);
+          setDataLoaded(true);
+        }
       } catch (err) {
-        console.error('Error fetching faults:', err);
-        setError('Failed to load faults');
+        console.error('Error fetching data:', err);
+        if (isMounted) {
+          setError('Failed to load form data');
+        }
       }
     };
-    fetchFaults();
-  }, [apiCall]);
-  
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [apiCall, dataLoaded]);
+
   // Device Barcode Scanner
   useEffect(() => {
-    if (showDeviceBarcodeScanner && deviceBarcodeVideoRef.current) {
-      const codeReader = new BrowserMultiFormatReader();
-      deviceBarcodeReaderRef.current = codeReader;
+    if (!showDeviceBarcodeScanner || !deviceBarcodeVideoRef.current) return;
 
-      codeReader.decodeFromVideoDevice(undefined, deviceBarcodeVideoRef.current, (result, error) => {
-        if (result) {
-          handleDeviceBarcodeScan(result.getText());
-        }
-        if (error && error.name !== 'NotFoundException') {
-          console.error('Device barcode scan error:', error);
-        }
-      });
+    const codeReader = new BrowserMultiFormatReader();
+    deviceBarcodeReaderRef.current = codeReader;
 
-      return () => {
-        if (deviceBarcodeReaderRef.current) {
-          deviceBarcodeReaderRef.current.reset();
-        }
-      };
-    }
+    codeReader.decodeFromVideoDevice(undefined, deviceBarcodeVideoRef.current, (result, error) => {
+      if (result) {
+        handleDeviceBarcodeScan(result.getText());
+      }
+      if (error && error.name !== 'NotFoundException') {
+        console.error('Device barcode scan error:', error);
+      }
+    });
+
+    return () => {
+      if (deviceBarcodeReaderRef.current) {
+        deviceBarcodeReaderRef.current.reset();
+        deviceBarcodeReaderRef.current = null;
+      }
+    };
   }, [showDeviceBarcodeScanner]);
 
   // Other Serial Scanner
   useEffect(() => {
-    if (showOtherSerialScanner && otherSerialVideoRef.current) {
-      const codeReader = new BrowserMultiFormatReader();
-      otherSerialReaderRef.current = codeReader;
+    if (!showOtherSerialScanner || !otherSerialVideoRef.current) return;
 
-      codeReader.decodeFromVideoDevice(undefined, otherSerialVideoRef.current, (result, error) => {
-        if (result) {
-          handleOtherSerialScan(result.getText());
-        }
-        if (error && error.name !== 'NotFoundException') {
-          console.error('Other serial scan error:', error);
-        }
-      });
+    const codeReader = new BrowserMultiFormatReader();
+    otherSerialReaderRef.current = codeReader;
 
-      return () => {
-        if (otherSerialReaderRef.current) {
-          otherSerialReaderRef.current.reset();
-        }
-      };
-    }
+    codeReader.decodeFromVideoDevice(undefined, otherSerialVideoRef.current, (result, error) => {
+      if (result) {
+        handleOtherSerialScan(result.getText());
+      }
+      if (error && error.name !== 'NotFoundException') {
+        console.error('Other serial scan error:', error);
+      }
+    });
+
+    return () => {
+      if (otherSerialReaderRef.current) {
+        otherSerialReaderRef.current.reset();
+        otherSerialReaderRef.current = null;
+      }
+    };
   }, [showOtherSerialScanner, currentOtherSerial.serialType]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
     setError('');
   };
@@ -139,6 +175,98 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     showSuccessMessage(`${currentOtherSerial.serialType} Scanned: ${scannedValue}`);
   };
 
+  // FAULT TAGS MANAGEMENT - Now optional
+  const addFault = (faultId) => {
+    if (!faultId) {
+      setError('Please select a fault');
+      return;
+    }
+    
+    if (formData.selectedFaults.includes(parseInt(faultId))) {
+      setError('This fault is already selected');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      selectedFaults: [...prev.selectedFaults, parseInt(faultId)]
+    }));
+    setError('');
+    showSuccessMessage('Fault added successfully!');
+  };
+
+  const removeFault = (faultId) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedFaults: prev.selectedFaults.filter(id => id !== faultId)
+    }));
+  };
+
+  // SERVICE TAGS MANAGEMENT - Now optional
+  const addService = (serviceId) => {
+    if (!serviceId) {
+      setError('Please select a service');
+      return;
+    }
+
+    const selectedService = services.find(s => s.id === parseInt(serviceId));
+    
+    if (!selectedService) {
+      setError('Selected service not found');
+      return;
+    }
+    
+    if (formData.selectedServices.some(s => s.id === parseInt(serviceId))) {
+      setError('This service is already selected');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      selectedServices: [...prev.selectedServices, selectedService]
+    }));
+    setError('');
+    showSuccessMessage('Service added successfully!');
+  };
+
+  const removeService = (serviceId) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedServices: prev.selectedServices.filter(s => s.id !== serviceId)
+    }));
+  };
+
+  const calculateTotalServicePrice = () => {
+    return formData.selectedServices.reduce((sum, service) => sum + (service.servicePrice || 0), 0);
+  };
+
+  // DEVICE CONDITION MANAGEMENT - Now supports multiple conditions
+  const addDeviceCondition = (conditionId) => {
+    if (!conditionId) {
+      setError('Please select a device condition');
+      return;
+    }
+    
+    if (formData.deviceConditionIds.includes(parseInt(conditionId))) {
+      setError('This device condition is already selected');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      deviceConditionIds: [...prev.deviceConditionIds, parseInt(conditionId)]
+    }));
+    setError('');
+    showSuccessMessage('Device condition added successfully!');
+  };
+
+  const removeDeviceCondition = (conditionId) => {
+    setFormData(prev => ({
+      ...prev,
+      deviceConditionIds: prev.deviceConditionIds.filter(id => id !== conditionId)
+    }));
+  };
+
   const addDeviceBarcode = () => {
     if (formData.deviceBarcode.trim()) {
       setFormData(prev => ({
@@ -147,9 +275,9 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
         deviceBarcode: ''
       }));
       setError('');
-      showSuccessMessage('Device barcode added successfully!');
+      showSuccessMessage('Device serial added successfully!');
     } else {
-      setError('Please enter or scan a device barcode');
+      setError('Please enter or scan a device serial');
     }
   };
 
@@ -167,7 +295,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
         otherSerials: [...prev.otherSerials, { ...currentOtherSerial }]
       }));
       setCurrentOtherSerial({
-        serialType: 'IMEI',
+        serialType: serialTypes.filter(type => !formData.otherSerials.some(serial => serial.serialType === type))[0] || 'IMEI',
         serialValue: ''
       });
       setError('');
@@ -203,11 +331,18 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
   };
 
   const showSuccessMessage = (message) => {
+    const existingMessages = document.querySelectorAll('.success-message');
+    existingMessages.forEach(msg => msg.remove());
+    
     const msg = document.createElement('div');
-    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    msg.className = 'success-message fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
     msg.textContent = message;
     document.body.appendChild(msg);
-    setTimeout(() => msg.remove(), 3000);
+    setTimeout(() => {
+      if (msg.parentNode) {
+        msg.remove();
+      }
+    }, 3000);
   };
 
   const handleSubmit = async (e) => {
@@ -215,7 +350,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     setLoading(true);
     setError('');
 
-    // Validation
+    // Validation - REMOVED: Faults and services are now optional
     if (!formData.customerName.trim()) {
       setError('Customer name is required');
       setLoading(false);
@@ -228,53 +363,48 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
       return;
     }
 
-    if (!formData.faultId) {
-      setError('Please select a fault type');
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.faultDescription.trim()) {
-      setError('Fault description is required');
-      setLoading(false);
-      return;
-    }
+    // REMOVED: Fault description is now optional
+    // if (!formData.faultDescription.trim()) {
+    //   setError('Fault description is required');
+    //   setLoading(false);
+    //   return;
+    // }
 
     if (formData.deviceBarcodes.length === 0) {
-      setError('At least one device barcode is required');
+      setError('At least one device Serial is required');
       setLoading(false);
       return;
     }
 
     try {
-      // FIXED: Send fault as object with id, not faultId
+      // Format device conditions as array of objects
+      const deviceConditionsPayload = formData.deviceConditionIds.map(id => ({ id }));
+
       const payload = {
         customerName: formData.customerName,
         customerPhone: formData.customerPhone,
         customerEmail: formData.customerEmail,
         deviceType: formData.deviceType,
-        brandId: formData.brandId,
-        modelId: formData.modelId,
-        fault: {
-          id: parseInt(formData.faultId)  // ✅ CORRECT: fault object
-        },
-        faultDescription: formData.faultDescription,
+        brand: formData.brandId ? { id: parseInt(formData.brandId) } : null,
+        model: formData.modelId ? { id: parseInt(formData.modelId) } : null,
+        processor: formData.processorId ? { id: parseInt(formData.processorId) } : null,
+        deviceConditions: deviceConditionsPayload, // CHANGED: Now an array
+        faults: formData.selectedFaults.map(id => ({ id })), // Can be empty array
+        serviceCategories: formData.selectedServices.map(s => ({ id: s.id })), // Can be empty array
+        faultDescription: formData.faultDescription, // Can be empty
         notes: formData.notes,
         advancePayment: parseFloat(formData.advancePayment) || 0,
         estimatedCost: parseFloat(formData.estimatedCost) || 0,
+        oneDayService: formData.oneDayService,
         createdBy: getUserIdFromToken(),
         serials: [
-          // Add device barcodes as DEVICE_SERIAL type
           ...formData.deviceBarcodes.map(barcode => ({
             serialType: 'DEVICE_SERIAL',
             serialValue: barcode
           })),
-          // Add other serials
           ...formData.otherSerials
         ]
       };
-
-      console.log('Sending payload:', JSON.stringify(payload, null, 2));
 
       const response = await apiCall('/api/jobcards', {
         method: 'POST',
@@ -289,6 +419,11 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Get available serial types (filter out already selected ones)
+  const getAvailableSerialTypes = () => {
+    return serialTypes.filter(type => !formData.otherSerials.some(serial => serial.serialType === type));
   };
 
   return (
@@ -347,7 +482,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
                 />
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email (Optional)
                 </label>
@@ -366,7 +501,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
           {/* Device Information */}
           <div className="border-b border-gray-200 pb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Device Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Device Type <span className="text-red-500">*</span>
@@ -396,7 +531,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
                 >
                   <option value="">Select Brand</option>
                   {brands.map(brand => (
-                    <option key={brand} value={brand}>{brand}</option>
+                    <option key={brand.id} value={brand.id}>{brand.brandName}</option>
                   ))}
                 </select>
               </div>
@@ -413,10 +548,98 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
                 >
                   <option value="">Select Model</option>
                   {models.map(model => (
-                    <option key={model} value={model}>{model}</option>
+                    <option key={model.id} value={model.id}>{model.modelName}</option>
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Processor
+                </label>
+                <select
+                  name="processorId"
+                  value={formData.processorId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Processor</option>
+                  {processors.map(processor => (
+                    <option key={processor.id} value={processor.id}>{processor.processorName}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* One Day Service Toggle */}
+          <div className="border-b border-gray-200 pb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Service Priority
+            </h3>
+            
+            <div className={`p-4 rounded-lg border-2 transition-all duration-300 ${
+              formData.oneDayService 
+                ? 'bg-red-50 border-red-300' 
+                : 'bg-gray-50 border-gray-300'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                    formData.oneDayService 
+                      ? 'bg-red-600 text-white' 
+                      : 'bg-gray-300 text-gray-600'
+                  }`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900">
+                      One Day Service
+                    </label>
+                    <p className="text-sm text-gray-600">
+                      {formData.oneDayService 
+                        ? '🚨 This job will be prioritized for same-day completion'
+                        : 'Standard service timeline'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="oneDayService"
+                    checked={formData.oneDayService}
+                    onChange={handleChange}
+                    className="sr-only peer"
+                  />
+                  <div className={`w-12 h-6 rounded-full transition-colors duration-300 ${
+                    formData.oneDayService 
+                      ? 'bg-red-600 peer-checked:bg-red-600' 
+                      : 'bg-gray-300 peer-checked:bg-red-600'
+                  }`}></div>
+                  <div className={`absolute left-1 top-1 bg-white border rounded-full w-4 h-4 transition-transform duration-300 ${
+                    formData.oneDayService ? 'transform translate-x-6' : ''
+                  }`}></div>
+                </label>
+              </div>
+              
+              {formData.oneDayService && (
+                <div className="mt-3 p-3 bg-red-100 border border-red-300 rounded-lg">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span className="text-sm font-medium text-red-800">
+                      Priority Service: This job card will be highlighted in red for urgent attention
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -424,7 +647,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
           <div className="border-b border-gray-200 pb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full text-sm font-bold mr-2">1</span>
-              Device Barcode (PRIMARY)
+              Device Serial (PRIMARY)
             </h3>
             
             <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-lg">
@@ -463,7 +686,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
                     title="Scan Device Barcode"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1v-2a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1z" />
                     </svg>
                   </button>
                 </div>
@@ -542,10 +765,16 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
                     onChange={handleOtherSerialChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
-                    {serialTypes.map(type => (
+                    <option value="">Select Serial Type</option>
+                    {getAvailableSerialTypes().map(type => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
+                  {formData.otherSerials.length > 0 && (
+                    <p className="text-xs text-purple-600 mt-1">
+                      Already added: {formData.otherSerials.map(s => s.serialType).join(', ')}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -580,7 +809,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
                     title="Scan Serial"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1v-2a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1z" />
                     </svg>
                   </button>
                 </div>
@@ -640,47 +869,184 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
             </div>
           </div>
 
-          {/* Fault & Notes - DROPDOWN ADDED */}
+          {/* DEVICE CONDITION - MULTIPLE SELECTION */}
+          <div className="border-b border-gray-200 pb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Device Condition Assessment (Multiple)
+            </h3>
+            
+            <div className="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-lg">
+              {/* Device Condition Dropdown */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Add Device Condition</label>
+                <select
+                  onChange={(e) => addDeviceCondition(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                >
+                  <option value="">-- Select a device condition --</option>
+                  {deviceConditions.map(condition => (
+                    <option key={condition.id} value={condition.id}>{condition.conditionName}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Selected Device Conditions Tags */}
+              {formData.deviceConditionIds.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Device Conditions:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.deviceConditionIds.map(conditionId => {
+                      const condition = deviceConditions.find(c => c.id === conditionId);
+                      return (
+                        <div key={conditionId} className="flex items-center gap-2 bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full">
+                          <span className="font-medium">{condition?.conditionName}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeDeviceCondition(conditionId)}
+                            className="text-yellow-600 hover:text-yellow-900 font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* FAULTS SECTION - NOW OPTIONAL */}
+          <div className="border-b border-gray-200 pb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Select Faults (Optional)
+            </h3>
+            
+            <div className="bg-red-50 border-2 border-red-300 p-4 rounded-lg">
+              {/* Fault Dropdown */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Add Fault Type</label>
+                <select
+                  onChange={(e) => addFault(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">-- Select a fault (Optional) --</option>
+                  {faults.map(fault => (
+                    <option key={fault.id} value={fault.id}>
+                      {fault.faultName} {fault.description && `- ${fault.description}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Selected Faults Tags */}
+              {formData.selectedFaults.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Faults:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.selectedFaults.map(faultId => {
+                      const fault = faults.find(f => f.id === faultId);
+                      return (
+                        <div key={faultId} className="flex items-center gap-2 bg-red-200 text-red-800 px-3 py-1 rounded-full">
+                          <span className="font-medium">{fault?.faultName}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeFault(faultId)}
+                            className="text-red-600 hover:text-red-900 font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SERVICES SECTION - NOW OPTIONAL */}
+          <div className="border-b border-gray-200 pb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Select Services (Optional)
+            </h3>
+            
+            <div className="bg-green-50 border-2 border-green-300 p-4 rounded-lg">
+              {/* Services Dropdown */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Add Service</label>
+                <select
+                  onChange={(e) => addService(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="">-- Select a service (Optional) --</option>
+                  {services.map(service => (
+                    <option key={service.id} value={service.id}>
+                      {service.name} - Rs.{service.servicePrice?.toFixed(2) || '0.00'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Selected Services Tags with Prices */}
+              {formData.selectedServices.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Services:</h4>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {formData.selectedServices.map(service => (
+                      <div key={service.id} className="flex items-center gap-2 bg-green-200 text-green-800 px-3 py-1 rounded-full">
+                        <span className="font-medium">
+                          {service.name} - Rs.{service.servicePrice?.toFixed(2) || '0.00'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeService(service.id)}
+                          className="text-green-600 hover:text-green-900 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total Service Price */}
+                  <div className="bg-green-100 border-2 border-green-400 p-3 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-gray-900">Total Service Price:</span>
+                      <span className="text-2xl font-bold text-green-700">
+                        Rs.{calculateTotalServicePrice().toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Fault Description & Notes */}
           <div className="border-b border-gray-200 pb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Details</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fault Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="faultId"
-                  value={formData.faultId}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  required
-                >
-                  <option value="">-- Select Fault Type --</option>
-                  {faults.map(fault => (
-                    <option key={fault.id} value={fault.id}>
-                      {fault.faultName}
-                    </option>
-                  ))}
-                </select>
-                {formData.faultId && (
-                  <p className="text-xs text-blue-600 mt-1">
-                    ✓ Selected: {faults.find(f => f.id === parseInt(formData.faultId))?.faultName}
-                  </p>
-                )}
-              </div>
-                
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fault Description <span className="text-red-500">*</span>
+                  Fault Description (Optional)
                 </label>
                 <textarea
                   name="faultDescription"
                   value={formData.faultDescription}
                   onChange={handleChange}
                   rows="3"
-                  placeholder="Detailed description of the fault..."
+                  placeholder="Detailed description of the fault (optional)..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
                 />
               </div>
 

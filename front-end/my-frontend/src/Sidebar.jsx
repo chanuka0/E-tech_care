@@ -4,6 +4,7 @@ import { useAuth } from './auth/AuthProvider';
 const Sidebar = ({ currentPage, onNavigate }) => {
   const { user, logout, isAdmin } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [reportsOpen, setReportsOpen] = useState(false);
 
   const menuItems = [
     { 
@@ -49,18 +50,24 @@ const Sidebar = ({ currentPage, onNavigate }) => {
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
-      ),
-      //adminOnly: true
+      )
     },
-   // { 
-      // id: 'damages', 
-      // label: 'Damages',
-      // icon: (
-      //   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      //     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      //   </svg>
-      // )
-    //},
+    // UPDATED: Reports menu with submenu including Income vs Expenses
+    { 
+      id: 'reports-menu',
+      label: 'Reports',
+      hasSubmenu: true,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      submenu: [
+       // { id: 'reports', label: 'Dashboard Reports' },
+        { id: 'income-expense-report', label: 'Income vs Expenses' },
+        { id: 'stock-report', label: 'Stock In/Out' }
+      ]
+    },
     { 
       id: 'settings', 
       label: 'Settings',
@@ -105,6 +112,68 @@ const Sidebar = ({ currentPage, onNavigate }) => {
         {menuItems.map(item => {
           if (item.adminOnly && !isAdmin()) return null;
 
+          // Handle submenu items (Reports)
+          if (item.hasSubmenu) {
+            return (
+              <div key={item.id}>
+                <button
+                  onClick={() => {
+                    if (isSidebarOpen) {
+                      setReportsOpen(!reportsOpen);
+                    } else {
+                      setIsSidebarOpen(true);
+                      setReportsOpen(true);
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
+                    (currentPage === 'reports' || currentPage === 'income-expense-report' || currentPage === 'stock-report')
+                      ? 'bg-blue-600 shadow-lg'
+                      : 'hover:bg-blue-700'
+                  }`}
+                  title={!isSidebarOpen ? item.label : ''}
+                >
+                  <div className="flex items-center space-x-3">
+                    {item.icon}
+                    {isSidebarOpen && (
+                      <span className="font-medium text-base">{item.label}</span>
+                    )}
+                  </div>
+                  {isSidebarOpen && (
+                    <svg 
+                      className={`w-4 h-4 transition-transform ${reportsOpen ? 'rotate-180' : ''}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
+                </button>
+                
+                {/* Submenu */}
+                {isSidebarOpen && reportsOpen && (
+                  <div className="ml-4 mt-2 space-y-1">
+                    {item.submenu.map(subItem => (
+                      <button
+                        key={subItem.id}
+                        onClick={() => onNavigate(subItem.id)}
+                        className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-200 text-sm ${
+                          currentPage === subItem.id
+                            ? 'bg-blue-500'
+                            : 'hover:bg-blue-700/50'
+                        }`}
+                      >
+                        <span>•</span>
+                        <span>{subItem.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // Regular menu items
           const isActive = currentPage === item.id;
           
           return (

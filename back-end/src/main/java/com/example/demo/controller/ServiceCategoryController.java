@@ -1,3 +1,4 @@
+
 package com.example.demo.controller;
 
 import com.example.demo.entity.ServiceCategory;
@@ -22,9 +23,19 @@ public class ServiceCategoryController {
      * Get all service categories (Admin only)
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ServiceCategory>> getAllServiceCategories() {
         return ResponseEntity.ok(serviceCategoryService.getAllServiceCategories());
+    }
+
+    /**
+     * Get service categories by status
+     * @param status true for active, false for inactive
+     */
+    @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<ServiceCategory>> getServiceCategoriesByStatus(@PathVariable Boolean status) {
+        return ResponseEntity.ok(serviceCategoryService.getServiceCategoriesByStatus(status));
     }
 
     /**
@@ -34,6 +45,15 @@ public class ServiceCategoryController {
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<ServiceCategory>> getActiveServiceCategories() {
         return ResponseEntity.ok(serviceCategoryService.getActiveServiceCategories());
+    }
+
+    /**
+     * Get only inactive service categories (Admin only)
+     */
+    @GetMapping("/inactive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<ServiceCategory>> getInactiveServiceCategories() {
+        return ResponseEntity.ok(serviceCategoryService.getInactiveServiceCategories());
     }
 
     /**

@@ -75,11 +75,9 @@
 //        updatedAt = LocalDateTime.now();
 //    }
 //}
-
 package com.example.demo.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.JsonIgnore; // ADD THIS
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -127,10 +125,9 @@ public class InventoryItem {
     @Column(name = "has_serialization")
     private Boolean hasSerialization = false;
 
-    // EXCLUDE serials when this is nested in UsedItem
+    // ✅ REMOVED @JsonIgnore - Now serials will be included in API responses
     @OneToMany(mappedBy = "inventoryItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
-    @JsonIgnore  // Prevent circular serialization
     private List<InventorySerial> serials;
 
     @Column(name = "created_at", nullable = false)
@@ -138,6 +135,7 @@ public class InventoryItem {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
 
     @PrePersist
     protected void onCreate() {

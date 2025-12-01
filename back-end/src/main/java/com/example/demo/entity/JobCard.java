@@ -33,19 +33,39 @@ public class JobCard {
     @Column(nullable = false, length = 50)
     private String deviceType;
 
-    @Column(length = 50)
-    private String brandId;
-
-    @Column(length = 50)
-    private String modelId;
-
-    // NEW: Fault reference
+    // All device information parts are optional
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "fault_id")
-    private Fault fault;
+    @JoinColumn(name = "brand_id")
+    private Brand brand;
 
-    @NotBlank(message = "Fault description cannot be blank")
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "model_id")
+    private Model model;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "processor_id")
+    private Processor processor;
+
+    // CHANGED: Multiple device conditions (optional)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "job_card_device_conditions",
+            joinColumns = @JoinColumn(name = "job_card_id"),
+            inverseJoinColumns = @JoinColumn(name = "device_condition_id")
+    )
+    private List<DeviceCondition> deviceConditions = new ArrayList<>();
+
+    // CHANGED: Faults are now optional (can be null/empty)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "job_card_faults",
+            joinColumns = @JoinColumn(name = "job_card_id"),
+            inverseJoinColumns = @JoinColumn(name = "fault_id")
+    )
+    private List<Fault> faults = new ArrayList<>();
+
+    // CHANGED: Fault description is now optional
+    @Column(columnDefinition = "TEXT")
     private String faultDescription;
 
     @Column(columnDefinition = "TEXT")
@@ -61,11 +81,26 @@ public class JobCard {
     @Column(name = "estimated_cost")
     private Double estimatedCost;
 
+    @Column(name = "total_service_price")
+    private Double totalServicePrice = 0.0;
+
+    @Column(name = "one_day_service", nullable = false)
+    private Boolean oneDayService = false;
+
+    // CHANGED: Service categories are now optional
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "job_card_service_categories",
+            joinColumns = @JoinColumn(name = "job_card_id"),
+            inverseJoinColumns = @JoinColumn(name = "service_category_id")
+    )
+    private List<ServiceCategory> serviceCategories = new ArrayList<>();
+
     // Serials
     @OneToMany(mappedBy = "jobCard", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<JobCardSerial> serials = new ArrayList<>();
 
-    // NEW: Used items
+    // Used items
     @OneToMany(mappedBy = "jobCard", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<UsedItem> usedItems = new ArrayList<>();
 
@@ -74,7 +109,7 @@ public class JobCard {
     private String cancelledBy;
 
     @Column(name = "cancelled_by_user_id")
-    private Long cancelledByUserId; // NEW: Who cancelled (user ID)
+    private Long cancelledByUserId;
 
     @Column(columnDefinition = "TEXT")
     private String cancellationReason;
@@ -98,6 +133,12 @@ public class JobCard {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (totalServicePrice == null) {
+            totalServicePrice = 0.0;
+        }
+        if (oneDayService == null) {
+            oneDayService = false;
+        }
     }
 
     @PreUpdate
@@ -129,5 +170,94 @@ public class JobCard {
     public void removeUsedItem(UsedItem item) {
         usedItems.remove(item);
         item.setJobCard(null);
+    }
+
+    public void addFault(Fault fault) {
+        if (faults == null) {
+            faults = new ArrayList<>();
+        }
+        if (!faults.contains(fault)) {
+            faults.add(fault);
+        }
+    }
+
+    public void removeFault(Fault fault) {
+        if (faults != null) {
+            faults.remove(fault);
+        }
+    }
+
+    public void clearFaults() {
+        if (faults != null) {
+            faults.clear();
+        }
+    }
+
+    // CHANGED: Device condition management methods for multiple conditions
+    public void addDeviceCondition(DeviceCondition deviceCondition) {
+        if (deviceConditions == null) {
+            deviceConditions = new ArrayList<>();
+        }
+        if (!deviceConditions.contains(deviceCondition)) {
+            deviceConditions.add(deviceCondition);
+        }
+    }
+
+    public void removeDeviceCondition(DeviceCondition deviceCondition) {
+        if (deviceConditions != null) {
+            deviceConditions.remove(deviceCondition);
+        }
+    }
+
+    public void clearDeviceConditions() {
+        if (deviceConditions != null) {
+            deviceConditions.clear();
+        }
+    }
+
+    // Helper methods for status transitions
+    public void markWaitingForParts() {
+        this.status = JobStatus.WAITING_FOR_PARTS;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void markWaitingForApproval() {
+        this.status = JobStatus.WAITING_FOR_APPROVAL;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void markInProgress() {
+        this.status = JobStatus.IN_PROGRESS;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void addServiceCategory(ServiceCategory serviceCategory) {
+        if (serviceCategories == null) {
+            serviceCategories = new ArrayList<>();
+        }
+        if (!serviceCategories.contains(serviceCategory)) {
+            serviceCategories.add(serviceCategory);
+        }
+    }
+
+    public void removeServiceCategory(ServiceCategory serviceCategory) {
+        if (serviceCategories != null) {
+            serviceCategories.remove(serviceCategory);
+        }
+    }
+
+    public void clearServiceCategories() {
+        if (serviceCategories != null) {
+            serviceCategories.clear();
+        }
+    }
+
+    public void calculateTotalServicePrice() {
+        this.totalServicePrice = 0.0;
+        if (serviceCategories != null && !serviceCategories.isEmpty()) {
+            this.totalServicePrice = serviceCategories.stream()
+                    .mapToDouble(sc -> sc.getServicePrice() != null ? sc.getServicePrice() : 0.0)
+                    .sum();
+        }
     }
 }

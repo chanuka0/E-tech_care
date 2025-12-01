@@ -25,7 +25,13 @@ public class ServiceCategory {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "is_active", nullable = false)
+    @Column(name = "code", nullable = false, unique = true, length = 100)
+    private String code;  // NEW: Generate from name (e.g., "SCREEN_REPAIR")
+
+    @Column(name = "Service_Price", nullable = false)
+    private Double servicePrice;
+
+    @Column(name = "is_active",nullable = false)
     private Boolean isActive = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -45,6 +51,13 @@ public class ServiceCategory {
         }
         if (this.isActive == null) {
             this.isActive = true;
+        }
+        // AUTO-GENERATE CODE from name if not provided
+        if (this.code == null || this.code.isBlank()) {
+            this.code = this.name
+                    .toUpperCase()
+                    .replaceAll(" ", "_")
+                    .replaceAll("[^A-Z0-9_]", "");
         }
     }
 

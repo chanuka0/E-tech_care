@@ -37,6 +37,15 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     @Query("SELECT SUM(i.balance) FROM Invoice i WHERE i.paymentStatus != 'PAID'")
     Double getTotalOutstanding();
+
+//    Optional<Invoice> findByJobCardIdAndIsDeletedFalse(Long jobCardId);
+
+    @Query("SELECT i FROM Invoice i WHERE i.jobCard.id = :jobCardId AND i.isDeleted = false")
+    Optional<Invoice> findByJobCardIdAndIsDeletedFalse(@Param("jobCardId") Long jobCardId);
+
+    // Check if job card has invoice
+    @Query("SELECT COUNT(i) > 0 FROM Invoice i WHERE i.jobCard.id = :jobCardId AND i.isDeleted = false")
+    boolean existsByJobCardIdAndIsDeletedFalse(@Param("jobCardId") Long jobCardId);
 }
 
 //package com.example.demo.repositories;
