@@ -3,7 +3,7 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.Expense;
 import com.example.demo.entity.ExpenseCategory;
-import com.example.demo.services.ExpenseService;
+import com.example.demo.service.ExpenseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;

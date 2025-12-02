@@ -1540,7 +1540,7 @@
 
 
 
-package com.example.demo.services;
+package com.example.demo.service;
 
 import com.example.demo.entity.*;
 import com.example.demo.repositories.InventoryItemRepository;

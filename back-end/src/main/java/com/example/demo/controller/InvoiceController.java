@@ -3,7 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.entity.Invoice;
 import com.example.demo.entity.Payment;
 import com.example.demo.entity.PaymentMethod;
-import com.example.demo.services.InvoiceService;
+import com.example.demo.service.InvoiceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;

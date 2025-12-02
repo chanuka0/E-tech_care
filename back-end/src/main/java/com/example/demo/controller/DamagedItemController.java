@@ -2,7 +2,7 @@ package com.example.demo.controller;
 
 
 import com.example.demo.entity.DamagedItem;
-import com.example.demo.services.DamagedItemService;
+import com.example.demo.service.DamagedItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;

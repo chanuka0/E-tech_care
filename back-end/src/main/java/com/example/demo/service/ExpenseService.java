@@ -292,7 +292,7 @@
 ////    }
 //}
 
-package com.example.demo.services;
+package com.example.demo.service;
 
 import com.example.demo.entity.Expense;
 import com.example.demo.entity.ExpenseCategory;

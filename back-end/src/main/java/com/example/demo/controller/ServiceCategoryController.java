@@ -2,7 +2,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.ServiceCategory;
-import com.example.demo.services.ServiceCategoryService;
+import com.example.demo.service.ServiceCategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

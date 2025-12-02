@@ -115,7 +115,7 @@ package com.example.demo.controller;
 import com.example.demo.entity.InventoryItem;
 import com.example.demo.entity.InventorySerial;
 import com.example.demo.entity.StockMovement;
-import com.example.demo.services.InventoryService;
+import com.example.demo.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;

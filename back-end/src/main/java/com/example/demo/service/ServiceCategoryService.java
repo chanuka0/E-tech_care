@@ -1,6 +1,6 @@
 
 
-package com.example.demo.services;
+package com.example.demo.service;
 
 import com.example.demo.entity.ServiceCategory;
 import com.example.demo.repositories.ServiceCategoryRepository;

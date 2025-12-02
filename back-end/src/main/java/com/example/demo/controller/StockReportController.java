@@ -1,8 +1,8 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.StockMovement;
-import com.example.demo.services.InventoryService;
-import com.example.demo.services.StockReportService;
+import com.example.demo.service.InventoryService;
+import com.example.demo.service.StockReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;

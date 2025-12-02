@@ -35,7 +35,7 @@
 
 package com.example.demo.controller;
 
-import com.example.demo.services.ReportService;
+import com.example.demo.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;

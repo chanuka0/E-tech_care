@@ -1,7 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.DeviceCondition;
-import com.example.demo.services.DeviceConditionService;
+import com.example.demo.service.DeviceConditionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
