@@ -121,4 +121,7 @@ public class InvoiceItem {
     @CollectionTable(name = "invoice_item_serials", joinColumns = @JoinColumn(name = "invoice_item_id"))
     @Column(name = "serial_number")
     private List<String> serialNumbers;
+
+    @Column
+    private String itemType;
 }

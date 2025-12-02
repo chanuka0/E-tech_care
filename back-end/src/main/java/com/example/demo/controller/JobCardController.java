@@ -157,6 +157,34 @@ public class JobCardController {
                     .body(new ErrorResponse(e.getMessage()));
         }
     }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')") // ✅ ONLY ADMINS CAN DELETE
+    public ResponseEntity<?> deleteJobCard(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> requestBody) {
+        try {
+            String reason = requestBody.get("reason");
+            if (reason == null || reason.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse("Deletion reason is required"));
+            }
+
+            jobCardService.deleteJobCard(id, reason);
+            return ResponseEntity.ok(new SuccessResponse("Job card deleted successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    // Add this helper class if it doesn't exist
+    static class SuccessResponse {
+        public String message;
+
+        public SuccessResponse(String message) {
+            this.message = message;
+        }
+    }
 
     // CHANGED: Device Condition Endpoints - now support multiple
     @PostMapping("/{id}/device-conditions/{deviceConditionId}")

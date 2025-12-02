@@ -190,6 +190,51 @@ public class JobCardService {
         sendJobCreatedNotification(saved);
         return saved;
     }
+    //......................................
+    @Transactional
+    public void deleteJobCard(Long id, String reason) {
+        JobCard jobCard = jobCardRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job card not found"));
+
+        // Only allow deletion of PENDING, CANCELLED job cards for safety
+        if (jobCard.getStatus() != JobStatus.PENDING &&
+                jobCard.getStatus() != JobStatus.CANCELLED) {
+            throw new RuntimeException(
+                    "Can only delete PENDING or CANCELLED job cards. Current status: " + jobCard.getStatus()
+            );
+        }
+
+        // IMPORTANT: Release all serials before deleting
+        if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
+            for (UsedItem item : jobCard.getUsedItems()) {
+                if (item.getInventoryItem().getHasSerialization() &&
+                        item.getUsedSerialNumbers() != null) {
+                    for (String serialNumber : item.getUsedSerialNumbers()) {
+                        try {
+                            inventoryService.releaseSerial(serialNumber);
+                            System.out.println("✅ Released serial before deletion: " + serialNumber);
+                        } catch (Exception e) {
+                            System.err.println("⚠️ Warning: Could not release serial " + serialNumber);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Send deletion notification
+        String priorityInfo = jobCard.getOneDayService() ? " 🚨 ONE DAY SERVICE DELETED" : "";
+        notificationService.sendNotification(
+                NotificationType.JOB_CANCELLED,
+                "Job card deleted: " + jobCard.getJobNumber() +
+                        " - Reason: " + reason +
+                        priorityInfo,
+                jobCard
+        );
+
+        // Delete the job card
+        jobCardRepository.deleteById(id);
+    }
+    //....................
 
     /**
      * Update job card with serial state management - FIXED VERSION
