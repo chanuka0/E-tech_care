@@ -5,11 +5,13 @@ import com.example.demo.entity.*;
 import com.example.demo.repositories.DamagedItemRepository;
 import com.example.demo.repositories.InventoryItemRepository;
 import com.example.demo.repositories.InventorySerialRepository;
+import com.example.demo.repositories.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.example.demo.service.NotificationService;
 
 @Service
 @RequiredArgsConstructor

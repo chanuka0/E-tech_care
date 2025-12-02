@@ -19,7 +19,7 @@ public class JobCardService {
     private final FaultRepository faultRepository;
     private final InventoryItemRepository inventoryItemRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
-    private final NotificationService notificationService;
+    private final com.example.demo.service.NotificationService notificationService;
     private final BrandRepository brandRepository;
     private final ModelRepository modelRepository;
     private final ProcessorRepository processorRepository;

@@ -1562,7 +1562,7 @@ public class InventoryService {
     private final InventoryItemRepository inventoryItemRepository;
     private final InventorySerialRepository inventorySerialRepository;
     private final StockMovementRepository stockMovementRepository;
-    private final NotificationService notificationService;
+    private final com.example.demo.service.NotificationService notificationService;
 
     // ========== INVENTORY ITEM MANAGEMENT ==========
 

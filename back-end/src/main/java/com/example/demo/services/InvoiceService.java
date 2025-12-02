@@ -950,7 +950,7 @@ public class InvoiceService {
     private final InventoryItemRepository inventoryItemRepository;
     private final InventorySerialRepository inventorySerialRepository;
     private final StockMovementRepository stockMovementRepository;
-    private final NotificationService notificationService;
+    private final com.example.demo.service.NotificationService notificationService;
     private final InventoryService inventoryService;
     private final PaymentRepository paymentRepository;
 
