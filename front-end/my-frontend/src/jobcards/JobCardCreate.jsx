@@ -1182,7 +1182,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
   });
 
   const deviceTypes = ['LAPTOP', 'DESKTOP', 'PRINTER', 'PROJECTOR', 'OTHER'];
-  const serialTypes = ['RAM_01_SERIAL', 'RAM_02_SERIAL', 'RAM_03_SERIAL', 'RAM_04_SERIAL', 'HDD_01_SERIAL', 'HDD_02_SERIAL', 'SSD_01_SERIAL', 'SSD_02_SERIAL', 'ADAPTOR_SERIAL', 'BATTERY_SERIAL'];
+  const serialTypes = ['RAM_01', 'RAM_02', 'RAM_03', 'RAM_04', 'HDD_01', 'HDD_02', 'SSD_01', 'SSD_02', 'ADAPTOR', 'BATTERY'];
 
   // Prevent form submission on Enter key
   useEffect(() => {
