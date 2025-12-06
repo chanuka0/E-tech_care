@@ -2264,9 +2264,15 @@ public class InventoryService {
         }
     }
 
-    private String generateSku() {
-        return "SKU-" + System.currentTimeMillis();
-    }
+//    private String generateSku() {
+//        return "SKU-" + System.currentTimeMillis();
+//    }
+private String generateSku() {
+    Long count = inventoryItemRepository.count();
+    // Generate SKU with 5-digit number: SKU-00001, SKU-00002, etc.
+    String sequencePart = String.format("%05d", (count + 1));
+    return "SKU-" + sequencePart;
+}
 
     private String getCurrentUsername() {
         try {
@@ -2275,6 +2281,7 @@ public class InventoryService {
             return "SYSTEM";
         }
     }
+
 
     // ========== INVENTORY STATISTICS ==========
 

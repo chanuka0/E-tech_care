@@ -1066,11 +1066,10 @@ public class InvoiceService {
         JobCard jobCard = jobCardRepository.findById(jobCardId)
                 .orElseThrow(() -> new RuntimeException("Job card not found"));
 
-        // ✅ Generate invoice number automatically
         String invoiceNumber = generateInvoiceNumber();
 
         Invoice invoice = new Invoice();
-        invoice.setInvoiceNumber(invoiceNumber); // ✅ AUTO-GENERATED
+        invoice.setInvoiceNumber(invoiceNumber);
         invoice.setJobCard(jobCard);
         invoice.setCustomerName(request.getCustomerName() != null ? request.getCustomerName() : jobCard.getCustomerName());
         invoice.setCustomerPhone(jobCard.getCustomerPhone());
@@ -1080,7 +1079,6 @@ public class InvoiceService {
         invoice.setTax(request.getTax() != null ? request.getTax() : 0.0);
         invoice.setPaidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : 0.0);
 
-        // ✅ Add invoice items (services + parts)
         List<InvoiceItem> invoiceItems = new ArrayList<>();
 
         // Add services from job card as invoice items
@@ -1093,7 +1091,7 @@ public class InvoiceService {
                 serviceItem.setUnitPrice(service.getServicePrice() != null ? service.getServicePrice() : 0.0);
                 serviceItem.setTotal(service.getServicePrice() != null ? service.getServicePrice() : 0.0);
                 serviceItem.setWarranty("Service");
-                serviceItem.setItemType("SERVICE"); // ✅ Mark as SERVICE
+                serviceItem.setItemType("SERVICE");
                 invoiceItems.add(serviceItem);
             }
         }
@@ -1104,11 +1102,26 @@ public class InvoiceService {
                 InvoiceItem partItem = new InvoiceItem();
                 partItem.setInvoice(invoice);
                 partItem.setItemName(usedItem.getInventoryItem().getName());
+
+                // ✅ NEW: Set item code (SKU)
+                partItem.setItemCode(usedItem.getInventoryItem().getSku());
+
                 partItem.setQuantity(usedItem.getQuantityUsed());
                 partItem.setUnitPrice(usedItem.getUnitPrice());
                 partItem.setTotal(usedItem.getQuantityUsed() * usedItem.getUnitPrice());
                 partItem.setWarranty(usedItem.getWarrantyPeriod());
-                partItem.setItemType("PART"); // ✅ Mark as PART
+
+                // ✅ NEW: Set warranty number (if provided in request or from usedItem)
+                if (request.getItems() != null) {
+                    for (CreateInvoiceRequest.ItemRequest reqItem : request.getItems()) {
+                        if (reqItem.getInventoryItemId().equals(usedItem.getInventoryItem().getId())) {
+                            partItem.setWarrantyNumber(reqItem.getWarrantyNumber());
+                            break;
+                        }
+                    }
+                }
+
+                partItem.setItemType("PART");
                 invoiceItems.add(partItem);
             }
         }
@@ -1147,7 +1160,6 @@ public class InvoiceService {
                 savedInvoice.setFullyPaidDate(LocalDateTime.now());
             }
 
-            // Create payment record
             Payment payment = createPaymentRecord(savedInvoice, savedInvoice.getPaidAmount(),
                     savedInvoice.getPaymentMethod(), "Initial payment");
 
@@ -1175,17 +1187,130 @@ public class InvoiceService {
 
         return savedInvoice;
     }
+//    @Transactional
+//    public Invoice createInvoiceFromJobCard(Long jobCardId, CreateInvoiceRequest request) {
+//        JobCard jobCard = jobCardRepository.findById(jobCardId)
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        // ✅ Generate invoice number automatically
+//        String invoiceNumber = generateInvoiceNumber();
+//
+//        Invoice invoice = new Invoice();
+//        invoice.setInvoiceNumber(invoiceNumber); // ✅ AUTO-GENERATED
+//        invoice.setJobCard(jobCard);
+//        invoice.setCustomerName(request.getCustomerName() != null ? request.getCustomerName() : jobCard.getCustomerName());
+//        invoice.setCustomerPhone(jobCard.getCustomerPhone());
+//        invoice.setCustomerEmail(jobCard.getCustomerEmail());
+//        invoice.setPaymentMethod(PaymentMethod.valueOf(request.getPaymentMethod() != null ? request.getPaymentMethod() : "CASH"));
+//        invoice.setDiscount(request.getDiscount() != null ? request.getDiscount() : 0.0);
+//        invoice.setTax(request.getTax() != null ? request.getTax() : 0.0);
+//        invoice.setPaidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : 0.0);
+//
+//        // ✅ Add invoice items (services + parts)
+//        List<InvoiceItem> invoiceItems = new ArrayList<>();
+//
+//        // Add services from job card as invoice items
+//        if (jobCard.getServiceCategories() != null && !jobCard.getServiceCategories().isEmpty()) {
+//            for (ServiceCategory service : jobCard.getServiceCategories()) {
+//                InvoiceItem serviceItem = new InvoiceItem();
+//                serviceItem.setInvoice(invoice);
+//                serviceItem.setItemName(service.getName());
+//                serviceItem.setQuantity(1);
+//                serviceItem.setUnitPrice(service.getServicePrice() != null ? service.getServicePrice() : 0.0);
+//                serviceItem.setTotal(service.getServicePrice() != null ? service.getServicePrice() : 0.0);
+//                serviceItem.setWarranty("Service");
+//                serviceItem.setItemType("SERVICE"); // ✅ Mark as SERVICE
+//                invoiceItems.add(serviceItem);
+//            }
+//        }
+//
+//        // Add parts from used items
+//        if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
+//            for (UsedItem usedItem : jobCard.getUsedItems()) {
+//                InvoiceItem partItem = new InvoiceItem();
+//                partItem.setInvoice(invoice);
+//                partItem.setItemName(usedItem.getInventoryItem().getName());
+//                partItem.setQuantity(usedItem.getQuantityUsed());
+//                partItem.setUnitPrice(usedItem.getUnitPrice());
+//                partItem.setTotal(usedItem.getQuantityUsed() * usedItem.getUnitPrice());
+//                partItem.setWarranty(usedItem.getWarrantyPeriod());
+//                partItem.setItemType("PART"); // ✅ Mark as PART
+//                invoiceItems.add(partItem);
+//            }
+//        }
+//
+//        invoice.setItems(invoiceItems);
+//
+//        // Calculate totals
+//        double subtotal = invoiceItems.stream()
+//                .mapToDouble(InvoiceItem::getTotal)
+//                .sum();
+//        double total = subtotal - invoice.getDiscount() + invoice.getTax();
+//        double balance = total - invoice.getPaidAmount();
+//
+//        invoice.setSubtotal(subtotal);
+//        invoice.setTotal(total);
+//        invoice.setBalance(balance);
+//
+//        // Determine payment status
+//        if (invoice.getPaidAmount() >= total) {
+//            invoice.setPaymentStatus(PaymentStatus.PAID);
+//        } else if (invoice.getPaidAmount() > 0) {
+//            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
+//        } else {
+//            invoice.setPaymentStatus(PaymentStatus.UNPAID);
+//        }
+//
+//        // Save and process the invoice
+//        Invoice savedInvoice = invoiceRepository.save(invoice);
+//
+//        // Process payments if any
+//        if (savedInvoice.getPaidAmount() != null && savedInvoice.getPaidAmount() > 0) {
+//            savedInvoice.setFirstPaymentDate(LocalDateTime.now());
+//            savedInvoice.setLastPaymentDate(LocalDateTime.now());
+//
+//            if (savedInvoice.getPaymentStatus() == PaymentStatus.PAID) {
+//                savedInvoice.setFullyPaidDate(LocalDateTime.now());
+//            }
+//
+//            // Create payment record
+//            Payment payment = createPaymentRecord(savedInvoice, savedInvoice.getPaidAmount(),
+//                    savedInvoice.getPaymentMethod(), "Initial payment");
+//
+//            if (savedInvoice.getPayments() == null) {
+//                savedInvoice.setPayments(new ArrayList<>());
+//            }
+//            savedInvoice.getPayments().add(payment);
+//
+//            savedInvoice = invoiceRepository.save(savedInvoice);
+//        }
+//
+//        // If fully paid, process stock and update job card
+//        if (savedInvoice.getPaymentStatus() == PaymentStatus.PAID) {
+//            processStockForPaidInvoice(savedInvoice);
+//            updateJobCardStatusToDelivered(savedInvoice.getJobCard().getId());
+//        }
+//
+//        notificationService.sendNotification(
+//                NotificationType.INVOICE_CREATED,
+//                "Invoice created from job card: " + savedInvoice.getInvoiceNumber() +
+//                        " | Amount: Rs." + savedInvoice.getTotal() +
+//                        " | Status: " + savedInvoice.getPaymentStatus(),
+//                savedInvoice
+//        );
+//
+//        return savedInvoice;
+//    }
 
     /**
      * ✅ Create Direct Invoice (WITHOUT Job Card) - NEW METHOD
      */
     @Transactional
     public Invoice createDirectInvoice(CreateInvoiceRequest request) {
-        // ✅ Generate invoice number automatically
         String invoiceNumber = generateInvoiceNumber();
 
         Invoice invoice = new Invoice();
-        invoice.setInvoiceNumber(invoiceNumber); // ✅ AUTO-GENERATED
+        invoice.setInvoiceNumber(invoiceNumber);
         invoice.setCustomerName(request.getCustomerName());
         invoice.setCustomerPhone(request.getCustomerPhone());
         invoice.setCustomerEmail(request.getCustomerEmail());
@@ -1194,7 +1319,6 @@ public class InvoiceService {
         invoice.setTax(request.getTax() != null ? request.getTax() : 0.0);
         invoice.setPaidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : 0.0);
 
-        // Add items from request
         List<InvoiceItem> invoiceItems = new ArrayList<>();
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (CreateInvoiceRequest.ItemRequest itemRequest : request.getItems()) {
@@ -1204,11 +1328,19 @@ public class InvoiceService {
                 InvoiceItem invoiceItem = new InvoiceItem();
                 invoiceItem.setInvoice(invoice);
                 invoiceItem.setItemName(inventoryItem.getName());
+
+                // ✅ NEW: Set item code (SKU)
+                invoiceItem.setItemCode(inventoryItem.getSku());
+
                 invoiceItem.setQuantity(itemRequest.getQuantity());
                 invoiceItem.setUnitPrice(itemRequest.getUnitPrice() != null ? itemRequest.getUnitPrice() : inventoryItem.getSellingPrice());
                 invoiceItem.setTotal(invoiceItem.getQuantity() * invoiceItem.getUnitPrice());
                 invoiceItem.setWarranty(itemRequest.getWarranty() != null ? itemRequest.getWarranty() : "No Warranty");
-                invoiceItem.setItemType("PART"); // ✅ Mark as PART
+
+                // ✅ NEW: Set warranty number from request
+                invoiceItem.setWarrantyNumber(itemRequest.getWarrantyNumber());
+
+                invoiceItem.setItemType("PART");
                 invoiceItems.add(invoiceItem);
             }
         }
@@ -1247,7 +1379,6 @@ public class InvoiceService {
                 savedInvoice.setFullyPaidDate(LocalDateTime.now());
             }
 
-            // Create payment record
             Payment payment = createPaymentRecord(savedInvoice, savedInvoice.getPaidAmount(),
                     savedInvoice.getPaymentMethod(), "Initial payment");
 
@@ -1283,6 +1414,110 @@ public class InvoiceService {
 
         return savedInvoice;
     }
+//    @Transactional
+//    public Invoice createDirectInvoice(CreateInvoiceRequest request) {
+//        // ✅ Generate invoice number automatically
+//        String invoiceNumber = generateInvoiceNumber();
+//
+//        Invoice invoice = new Invoice();
+//        invoice.setInvoiceNumber(invoiceNumber); // ✅ AUTO-GENERATED
+//        invoice.setCustomerName(request.getCustomerName());
+//        invoice.setCustomerPhone(request.getCustomerPhone());
+//        invoice.setCustomerEmail(request.getCustomerEmail());
+//        invoice.setPaymentMethod(PaymentMethod.valueOf(request.getPaymentMethod() != null ? request.getPaymentMethod() : "CASH"));
+//        invoice.setDiscount(request.getDiscount() != null ? request.getDiscount() : 0.0);
+//        invoice.setTax(request.getTax() != null ? request.getTax() : 0.0);
+//        invoice.setPaidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : 0.0);
+//
+//        // Add items from request
+//        List<InvoiceItem> invoiceItems = new ArrayList<>();
+//        if (request.getItems() != null && !request.getItems().isEmpty()) {
+//            for (CreateInvoiceRequest.ItemRequest itemRequest : request.getItems()) {
+//                InventoryItem inventoryItem = inventoryItemRepository.findById(itemRequest.getInventoryItemId())
+//                        .orElseThrow(() -> new RuntimeException("Inventory item not found"));
+//
+//                InvoiceItem invoiceItem = new InvoiceItem();
+//                invoiceItem.setInvoice(invoice);
+//                invoiceItem.setItemName(inventoryItem.getName());
+//                invoiceItem.setQuantity(itemRequest.getQuantity());
+//                invoiceItem.setUnitPrice(itemRequest.getUnitPrice() != null ? itemRequest.getUnitPrice() : inventoryItem.getSellingPrice());
+//                invoiceItem.setTotal(invoiceItem.getQuantity() * invoiceItem.getUnitPrice());
+//                invoiceItem.setWarranty(itemRequest.getWarranty() != null ? itemRequest.getWarranty() : "No Warranty");
+//                invoiceItem.setItemType("PART"); // ✅ Mark as PART
+//                invoiceItems.add(invoiceItem);
+//            }
+//        }
+//
+//        invoice.setItems(invoiceItems);
+//
+//        // Calculate totals
+//        double subtotal = invoiceItems.stream()
+//                .mapToDouble(InvoiceItem::getTotal)
+//                .sum();
+//        double total = subtotal - invoice.getDiscount() + invoice.getTax();
+//        double balance = total - invoice.getPaidAmount();
+//
+//        invoice.setSubtotal(subtotal);
+//        invoice.setTotal(total);
+//        invoice.setBalance(balance);
+//
+//        // Determine payment status
+//        if (invoice.getPaidAmount() >= total) {
+//            invoice.setPaymentStatus(PaymentStatus.PAID);
+//        } else if (invoice.getPaidAmount() > 0) {
+//            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
+//        } else {
+//            invoice.setPaymentStatus(PaymentStatus.UNPAID);
+//        }
+//
+//        // Save the invoice
+//        Invoice savedInvoice = invoiceRepository.save(invoice);
+//
+//        // Process payments if any
+//        if (savedInvoice.getPaidAmount() != null && savedInvoice.getPaidAmount() > 0) {
+//            savedInvoice.setFirstPaymentDate(LocalDateTime.now());
+//            savedInvoice.setLastPaymentDate(LocalDateTime.now());
+//
+//            if (savedInvoice.getPaymentStatus() == PaymentStatus.PAID) {
+//                savedInvoice.setFullyPaidDate(LocalDateTime.now());
+//            }
+//
+//            // Create payment record
+//            Payment payment = createPaymentRecord(savedInvoice, savedInvoice.getPaidAmount(),
+//                    savedInvoice.getPaymentMethod(), "Initial payment");
+//
+//            if (savedInvoice.getPayments() == null) {
+//                savedInvoice.setPayments(new ArrayList<>());
+//            }
+//            savedInvoice.getPayments().add(payment);
+//
+//            savedInvoice = invoiceRepository.save(savedInvoice);
+//        }
+//
+//        // Deduct inventory for direct invoice
+//        if (savedInvoice.getItems() != null) {
+//            for (InvoiceItem item : savedInvoice.getItems()) {
+//                if (item.getInventoryItem() != null) {
+//                    deductInventoryForInvoiceItem(savedInvoice, item);
+//                }
+//            }
+//        }
+//
+//        // If fully paid, process stock
+//        if (savedInvoice.getPaymentStatus() == PaymentStatus.PAID) {
+//            processStockForPaidInvoice(savedInvoice);
+//        }
+//
+//        notificationService.sendNotification(
+//                NotificationType.INVOICE_CREATED,
+//                "Direct invoice created: " + savedInvoice.getInvoiceNumber() +
+//                        " | Amount: Rs." + savedInvoice.getTotal() +
+//                        " | Status: " + savedInvoice.getPaymentStatus(),
+//                savedInvoice
+//        );
+//
+//        return savedInvoice;
+//    }
 
     /**
      * Create payment record for tracking individual payments
@@ -1494,6 +1729,39 @@ public class InvoiceService {
     /**
      * Auto-populate invoice items from job card used items with serial numbers
      */
+//    private void autoPopulateItemsFromJobCard(Invoice invoice) {
+//        if (invoice.getJobCard() == null) return;
+//
+//        JobCard jobCard = jobCardRepository.findById(invoice.getJobCard().getId())
+//                .orElseThrow(() -> new RuntimeException("Job card not found"));
+//
+//        if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
+//            List<InvoiceItem> invoiceItems = new ArrayList<>();
+//
+//            for (UsedItem usedItem : jobCard.getUsedItems()) {
+//                InvoiceItem invoiceItem = new InvoiceItem();
+//                invoiceItem.setInvoice(invoice);
+//                invoiceItem.setInventoryItem(usedItem.getInventoryItem());
+//                invoiceItem.setItemName(usedItem.getInventoryItem().getName());
+//                invoiceItem.setQuantity(usedItem.getQuantityUsed());
+//                invoiceItem.setUnitPrice(usedItem.getUnitPrice());
+//                invoiceItem.setTotal(usedItem.getQuantityUsed() * usedItem.getUnitPrice());
+//                invoiceItem.setWarranty(usedItem.getWarrantyPeriod() != null ?
+//                        usedItem.getWarrantyPeriod() : "No Warranty");
+//
+//                // Transfer serial numbers from used item to invoice item
+//                if (usedItem.getUsedSerialNumbers() != null && !usedItem.getUsedSerialNumbers().isEmpty()) {
+//                    invoiceItem.setSerialNumbers(new ArrayList<>(usedItem.getUsedSerialNumbers()));
+//                } else {
+//                    invoiceItem.setSerialNumbers(new ArrayList<>());
+//                }
+//
+//                invoiceItems.add(invoiceItem);
+//            }
+//
+//            invoice.setItems(invoiceItems);
+//        }
+//    }
     private void autoPopulateItemsFromJobCard(Invoice invoice) {
         if (invoice.getJobCard() == null) return;
 
@@ -1508,11 +1776,16 @@ public class InvoiceService {
                 invoiceItem.setInvoice(invoice);
                 invoiceItem.setInventoryItem(usedItem.getInventoryItem());
                 invoiceItem.setItemName(usedItem.getInventoryItem().getName());
+
+                // ✅ NEW: Set item code (SKU)
+                invoiceItem.setItemCode(usedItem.getInventoryItem().getSku());
+
                 invoiceItem.setQuantity(usedItem.getQuantityUsed());
                 invoiceItem.setUnitPrice(usedItem.getUnitPrice());
                 invoiceItem.setTotal(usedItem.getQuantityUsed() * usedItem.getUnitPrice());
                 invoiceItem.setWarranty(usedItem.getWarrantyPeriod() != null ?
                         usedItem.getWarrantyPeriod() : "No Warranty");
+                // Note: warrantyNumber will be set by user via frontend
 
                 // Transfer serial numbers from used item to invoice item
                 if (usedItem.getUsedSerialNumbers() != null && !usedItem.getUsedSerialNumbers().isEmpty()) {
@@ -2043,24 +2316,49 @@ class CreateInvoiceRequest {
     public List<ItemRequest> getItems() { return items; }
     public void setItems(List<ItemRequest> items) { this.items = items; }
 
-    // Nested class for items
-    public static class ItemRequest {
-        private Long inventoryItemId;
-        private Integer quantity;
-        private Double unitPrice;
-        private String warranty;
+//    // Nested class for items
+//    public static class ItemRequest {
+//        private Long inventoryItemId;
+//        private Integer quantity;
+//        private Double unitPrice;
+//        private String warranty;
+//
+//
+//        // Getters and Setters
+//        public Long getInventoryItemId() { return inventoryItemId; }
+//        public void setInventoryItemId(Long inventoryItemId) { this.inventoryItemId = inventoryItemId; }
+//
+//        public Integer getQuantity() { return quantity; }
+//        public void setQuantity(Integer quantity) { this.quantity = quantity; }
+//
+//        public Double getUnitPrice() { return unitPrice; }
+//        public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
+//
+//        public String getWarranty() { return warranty; }
+//        public void setWarranty(String warranty) { this.warranty = warranty; }
+//    }
+public static class ItemRequest {
+    private Long inventoryItemId;
+    private Integer quantity;
+    private Double unitPrice;
+    private String warranty;
+    private String warrantyNumber; // ✅ NEW: Manual warranty number (4-5 digits)
 
-        // Getters and Setters
-        public Long getInventoryItemId() { return inventoryItemId; }
-        public void setInventoryItemId(Long inventoryItemId) { this.inventoryItemId = inventoryItemId; }
+    // Getters and Setters
+    public Long getInventoryItemId() { return inventoryItemId; }
+    public void setInventoryItemId(Long inventoryItemId) { this.inventoryItemId = inventoryItemId; }
 
-        public Integer getQuantity() { return quantity; }
-        public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
 
-        public Double getUnitPrice() { return unitPrice; }
-        public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
+    public Double getUnitPrice() { return unitPrice; }
+    public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
 
-        public String getWarranty() { return warranty; }
-        public void setWarranty(String warranty) { this.warranty = warranty; }
+    public String getWarranty() { return warranty; }
+    public void setWarranty(String warranty) { this.warranty = warranty; }
+
+    public String getWarrantyNumber() { return warrantyNumber; }
+    public void setWarrantyNumber(String warrantyNumber) { this.warrantyNumber = warrantyNumber; }
     }
+
 }
