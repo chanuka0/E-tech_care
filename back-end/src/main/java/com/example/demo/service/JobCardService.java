@@ -3150,6 +3150,35 @@ public class JobCardService {
     public List<JobCard> getJobsWaitingForApproval() {
         return jobCardRepository.findByStatus(JobStatus.WAITING_FOR_APPROVAL);
     }
+    // Add these methods to your JobCardService class
+
+    /**
+     * Search job cards by device serial number (from JobCardSerial)
+     */
+    public List<JobCard> getJobCardByDeviceSerialNumber(String serialNumber) {
+        return jobCardRepository.findByDeviceSerialNumber(serialNumber);
+    }
+
+    /**
+     * General search across all fields (including serials and faults)
+     */
+    public List<JobCard> searchJobCards(String query) {
+        return jobCardRepository.searchJobCards(query);
+    }
+
+    /**
+     * Search job cards by barcode (partial match for search functionality)
+     */
+    public List<JobCard> searchJobCardsByBarcode(String barcode) {
+        return jobCardRepository.searchJobCards(barcode);
+    }
+
+    /**
+     * Get job cards by device barcode (exact match)
+     */
+    public List<JobCard> getJobCardByBarcode(String barcode) {
+        return jobCardRepository.findByDeviceBarcode(barcode);
+    }
 
     /**
      * Get job card statistics

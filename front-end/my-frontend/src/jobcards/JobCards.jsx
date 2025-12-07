@@ -1,7 +1,7 @@
 
 // import { useState, useEffect } from 'react';
 // import { useApi } from '../services/apiService';
-// import { useAuth } from '../auth/AuthProvider'; // ✅ IMPORT useAuth
+// import { useAuth } from '../auth/AuthProvider';
 // import JobCardEdit from './JobCardEdit';
 // import JobCardView from './JobCardView';
 // import { jsPDF } from 'jspdf';
@@ -9,7 +9,7 @@
 
 // const JobCards = ({ onCreateNew }) => {
 //   const { apiCall } = useApi();
-//   const { isAdmin } = useAuth(); // ✅ USE useAuth from AuthProvider
+//   const { isAdmin } = useAuth();
   
 //   const [jobCards, setJobCards] = useState([]);
 //   const [loading, setLoading] = useState(false);
@@ -19,57 +19,18 @@
 //   const [viewingJobCard, setViewingJobCard] = useState(null);
 //   const [searchTerm, setSearchTerm] = useState('');
 //   const [visibleCount, setVisibleCount] = useState(10);
-  
-//   // State for advanced filters
-//   const [filterBrand, setFilterBrand] = useState('');
-//   const [filterModel, setFilterModel] = useState('');
-//   const [filterProcessor, setFilterProcessor] = useState('');
-//   const [filterDeviceCondition, setFilterDeviceCondition] = useState('');
-//   const [filterServiceLocation, setFilterServiceLocation] = useState('');
-//   const [filterServiceType, setFilterServiceType] = useState('');
-//   const [filterWarranty, setFilterWarranty] = useState('');
-//   const [brands, setBrands] = useState([]);
-//   const [models, setModels] = useState([]);
-//   const [processors, setProcessors] = useState([]);
-//   const [deviceConditions, setDeviceConditions] = useState([]);
-//   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-
-//   // Service location options
-//   const serviceLocationOptions = [
-//     { value: 'WALK_IN', label: 'Walk-in' },
-//     { value: 'PICKUP', label: 'Pickup' },
-//     { value: 'ONSITE', label: 'On-site' }
-//   ];
-
-//   // Service type options
-//   const serviceTypeOptions = [
-//     { value: 'REPAIR', label: 'Repair' },
-//     { value: 'SERVICE', label: 'Service' },
-//     { value: 'REPLACEMENT', label: 'Replacement' },
-//     { value: 'DIAGNOSTICS', label: 'Diagnostics' }
-//   ];
-
-//   // Warranty period options
-//   const warrantyOptions = [
-//     { value: '3', label: '3 Months' },
-//     { value: '6', label: '6 Months' },
-//     { value: '12', label: '12 Months' },
-//     { value: '24', label: '24 Months' },
-//     { value: 'NO_WARRANTY', label: 'No Warranty' }
-//   ];
 
 //   // ✅ DEBUG: Log admin status
 //   useEffect(() => {
 //     console.log('🔐 Admin Status:', isAdmin());
 //   }, [isAdmin]);
 
-//   // Fetch job cards and filter data
+//   // Fetch job cards
 //   const fetchJobCards = async () => {
 //     setLoading(true);
 //     setError('');
 //     try {
 //       const data = await apiCall('/api/jobcards');
-//       // Sort by creation date - newest first
 //       const sortedData = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 //       setJobCards(sortedData);
 //     } catch (err) {
@@ -79,27 +40,8 @@
 //     setLoading(false);
 //   };
 
-//   // Fetch filter options
-//   const fetchFilterData = async () => {
-//     try {
-//       const [brandsData, modelsData, processorsData, conditionsData] = await Promise.all([
-//         apiCall('/api/brands'),
-//         apiCall('/api/models'),
-//         apiCall('/api/processors'),
-//         apiCall('/api/device-conditions')
-//       ]);
-//       setBrands(brandsData || []);
-//       setModels(modelsData || []);
-//       setProcessors(processorsData || []);
-//       setDeviceConditions(conditionsData || []);
-//     } catch (err) {
-//       console.error('Error fetching filter data:', err);
-//     }
-//   };
-
 //   useEffect(() => {
 //     fetchJobCards();
-//     fetchFilterData();
 //   }, []);
 
 //   // Function to add new job card to the top
@@ -109,7 +51,6 @@
 
 //   // ✅ DELETE JOB CARD FUNCTION - UPDATED (Only for PENDING jobs)
 //   const handleDeleteJobCard = async (jobCardId, jobNumber) => {
-//     // ✅ Check if user is admin (should already be checked, but keeping as safety)
 //     if (!isAdmin()) {
 //       alert('❌ Only admins can delete job cards');
 //       return;
@@ -169,7 +110,7 @@
 //     return icons[status] || '📄';
 //   };
 
-//   // Filter job cards by status, search term, AND new filters
+//   // ✅ UPDATED: Filter job cards by status and search term (INCLUDES DEVICE SERIAL)
 //   const filteredJobCards = jobCards.filter(job => {
 //     // Handle ONE_DAY_SERVICE filter separately since it's a boolean flag
 //     if (filterStatus === 'ONE_DAY_SERVICE') {
@@ -179,31 +120,17 @@
 //       if (!statusMatch) return false;
 //     }
     
+//     // ✅ UPDATED: Search now includes deviceSerial
 //     const searchMatch = searchTerm === '' || 
 //       job.jobNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
 //       job.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
 //       job.customerPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
 //       job.deviceType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
 //       job.diagnosisDetails?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//       job.deviceSerial?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//       job.deviceSerial?.toLowerCase().includes(searchTerm.toLowerCase()) || // ✅ ADDED
 //       job.fault?.toLowerCase().includes(searchTerm.toLowerCase());
     
-//     // Advanced filter conditions
-//     const brandMatch = filterBrand === '' || job.brand?.id === parseInt(filterBrand);
-//     const modelMatch = filterModel === '' || job.model?.id === parseInt(filterModel);
-//     const processorMatch = filterProcessor === '' || job.processor?.id === parseInt(filterProcessor);
-//     const conditionMatch = filterDeviceCondition === '' || job.deviceCondition?.id === parseInt(filterDeviceCondition);
-    
-//     // New filter conditions
-//     const serviceLocationMatch = filterServiceLocation === '' || job.serviceLocation === filterServiceLocation;
-//     const serviceTypeMatch = filterServiceType === '' || job.serviceType === filterServiceType;
-//     const warrantyMatch = filterWarranty === '' || 
-//       (filterWarranty === 'NO_WARRANTY' 
-//         ? (!job.warrantyPeriod || job.warrantyPeriod === 0)
-//         : job.warrantyPeriod === parseInt(filterWarranty));
-
-//     return searchMatch && brandMatch && modelMatch && processorMatch && conditionMatch && 
-//            serviceLocationMatch && serviceTypeMatch && warrantyMatch;
+//     return searchMatch;
 //   });
 
 //   // Get only the visible job cards (first N items)
@@ -212,17 +139,6 @@
 //   // Function to load more job cards
 //   const loadMore = () => {
 //     setVisibleCount(prev => prev + 10);
-//   };
-
-//   // Function to clear all advanced filters
-//   const clearAdvancedFilters = () => {
-//     setFilterBrand('');
-//     setFilterModel('');
-//     setFilterProcessor('');
-//     setFilterDeviceCondition('');
-//     setFilterServiceLocation('');
-//     setFilterServiceType('');
-//     setFilterWarranty('');
 //   };
 
 //   // Status filter button style
@@ -248,12 +164,11 @@
 //     return `${baseStyle} bg-gray-100 text-gray-700 hover:bg-gray-200`;
 //   };
 
-//   // NEW: Get urgent one day service job cards (only PENDING and IN_PROGRESS - EXCLUDES DELIVERED)
+//   // ✅ UPDATED: Get urgent one day service job cards - ONLY PENDING and IN_PROGRESS
 //   const getUrgentOneDayServiceJobCards = () => {
 //     return jobCards.filter(job => 
 //       job.oneDayService && 
-//       (job.status === 'PENDING' || job.status === 'IN_PROGRESS') &&
-//       job.status !== 'DELIVERED' // EXCLUDE DELIVERED JOBS
+//       (job.status === 'PENDING' || job.status === 'IN_PROGRESS') // ✅ ONLY these two statuses
 //     );
 //   };
 
@@ -276,7 +191,7 @@
 //           setViewingJobCard(null);
 //           setEditingJobCard(id);
 //         }}
-//         onStatusChange={fetchJobCards} // Refresh list when status changes
+//         onStatusChange={fetchJobCards}
 //       />
 //     );
 //   }
@@ -287,7 +202,6 @@
 //         jobCardId={editingJobCard}
 //         onSuccess={(updatedJobCard) => {
 //           setEditingJobCard(null);
-//           // Update the specific job card in the list
 //           setJobCards(prev => prev.map(job => 
 //             job.id === editingJobCard ? updatedJobCard : job
 //           ));
@@ -322,7 +236,7 @@
 //         </div>
 //       )}
 
-//       {/* URGENT ONE DAY SERVICE ALERT - Only for PENDING and IN_PROGRESS (EXCLUDES DELIVERED) */}
+//       {/* ✅ UPDATED: URGENT ONE DAY SERVICE ALERT - Only for PENDING and IN_PROGRESS */}
 //       {urgentOneDayServiceJobs.length > 0 && (
 //         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
 //           <div className="flex items-center justify-between">
@@ -361,7 +275,7 @@
 //         </div>
 //       )}
 
-//       {/* Search Bar */}
+//       {/* ✅ UPDATED: Search Bar - Now searches device serial too */}
 //       <div className="bg-white rounded-lg shadow p-4">
 //         <div className="relative">
 //           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -371,7 +285,7 @@
 //           </div>
 //           <input
 //             type="text"
-//             placeholder="Search by job card number, customer name, phone, device type, serial, fault, or diagnosis details..."
+//             placeholder="Search by job number, customer name, phone, device type, serial, fault, or diagnosis..."
 //             value={searchTerm}
 //             onChange={(e) => setSearchTerm(e.target.value)}
 //             className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
@@ -404,173 +318,37 @@
 //         </div>
 //       </div>
 
-//       {/* Advanced Filters Toggle */}
-//       <div className="bg-white rounded-lg shadow p-4">
-//         <button
-//           onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-//           className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 font-medium"
-//         >
-//           <svg className={`w-5 h-5 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-//           </svg>
-//           <span>Advanced Filters</span>
-//           {(filterBrand || filterModel || filterProcessor || filterDeviceCondition || 
-//             filterServiceLocation || filterServiceType || filterWarranty) && (
-//             <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-//               Active
-//             </span>
-//           )}
-//         </button>
-
-//         {/* Advanced Filters */}
-//         {showAdvancedFilters && (
-//           <div className="mt-4 pt-4 border-t border-gray-200">
-//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-//               {/* Brand Filter */}
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">Brand</label>
-//                 <select
-//                   value={filterBrand}
-//                   onChange={(e) => setFilterBrand(e.target.value)}
-//                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//                 >
-//                   <option value="">All Brands</option>
-//                   {brands.map(brand => (
-//                     <option key={brand.id} value={brand.id}>{brand.brandName}</option>
-//                   ))}
-//                 </select>
-//               </div>
-
-//               {/* Model Filter */}
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
-//                 <select
-//                   value={filterModel}
-//                   onChange={(e) => setFilterModel(e.target.value)}
-//                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//                 >
-//                   <option value="">All Models</option>
-//                   {models.map(model => (
-//                     <option key={model.id} value={model.id}>{model.modelName}</option>
-//                   ))}
-//                 </select>
-//               </div>
-
-//               {/* Processor Filter */}
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">Processor</label>
-//                 <select
-//                   value={filterProcessor}
-//                   onChange={(e) => setFilterProcessor(e.target.value)}
-//                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//                 >
-//                   <option value="">All Processors</option>
-//                   {processors.map(processor => (
-//                     <option key={processor.id} value={processor.id}>{processor.processorName}</option>
-//                   ))}
-//                 </select>
-//               </div>
-
-//               {/* Device Condition Filter */}
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">Device Condition</label>
-//                 <select
-//                   value={filterDeviceCondition}
-//                   onChange={(e) => setFilterDeviceCondition(e.target.value)}
-//                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//                 >
-//                   <option value="">All Conditions</option>
-//                   {deviceConditions.map(condition => (
-//                     <option key={condition.id} value={condition.id}>{condition.conditionName}</option>
-//                   ))}
-//                 </select>
-//               </div>
-              
-//               {/* Service Location Filter */}
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">Service Location</label>
-//                 <select
-//                   value={filterServiceLocation}
-//                   onChange={(e) => setFilterServiceLocation(e.target.value)}
-//                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//                 >
-//                   <option value="">All Locations</option>
-//                   {serviceLocationOptions.map(option => (
-//                     <option key={option.value} value={option.value}>{option.label}</option>
-//                   ))}
-//                 </select>
-//               </div>
-              
-//               {/* Service Type Filter */}
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">Service Type</label>
-//                 <select
-//                   value={filterServiceType}
-//                   onChange={(e) => setFilterServiceType(e.target.value)}
-//                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//                 >
-//                   <option value="">All Types</option>
-//                   {serviceTypeOptions.map(option => (
-//                     <option key={option.value} value={option.value}>{option.label}</option>
-//                   ))}
-//                 </select>
-//               </div>
-              
-//               {/* Warranty Period Filter */}
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">Warranty Period</label>
-//                 <select
-//                   value={filterWarranty}
-//                   onChange={(e) => setFilterWarranty(e.target.value)}
-//                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//                 >
-//                   <option value="">All Warranty</option>
-//                   {warrantyOptions.map(option => (
-//                     <option key={option.value} value={option.value}>{option.label}</option>
-//                   ))}
-//                 </select>
-//               </div>
-//             </div>
-
-//             {/* Clear Filters Button */}
-//             {(filterBrand || filterModel || filterProcessor || filterDeviceCondition || 
-//               filterServiceLocation || filterServiceType || filterWarranty) && (
-//               <div className="mt-4 flex justify-end">
-//                 <button
-//                   onClick={clearAdvancedFilters}
-//                   className="text-sm text-gray-600 hover:text-gray-800 underline"
-//                 >
-//                   Clear all filters
-//                 </button>
-//               </div>
-//             )}
-//           </div>
-//         )}
-//       </div>
+//       {/* ✅ REMOVED: Advanced Filters Section */}
 
 //       {/* Results Count */}
-//       {(searchTerm || filterBrand || filterModel || filterProcessor || filterDeviceCondition || 
-//         filterServiceLocation || filterServiceType || filterWarranty || filterStatus !== 'ALL') && (
+//       {(searchTerm || filterStatus !== 'ALL') && (
 //         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
 //           <p className="text-blue-800">
 //             Showing {filteredJobCards.length} of {jobCards.length} job card{filteredJobCards.length !== 1 ? 's' : ''}
 //             {filterStatus !== 'ALL' && ` with ${filterStatus === 'ONE_DAY_SERVICE' ? 'one day service' : `status "${filterStatus.replace(/_/g, ' ')}"`}`}
 //             {searchTerm && ` matching "${searchTerm}"`}
-//             {(filterBrand || filterModel || filterProcessor || filterDeviceCondition || 
-//               filterServiceLocation || filterServiceType || filterWarranty) && ' with selected filters'}
 //           </p>
 //         </div>
 //       )}
 
-//       {/* One Day Service Summary - Only show when not already filtered by one day service (EXCLUDES DELIVERED) */}
-//       {filterStatus !== 'ONE_DAY_SERVICE' && filteredJobCards.some(job => job.oneDayService && job.status !== 'DELIVERED') && (
+//       {/* ✅ UPDATED: One Day Service Summary - Only show PENDING and IN_PROGRESS */}
+//       {filterStatus !== 'ONE_DAY_SERVICE' && filteredJobCards.some(job => 
+//         job.oneDayService && 
+//         (job.status === 'PENDING' || job.status === 'IN_PROGRESS')
+//       ) && (
 //         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
 //           <div className="flex items-center">
 //             <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 //               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
 //             </svg>
 //             <span className="text-red-800 font-medium">
-//               🚨 {filteredJobCards.filter(job => job.oneDayService && job.status !== 'DELIVERED').length} One Day Service job card{filteredJobCards.filter(job => job.oneDayService && job.status !== 'DELIVERED').length !== 1 ? 's' : ''} requiring urgent attention
+//               🚨 {filteredJobCards.filter(job => 
+//                 job.oneDayService && 
+//                 (job.status === 'PENDING' || job.status === 'IN_PROGRESS')
+//               ).length} One Day Service job card{filteredJobCards.filter(job => 
+//                 job.oneDayService && 
+//                 (job.status === 'PENDING' || job.status === 'IN_PROGRESS')
+//               ).length !== 1 ? 's' : ''} requiring urgent attention
 //             </span>
 //           </div>
 //         </div>
@@ -635,10 +413,10 @@
 //                 <tr 
 //                   key={job.id} 
 //                   className={`transition-colors hover:bg-gray-50 ${
-//                     job.oneDayService && (job.status === 'PENDING' || job.status === 'IN_PROGRESS') && job.status !== 'DELIVERED'
-//                       ? 'bg-red-50 border-l-4 border-l-red-500'  // Red highlight for urgent One Day Service (not delivered)
-//                       : job.oneDayService && job.status !== 'DELIVERED'
-//                       ? 'bg-orange-50 border-l-4 border-l-orange-500'  // Orange for non-urgent One Day Service (not delivered)
+//                     job.oneDayService && (job.status === 'PENDING' || job.status === 'IN_PROGRESS')
+//                       ? 'bg-red-50 border-l-4 border-l-red-500'
+//                       : job.oneDayService
+//                       ? 'bg-orange-50 border-l-4 border-l-orange-500'
 //                       : ''
 //                   } ${
 //                     job.status === 'WAITING_FOR_PARTS'
@@ -653,11 +431,11 @@
 //                     <div className="text-xs text-gray-500 mt-1">
 //                       {new Date(job.createdAt).toLocaleDateString()}
 //                     </div>
-//                     {job.oneDayService && job.status !== 'DELIVERED' && (
+//                     {job.oneDayService && (
 //                       <span className={`inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full ${
 //                         (job.status === 'PENDING' || job.status === 'IN_PROGRESS')
-//                           ? 'bg-red-100 text-red-800'  // Urgent styling
-//                           : 'bg-orange-100 text-orange-800'  // Non-urgent styling
+//                           ? 'bg-red-100 text-red-800'
+//                           : 'bg-orange-100 text-orange-800'
 //                       }`}>
 //                         {(job.status === 'PENDING' || job.status === 'IN_PROGRESS') ? '🚨 ONE DAY' : '⚠️ ONE DAY'}
 //                       </span>
@@ -676,6 +454,12 @@
 //                     <div className="text-xs text-gray-500">
 //                       {job.processor?.processorName || 'No processor'}
 //                     </div>
+//                     {/* ✅ Display device serial number if available */}
+//                     {job.deviceSerial && (
+//                       <div className="text-xs text-gray-500 font-medium mt-1">
+//                         Serial: {job.deviceSerial}
+//                       </div>
+//                     )}
 //                   </td>
 //                   <td className="px-6 py-4">
 //                     <div className="space-y-2">
@@ -767,25 +551,21 @@
 //               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 //             </svg>
 //             <h3 className="text-xl font-medium text-gray-900 mb-2">
-//               {searchTerm || filterBrand || filterModel || filterProcessor || filterDeviceCondition || 
-//                filterServiceLocation || filterServiceType || filterWarranty || filterStatus !== 'ALL' 
+//               {searchTerm || filterStatus !== 'ALL' 
 //                 ? 'No Job Cards Found' 
 //                 : 'No Job Cards Yet'}
 //             </h3>
 //             <p className="text-gray-500 mb-4">
-//               {searchTerm || filterBrand || filterModel || filterProcessor || filterDeviceCondition || 
-//                filterServiceLocation || filterServiceType || filterWarranty || filterStatus !== 'ALL'
+//               {searchTerm || filterStatus !== 'ALL'
 //                 ? 'No job cards match your search criteria. Try adjusting your filters.'
 //                 : 'Create your first job card to get started with repair management.'
 //               }
 //             </p>
-//             {searchTerm || filterBrand || filterModel || filterProcessor || filterDeviceCondition || 
-//              filterServiceLocation || filterServiceType || filterWarranty || filterStatus !== 'ALL' ? (
+//             {searchTerm || filterStatus !== 'ALL' ? (
 //               <button
 //                 onClick={() => {
 //                   setSearchTerm('');
 //                   setFilterStatus('ALL');
-//                   clearAdvancedFilters();
 //                 }}
 //                 className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
 //               >
@@ -810,14 +590,11 @@
 
 
 
-
 import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
 import { useAuth } from '../auth/AuthProvider';
 import JobCardEdit from './JobCardEdit';
 import JobCardView from './JobCardView';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 
 const JobCards = ({ onCreateNew }) => {
   const { apiCall } = useApi();
@@ -831,6 +608,8 @@ const JobCards = ({ onCreateNew }) => {
   const [viewingJobCard, setViewingJobCard] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [visibleCount, setVisibleCount] = useState(10);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   // ✅ DEBUG: Log admin status
   useEffect(() => {
@@ -845,6 +624,8 @@ const JobCards = ({ onCreateNew }) => {
       const data = await apiCall('/api/jobcards');
       const sortedData = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setJobCards(sortedData);
+      setSearchResults([]);
+      setIsSearching(false);
     } catch (err) {
       setError('Failed to load job cards');
       console.error(err);
@@ -852,9 +633,43 @@ const JobCards = ({ onCreateNew }) => {
     setLoading(false);
   };
 
+  // Search job cards
+  const searchJobCards = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setError('');
+    try {
+      // Try general search first (includes serials, faults, barcode, etc.)
+      const results = await apiCall(`/api/jobcards/search/${query}`);
+      setSearchResults(results);
+    } catch (err) {
+      setSearchResults([]);
+      console.error('Search error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchJobCards();
   }, []);
+
+  // Handle search input change with debouncing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm) {
+        searchJobCards(searchTerm);
+      } else {
+        setSearchResults([]);
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Function to add new job card to the top
   const addNewJobCard = (newJobCard) => {
@@ -922,8 +737,13 @@ const JobCards = ({ onCreateNew }) => {
     return icons[status] || '📄';
   };
 
-  // ✅ UPDATED: Filter job cards by status and search term (INCLUDES DEVICE SERIAL)
-  const filteredJobCards = jobCards.filter(job => {
+  // ✅ UPDATED: Filter job cards
+  const filteredJobCards = (isSearching && searchResults.length > 0 ? searchResults : jobCards).filter(job => {
+    // If we're searching, show all search results
+    if (isSearching && searchResults.length > 0) {
+      return true;
+    }
+    
     // Handle ONE_DAY_SERVICE filter separately since it's a boolean flag
     if (filterStatus === 'ONE_DAY_SERVICE') {
       if (!job.oneDayService) return false;
@@ -932,17 +752,7 @@ const JobCards = ({ onCreateNew }) => {
       if (!statusMatch) return false;
     }
     
-    // ✅ UPDATED: Search now includes deviceSerial
-    const searchMatch = searchTerm === '' || 
-      job.jobNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.customerPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.deviceType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.diagnosisDetails?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.deviceSerial?.toLowerCase().includes(searchTerm.toLowerCase()) || // ✅ ADDED
-      job.fault?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return searchMatch;
+    return true;
   });
 
   // Get only the visible job cards (first N items)
@@ -976,15 +786,36 @@ const JobCards = ({ onCreateNew }) => {
     return `${baseStyle} bg-gray-100 text-gray-700 hover:bg-gray-200`;
   };
 
-  // ✅ UPDATED: Get urgent one day service job cards - ONLY PENDING and IN_PROGRESS
+  // ✅ Get urgent one day service job cards
   const getUrgentOneDayServiceJobCards = () => {
     return jobCards.filter(job => 
       job.oneDayService && 
-      (job.status === 'PENDING' || job.status === 'IN_PROGRESS') // ✅ ONLY these two statuses
+      (job.status === 'PENDING' || job.status === 'IN_PROGRESS')
     );
   };
 
   const urgentOneDayServiceJobs = getUrgentOneDayServiceJobCards();
+
+  // ✅ Get primary device serial (first DEVICE_SERIAL type)
+  const getPrimaryDeviceSerial = (job) => {
+    if (job.serials && job.serials.length > 0) {
+      // First try to find DEVICE_SERIAL type
+      const deviceSerial = job.serials.find(s => s.serialType === 'DEVICE_SERIAL');
+      if (deviceSerial) return deviceSerial.serialValue;
+      
+      // Otherwise return the first serial
+      return job.serials[0].serialValue;
+    }
+    return null;
+  };
+
+  // ✅ Get all faults as comma-separated string
+  const getAllFaults = (job) => {
+    if (job.faults && job.faults.length > 0) {
+      return job.faults.map(f => f.faultName).join(', ');
+    }
+    return 'No faults';
+  };
 
   if (loading) {
     return (
@@ -1048,7 +879,7 @@ const JobCards = ({ onCreateNew }) => {
         </div>
       )}
 
-      {/* ✅ UPDATED: URGENT ONE DAY SERVICE ALERT - Only for PENDING and IN_PROGRESS */}
+      {/* ✅ URGENT ONE DAY SERVICE ALERT */}
       {urgentOneDayServiceJobs.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
@@ -1087,7 +918,7 @@ const JobCards = ({ onCreateNew }) => {
         </div>
       )}
 
-      {/* ✅ UPDATED: Search Bar - Now searches device serial too */}
+      {/* ✅ UPDATED: Search Bar - Now searches device serial and faults */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1097,14 +928,18 @@ const JobCards = ({ onCreateNew }) => {
           </div>
           <input
             type="text"
-            placeholder="Search by job number, customer name, phone, device type, serial, fault, or diagnosis..."
+            placeholder="Search by job number, customer, phone, device type, serial number, barcode, fault, or notes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
           />
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm('')}
+              onClick={() => {
+                setSearchTerm('');
+                setIsSearching(false);
+                setSearchResults([]);
+              }}
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
             >
               <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1113,38 +948,83 @@ const JobCards = ({ onCreateNew }) => {
             </button>
           )}
         </div>
-      </div>
-
-      {/* Status Filter Buttons - INCLUDING ONE DAY SERVICE */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex flex-wrap gap-2">
-          {['ALL', 'PENDING', 'IN_PROGRESS', 'WAITING_FOR_PARTS', 'WAITING_FOR_APPROVAL', 'COMPLETED', 'DELIVERED', 'CANCELLED', 'ONE_DAY_SERVICE'].map(status => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={getStatusButtonStyle(status)}
-            >
-              <span className="capitalize">{status.toLowerCase().replace(/_/g, ' ')}</span>
-            </button>
-          ))}
+        {isSearching && (
+          <div className="mt-2 text-sm text-blue-600">
+            🔍 Searching for "{searchTerm}"...
+          </div>
+        )}
+        <div className="mt-2 text-xs text-gray-500">
+          🔎 Search includes: Job Number, Customer Name, Phone, Device Type, Device Serial, Barcode, Faults, and Notes
         </div>
       </div>
 
-      {/* ✅ REMOVED: Advanced Filters Section */}
-
-      {/* Results Count */}
-      {(searchTerm || filterStatus !== 'ALL') && (
+      {/* Search Results Info */}
+      {isSearching && searchResults.length > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-blue-800">
-            Showing {filteredJobCards.length} of {jobCards.length} job card{filteredJobCards.length !== 1 ? 's' : ''}
-            {filterStatus !== 'ALL' && ` with ${filterStatus === 'ONE_DAY_SERVICE' ? 'one day service' : `status "${filterStatus.replace(/_/g, ' ')}"`}`}
-            {searchTerm && ` matching "${searchTerm}"`}
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-blue-800 font-medium">
+                🔍 Found {searchResults.length} job card{searchResults.length !== 1 ? 's' : ''} matching "{searchTerm}"
+              </p>
+              <p className="text-blue-600 text-sm mt-1">
+                Showing search results (status filters disabled during search)
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setIsSearching(false);
+                setSearchResults([]);
+              }}
+              className="text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Clear Search
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isSearching && searchResults.length === 0 && searchTerm && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-yellow-800">
+            🔍 No job cards found matching "{searchTerm}"
+          </p>
+          <p className="text-yellow-700 text-sm mt-1">
+            Try searching by: Serial Number, Barcode, Customer Name, or Fault
           </p>
         </div>
       )}
 
-      {/* ✅ UPDATED: One Day Service Summary - Only show PENDING and IN_PROGRESS */}
-      {filterStatus !== 'ONE_DAY_SERVICE' && filteredJobCards.some(job => 
+      {/* Status Filter Buttons */}
+      {!isSearching && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex flex-wrap gap-2">
+            {['ALL', 'PENDING', 'IN_PROGRESS', 'WAITING_FOR_PARTS', 'WAITING_FOR_APPROVAL', 'COMPLETED', 'DELIVERED', 'CANCELLED', 'ONE_DAY_SERVICE'].map(status => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={getStatusButtonStyle(status)}
+              >
+                <span className="capitalize">{status.toLowerCase().replace(/_/g, ' ')}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Results Count */}
+      {(!isSearching && (searchTerm || filterStatus !== 'ALL')) && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-blue-800">
+            Showing {filteredJobCards.length} of {jobCards.length} job card{filteredJobCards.length !== 1 ? 's' : ''}
+            {filterStatus !== 'ALL' && ` with ${filterStatus === 'ONE_DAY_SERVICE' ? 'one day service' : `status "${filterStatus.replace(/_/g, ' ')}"`}`}
+            {searchTerm && !isSearching && ` matching "${searchTerm}"`}
+          </p>
+        </div>
+      )}
+
+      {/* ✅ UPDATED: One Day Service Summary */}
+      {!isSearching && filteredJobCards.some(job => 
         job.oneDayService && 
         (job.status === 'PENDING' || job.status === 'IN_PROGRESS')
       ) && (
@@ -1167,7 +1047,7 @@ const JobCards = ({ onCreateNew }) => {
       )}
 
       {/* Waiting for Parts Summary */}
-      {filteredJobCards.some(job => job.status === 'WAITING_FOR_PARTS') && (
+      {!isSearching && filteredJobCards.some(job => job.status === 'WAITING_FOR_PARTS') && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
           <div className="flex items-center">
             <svg className="w-5 h-5 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1181,7 +1061,7 @@ const JobCards = ({ onCreateNew }) => {
       )}
 
       {/* Waiting for Approval Summary */}
-      {filteredJobCards.some(job => job.status === 'WAITING_FOR_APPROVAL') && (
+      {!isSearching && filteredJobCards.some(job => job.status === 'WAITING_FOR_APPROVAL') && (
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
           <div className="flex items-center">
             <svg className="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1266,26 +1146,41 @@ const JobCards = ({ onCreateNew }) => {
                     <div className="text-xs text-gray-500">
                       {job.processor?.processorName || 'No processor'}
                     </div>
-                    {/* ✅ Display device serial number if available */}
-                    {job.deviceSerial && (
-                      <div className="text-xs text-gray-500 font-medium mt-1">
-                        Serial: {job.deviceSerial}
+                    {/* ✅ Display primary device serial */}
+                    {getPrimaryDeviceSerial(job) && (
+                      <div className="text-xs text-gray-700 font-medium mt-1">
+                        🔢 Serial: {getPrimaryDeviceSerial(job)}
+                      </div>
+                    )}
+                    {/* Display device barcode if available */}
+                    {job.deviceBarcode && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        📋 Barcode: {job.deviceBarcode}
                       </div>
                     )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="space-y-2">
+                      {/* ✅ UPDATED: Display all faults in a single line */}
                       <div>
-                        <div className="text-xs font-medium text-gray-700">Reported Fault:</div>
+                        <div className="text-xs font-medium text-gray-700">Faults:</div>
                         <div className="text-sm font-semibold text-gray-900">
-                          {job.fault || 'No fault reported'}
+                          {getAllFaults(job)}
                         </div>
                       </div>
-                      {job.diagnosisDetails && (
+                      {job.faultDescription && (
                         <div>
-                          <div className="text-xs font-medium text-gray-700">Diagnosis:</div>
-                          <div className="text-sm text-gray-900 truncate max-w-xs" title={job.diagnosisDetails}>
-                            {job.diagnosisDetails}
+                          <div className="text-xs font-medium text-gray-700">Description:</div>
+                          <div className="text-sm text-gray-900 truncate max-w-xs" title={job.faultDescription}>
+                            {job.faultDescription}
+                          </div>
+                        </div>
+                      )}
+                      {job.notes && (
+                        <div>
+                          <div className="text-xs font-medium text-gray-700">Notes:</div>
+                          <div className="text-sm text-gray-900 truncate max-w-xs" title={job.notes}>
+                            {job.notes}
                           </div>
                         </div>
                       )}
@@ -1306,7 +1201,7 @@ const JobCards = ({ onCreateNew }) => {
                     )}
                   </td>
                   
-                  {/* ✅ UPDATED ACTIONS COLUMN - Delete button only for admin AND PENDING jobs */}
+                  {/* ✅ UPDATED ACTIONS COLUMN */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button 
@@ -1363,17 +1258,32 @@ const JobCards = ({ onCreateNew }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <h3 className="text-xl font-medium text-gray-900 mb-2">
-              {searchTerm || filterStatus !== 'ALL' 
+              {isSearching 
+                ? 'No Search Results Found' 
+                : searchTerm || filterStatus !== 'ALL' 
                 ? 'No Job Cards Found' 
                 : 'No Job Cards Yet'}
             </h3>
             <p className="text-gray-500 mb-4">
-              {searchTerm || filterStatus !== 'ALL'
+              {isSearching
+                ? `No job cards match your search for "${searchTerm}". Try a different search term.`
+                : searchTerm || filterStatus !== 'ALL'
                 ? 'No job cards match your search criteria. Try adjusting your filters.'
                 : 'Create your first job card to get started with repair management.'
               }
             </p>
-            {searchTerm || filterStatus !== 'ALL' ? (
+            {isSearching ? (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setIsSearching(false);
+                  setSearchResults([]);
+                }}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              >
+                Clear Search
+              </button>
+            ) : searchTerm || filterStatus !== 'ALL' ? (
               <button
                 onClick={() => {
                   setSearchTerm('');
