@@ -157,8 +157,10 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
      * Find expenses created between start and end date
      * Uses createdAt field (not expenseDate)
      */
-    List<Expense> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
-
+//    List<Expense> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+    @Query("SELECT e FROM Expense e WHERE e.createdAt >= :startDateTime AND e.createdAt <= :endDateTime")
+    List<Expense> findByCreatedAtBetween(@Param("startDateTime") LocalDateTime startDateTime,
+                                         @Param("endDateTime") LocalDateTime endDateTime);
     /**
      * Find expenses by category name (String, not Long ID)
      */
