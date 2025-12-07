@@ -3125,6 +3125,10 @@ public class JobCardService {
         return jobCardRepository.findByJobNumber(jobNumber)
                 .orElseThrow(() -> new RuntimeException("Job card not found: " + jobNumber));
     }
+    public JobCard getJobCardByDeviceSerial(String jobNumber) {
+        return jobCardRepository.findByJobNumber(jobNumber)
+                .orElseThrow(() -> new RuntimeException("Job card not found: " + jobNumber));
+    }
 
     public List<JobCard> getJobCardsByStatus(JobStatus status) {
         return jobCardRepository.findByStatus(status);
