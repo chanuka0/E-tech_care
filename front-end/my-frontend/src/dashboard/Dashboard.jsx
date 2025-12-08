@@ -262,31 +262,7 @@ const Dashboard = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* One Day Service Filter */}
-      <div className="bg-white p-4 rounded-lg shadow-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Job Status Overview</h3>
-            <p className="text-sm text-gray-600">View all job card status counts</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filterOneDayService}
-                onChange={(e) => setFilterOneDayService(e.target.checked)}
-                className="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-              />
-              <span className="text-sm font-medium text-gray-700">Show Only One Day Service</span>
-            </label>
-            {filterOneDayService && (
-              <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
-                🚨 ONE DAY SERVICE
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+
 
       {/* Job Status Cards - Top Row */}
       {dashboardData && (
