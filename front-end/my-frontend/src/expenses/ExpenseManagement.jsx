@@ -112,7 +112,7 @@ const ExpenseManagement = () => {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'LKR'
     }).format(value || 0);
   };
 
