@@ -311,6 +311,10 @@ public class JobCard {
     private Model model;
 
     @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "model_number_id")
+    private ModelNumber modelNumber; // NEW: Model number field
+
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "processor_id")
     private Processor processor;
 

@@ -86,6 +86,7 @@ public class JobCardUpdateRequest {
     private String deviceType;
     private Long brandId;
     private Long modelId;
+    private Long modelNumberId; // CHANGED: Add modelNumberId
     private Long processorId;
 
     // CHANGED: Now accepts multiple device condition IDs
