@@ -1629,7 +1629,6 @@ const InvoiceView = ({ invoiceId, onClose, onRefresh }) => {
 <div class="notice">
     <b>Important Notice</b>
     <ul>
-        <li>Warranty period one year less than 14 working days.</li>
         <li>Warranty covers only manufacturer's defects. Damages or defects due to misuse, negligence, or power issues are not covered.</li>
         <li>Repairs or replacements may include labor or material costs.</li>
         <li>No warranty for cartridges, power adaptors, some battery types, and software.</li>
