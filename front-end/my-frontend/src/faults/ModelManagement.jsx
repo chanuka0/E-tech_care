@@ -1135,15 +1135,9 @@ const ModelManagement = () => {
   };
 
   const handleDeleteModel = async (id) => {
-    const deletionStatus = modelDeletionStatus[id];
     const model = models.find(m => m.id === id);
     
-    let confirmMessage;
-    if (deletionStatus?.canDelete) {
-      confirmMessage = `Are you sure you want to permanently delete the model "${model?.modelName}"?\n\nThis action cannot be undone as this model is not linked to any model numbers.`;
-    } else {
-      confirmMessage = `The model "${model?.modelName}" is linked to model numbers and cannot be permanently deleted.\n\nIt will be marked as inactive instead. Continue?`;
-    }
+    const confirmMessage = `Are you sure you want to permanently delete the model "${model?.modelName}"?\n\nThis action cannot be undone and the record will be removed from the database.`;
 
     if (window.confirm(confirmMessage)) {
       try {
@@ -1154,11 +1148,7 @@ const ModelManagement = () => {
         // Refresh data to get updated status
         await fetchData();
         
-        if (response.deletionType === 'permanent') {
-          showSuccessMessage('Model permanently deleted from database!');
-        } else {
-          showSuccessMessage('Model marked as inactive!');
-        }
+        showSuccessMessage('Model permanently deleted from database!');
       } catch (err) {
         const errorMsg = err.message || 'Failed to delete model';
         setError(errorMsg);
@@ -1401,13 +1391,20 @@ const ModelManagement = () => {
                         >
                           Edit
                         </button>
-                        <button
-                          onClick={() => handleDeleteModel(model.id)}
-                          className="text-red-600 hover:text-red-900 font-medium transition-colors px-2 py-1 rounded hover:bg-red-50"
-                          title={isLinked ? "Model is linked to model numbers and will be marked as inactive" : "Permanently delete model from database"}
-                        >
-                          Delete
-                        </button>
+                        {!isLinked && (
+                          <button
+                            onClick={() => handleDeleteModel(model.id)}
+                            className="text-red-600 hover:text-red-900 font-medium transition-colors px-2 py-1 rounded hover:bg-red-50"
+                            title="Permanently delete model from database"
+                          >
+                            Delete
+                          </button>
+                        )}
+                        {isLinked && (
+                          <span className="text-gray-400 text-xs italic px-2 py-1">
+                            Cannot delete (linked)
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
