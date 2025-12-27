@@ -1,3 +1,6 @@
+//
+//
+//
 //package com.example.demo.entity;
 //
 //import jakarta.persistence.*;
@@ -18,8 +21,12 @@
 //    private Long id;
 //
 //    @NotBlank(message = "Model name cannot be blank")
-//    @Column(name = "model_name", unique = true, nullable = false, length = 255)
+//    @Column(name = "model_name", nullable = false, length = 255)
 //    private String modelName;
+//
+//    @ManyToOne(fetch = FetchType.EAGER)
+//    @JoinColumn(name = "brand_id", nullable = false)
+//    private Brand brand;
 //
 //    @Column(name = "description", columnDefinition = "TEXT")
 //    private String description;
@@ -49,6 +56,9 @@
 //}
 
 
+
+
+
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
@@ -59,7 +69,15 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "models")
+@Table(
+        name = "models",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_brand_model_name",
+                        columnNames = {"brand_id", "model_name"}
+                )
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

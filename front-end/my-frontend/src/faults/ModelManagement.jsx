@@ -1,3 +1,308 @@
+// // import { useState, useEffect } from 'react';
+// // import { useApi } from '../services/apiService';
+// // import { useAuth } from '../auth/AuthProvider';
+// // import AddModelModal from './AddModelModal';
+// // import EditModelModal from './EditModelModal';
+
+// // const ModelManagement = () => {
+// //   const { apiCall } = useApi();
+// //   const { isAdmin } = useAuth();
+// //   const [models, setModels] = useState([]);
+// //   const [loading, setLoading] = useState(false);
+// //   const [error, setError] = useState('');
+// //   const [searchTerm, setSearchTerm] = useState('');
+  
+// //   const [showAddModal, setShowAddModal] = useState(false);
+// //   const [showEditModal, setShowEditModal] = useState(false);
+// //   const [selectedModel, setSelectedModel] = useState(null);
+
+// //   const fetchModels = async () => {
+// //     setLoading(true);
+// //     setError('');
+// //     try {
+// //       const data = await apiCall('/api/models');
+// //       setModels(data);
+// //     } catch (err) {
+// //       setError(err.message || 'Failed to fetch models');
+// //       console.error(err);
+// //     }
+// //     setLoading(false);
+// //   };
+
+// //   useEffect(() => {
+// //     fetchModels();
+// //   }, []);
+
+// //   const handleAddModel = async (newModel) => {
+// //     try {
+// //       const response = await apiCall('/api/models', {
+// //         method: 'POST',
+// //         body: JSON.stringify(newModel)
+// //       });
+// //       setModels([...models, response]);
+// //       setShowAddModal(false);
+// //       showSuccessMessage('Model added successfully!');
+// //     } catch (err) {
+// //       setError(err.message || 'Failed to add model');
+// //     }
+// //   };
+
+// //   const handleUpdateModel = async (updatedModel) => {
+// //     try {
+// //       const response = await apiCall(`/api/models/${selectedModel.id}`, {
+// //         method: 'PUT',
+// //         body: JSON.stringify(updatedModel)
+// //       });
+// //       setModels(models.map(model => model.id === selectedModel.id ? response : model));
+// //       setShowEditModal(false);
+// //       setSelectedModel(null);
+// //       showSuccessMessage('Model updated successfully!');
+// //     } catch (err) {
+// //       setError(err.message || 'Failed to update model');
+// //     }
+// //   };
+
+// //   const handleDeleteModel = async (id) => {
+// //     if (window.confirm('Are you sure you want to delete this model?')) {
+// //       try {
+// //         await apiCall(`/api/models/${id}`, {
+// //           method: 'DELETE'
+// //         });
+// //         setModels(models.filter(model => model.id !== id));
+// //         showSuccessMessage('Model deleted successfully!');
+// //       } catch (err) {
+// //         setError(err.message || 'Failed to delete model');
+// //       }
+// //     }
+// //   };
+
+// //   const showSuccessMessage = (message) => {
+// //     const msg = document.createElement('div');
+// //     msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+// //     msg.textContent = message;
+// //     document.body.appendChild(msg);
+// //     setTimeout(() => msg.remove(), 3000);
+// //   };
+
+// //   const filteredModels = models.filter(model => {
+// //     const searchLower = searchTerm.toLowerCase();
+// //     return (
+// //       model.modelName.toLowerCase().includes(searchLower) ||
+// //       model.id.toString().includes(searchLower)
+// //     );
+// //   });
+
+// //   if (!isAdmin()) {
+// //     return (
+// //       <div className="max-w-6xl mx-auto p-6">
+// //         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+// //           <p className="font-medium">Access Denied</p>
+// //           <p className="text-sm mt-1">You do not have permission to access Model Management. Only administrators can manage models.</p>
+// //         </div>
+// //       </div>
+// //     );
+// //   }
+
+// //   return (
+// //     <div className="max-w-6xl mx-auto p-6 space-y-6">
+// //       {/* Header */}
+// //       <div className="flex justify-between items-center">
+// //         <div>
+// //           <h2 className="text-3xl font-bold text-gray-900">Model Management</h2>
+// //           <p className="text-gray-600 mt-1">Manage device models for job cards</p>
+// //         </div>
+// //         <button
+// //           onClick={() => setShowAddModal(true)}
+// //           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+// //         >
+// //           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+// //             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+// //           </svg>
+// //           <span>Add Model</span>
+// //         </button>
+// //       </div>
+
+// //       {/* Error Message */}
+// //       {error && (
+// //         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+// //           <span>{error}</span>
+// //           <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">
+// //             ✕
+// //           </button>
+// //         </div>
+// //       )}
+
+// //       {/* Search Bar */}
+// //       <div className="bg-white rounded-lg shadow p-4">
+// //         <div className="relative">
+// //           <svg className="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+// //             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+// //           </svg>
+// //           <input
+// //             type="text"
+// //             placeholder="Search by model name or ID..."
+// //             value={searchTerm}
+// //             onChange={(e) => setSearchTerm(e.target.value)}
+// //             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+// //           />
+// //         </div>
+// //       </div>
+
+// //       {/* Models Table */}
+// //       <div className="bg-white rounded-lg shadow overflow-hidden">
+// //         {loading ? (
+// //           <div className="flex justify-center items-center h-64">
+// //             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+// //           </div>
+// //         ) : filteredModels.length === 0 ? (
+// //           <div className="flex justify-center items-center h-64">
+// //             <div className="text-center">
+// //               <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+// //                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+// //               </svg>
+// //               <h3 className="text-lg font-medium text-gray-900">No Models Found</h3>
+// //               <p className="text-gray-600 mt-1">{searchTerm ? 'Try adjusting your search' : 'Create your first model to get started'}</p>
+// //             </div>
+// //           </div>
+// //         ) : (
+// //           <div className="overflow-x-auto">
+// //             <table className="min-w-full divide-y divide-gray-200">
+// //               <thead className="bg-gray-50">
+// //                 <tr>
+// //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+// //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model Name</th>
+// //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+// //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+// //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+// //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+// //                 </tr>
+// //               </thead>
+// //               <tbody className="bg-white divide-y divide-gray-200">
+// //                 {filteredModels.map(model => (
+// //                   <tr key={model.id} className="hover:bg-gray-50 transition-colors">
+// //                     <td className="px-6 py-4 whitespace-nowrap">
+// //                       <span className="text-sm font-medium text-gray-900">#{model.id}</span>
+// //                     </td>
+// //                     <td className="px-6 py-4 whitespace-nowrap">
+// //                       <span className="text-sm font-medium text-gray-900">{model.modelName}</span>
+// //                     </td>
+// //                     <td className="px-6 py-4">
+// //                       <p className="text-sm text-gray-600 line-clamp-2">
+// //                         {model.description || 'No description provided'}
+// //                       </p>
+// //                     </td>
+// //                     <td className="px-6 py-4 whitespace-nowrap">
+// //                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+// //                         model.isActive 
+// //                           ? 'bg-green-100 text-green-800' 
+// //                           : 'bg-red-100 text-red-800'
+// //                       }`}>
+// //                         {model.isActive ? 'Active' : 'Inactive'}
+// //                       </span>
+// //                     </td>
+// //                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+// //                       {new Date(model.createdAt).toLocaleDateString('en-US', {
+// //                         year: 'numeric',
+// //                         month: 'short',
+// //                         day: 'numeric'
+// //                       })}
+// //                     </td>
+// //                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+// //                       <button
+// //                         onClick={() => {
+// //                           setSelectedModel(model);
+// //                           setShowEditModal(true);
+// //                         }}
+// //                         className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+// //                       >
+// //                         Edit
+// //                       </button>
+// //                       <button
+// //                         onClick={() => handleDeleteModel(model.id)}
+// //                         className="text-red-600 hover:text-red-900 font-medium transition-colors"
+// //                       >
+// //                         Delete
+// //                       </button>
+// //                     </td>
+// //                   </tr>
+// //                 ))}
+// //               </tbody>
+// //             </table>
+// //           </div>
+// //         )}
+// //       </div>
+
+// //       {/* Stats */}
+// //       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+// //         <div className="bg-white rounded-lg shadow p-6">
+// //           <div className="flex items-center justify-between">
+// //             <div>
+// //               <p className="text-sm text-gray-600">Total Models</p>
+// //               <p className="text-3xl font-bold text-gray-900">{models.length}</p>
+// //             </div>
+// //             <div className="bg-blue-100 p-3 rounded-full">
+// //               <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+// //                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+// //               </svg>
+// //             </div>
+// //           </div>
+// //         </div>
+
+// //         <div className="bg-white rounded-lg shadow p-6">
+// //           <div className="flex items-center justify-between">
+// //             <div>
+// //               <p className="text-sm text-gray-600">Active Models</p>
+// //               <p className="text-3xl font-bold text-green-600">{models.filter(m => m.isActive).length}</p>
+// //             </div>
+// //             <div className="bg-green-100 p-3 rounded-full">
+// //               <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+// //                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+// //               </svg>
+// //             </div>
+// //           </div>
+// //         </div>
+
+// //         <div className="bg-white rounded-lg shadow p-6">
+// //           <div className="flex items-center justify-between">
+// //             <div>
+// //               <p className="text-sm text-gray-600">Inactive Models</p>
+// //               <p className="text-3xl font-bold text-red-600">{models.filter(m => !m.isActive).length}</p>
+// //             </div>
+// //             <div className="bg-red-100 p-3 rounded-full">
+// //               <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+// //                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m2-2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+// //               </svg>
+// //             </div>
+// //           </div>
+// //         </div>
+// //       </div>
+
+// //       {/* Modals */}
+// //       {showAddModal && (
+// //         <AddModelModal
+// //           onAdd={handleAddModel}
+// //           onClose={() => setShowAddModal(false)}
+// //         />
+// //       )}
+
+// //       {showEditModal && selectedModel && (
+// //         <EditModelModal
+// //           model={selectedModel}
+// //           onUpdate={handleUpdateModel}
+// //           onClose={() => {
+// //             setShowEditModal(false);
+// //             setSelectedModel(null);
+// //           }}
+// //         />
+// //       )}
+// //     </div>
+// //   );
+// // };
+
+// // export default ModelManagement;
+
+
+
 // import { useState, useEffect } from 'react';
 // import { useApi } from '../services/apiService';
 // import { useAuth } from '../auth/AuthProvider';
@@ -7,32 +312,60 @@
 // const ModelManagement = () => {
 //   const { apiCall } = useApi();
 //   const { isAdmin } = useAuth();
+  
 //   const [models, setModels] = useState([]);
+//   const [brands, setBrands] = useState([]);
 //   const [loading, setLoading] = useState(false);
 //   const [error, setError] = useState('');
 //   const [searchTerm, setSearchTerm] = useState('');
   
+//   // Filter state
+//   const [selectedBrandId, setSelectedBrandId] = useState('');
+  
+//   // Modal states
 //   const [showAddModal, setShowAddModal] = useState(false);
 //   const [showEditModal, setShowEditModal] = useState(false);
 //   const [selectedModel, setSelectedModel] = useState(null);
 
-//   const fetchModels = async () => {
+//   // Fetch data
+//   const fetchData = async () => {
 //     setLoading(true);
 //     setError('');
 //     try {
-//       const data = await apiCall('/api/models');
-//       setModels(data);
+//       const [brandsData, modelsData] = await Promise.all([
+//         apiCall('/api/brands'),
+//         apiCall('/api/models')
+//       ]);
+//       setBrands(brandsData);
+//       setModels(modelsData);
 //     } catch (err) {
-//       setError(err.message || 'Failed to fetch models');
+//       setError(err.message || 'Failed to fetch data');
 //       console.error(err);
 //     }
 //     setLoading(false);
 //   };
 
 //   useEffect(() => {
-//     fetchModels();
+//     fetchData();
 //   }, []);
 
+//   // Filter models
+//   const filteredModels = models.filter(model => {
+//     // Filter by brand
+//     if (selectedBrandId && model.brand?.id !== parseInt(selectedBrandId)) {
+//       return false;
+//     }
+    
+//     // Filter by search term
+//     const searchLower = searchTerm.toLowerCase();
+//     return (
+//       model.modelName.toLowerCase().includes(searchLower) ||
+//       model.id.toString().includes(searchLower) ||
+//       model.brand?.brandName.toLowerCase().includes(searchLower)
+//     );
+//   });
+
+//   // CRUD Operations
 //   const handleAddModel = async (newModel) => {
 //     try {
 //       const response = await apiCall('/api/models', {
@@ -84,14 +417,6 @@
 //     setTimeout(() => msg.remove(), 3000);
 //   };
 
-//   const filteredModels = models.filter(model => {
-//     const searchLower = searchTerm.toLowerCase();
-//     return (
-//       model.modelName.toLowerCase().includes(searchLower) ||
-//       model.id.toString().includes(searchLower)
-//     );
-//   });
-
 //   if (!isAdmin()) {
 //     return (
 //       <div className="max-w-6xl mx-auto p-6">
@@ -109,7 +434,7 @@
 //       <div className="flex justify-between items-center">
 //         <div>
 //           <h2 className="text-3xl font-bold text-gray-900">Model Management</h2>
-//           <p className="text-gray-600 mt-1">Manage device models for job cards</p>
+//           <p className="text-gray-600 mt-1">Manage device models organized by brand</p>
 //         </div>
 //         <button
 //           onClick={() => setShowAddModal(true)}
@@ -132,21 +457,68 @@
 //         </div>
 //       )}
 
-//       {/* Search Bar */}
+//       {/* Filters */}
 //       <div className="bg-white rounded-lg shadow p-4">
-//         <div className="relative">
-//           <svg className="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-//           </svg>
-//           <input
-//             type="text"
-//             placeholder="Search by model name or ID..."
-//             value={searchTerm}
-//             onChange={(e) => setSearchTerm(e.target.value)}
-//             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-//           />
+//         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+//           {/* Search */}
+//           <div className="md:col-span-2">
+//             <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+//             <div className="relative">
+//               <svg className="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+//               </svg>
+//               <input
+//                 type="text"
+//                 placeholder="Search by model name, brand, or ID..."
+//                 value={searchTerm}
+//                 onChange={(e) => setSearchTerm(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Brand Filter */}
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Brand</label>
+//             <select
+//               value={selectedBrandId}
+//               onChange={(e) => setSelectedBrandId(e.target.value)}
+//               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+//             >
+//               <option value="">All Brands</option>
+//               {brands.map(brand => (
+//                 <option key={brand.id} value={brand.id}>
+//                   {brand.brandName}
+//                 </option>
+//               ))}
+//             </select>
+//           </div>
 //         </div>
 //       </div>
+
+//       {/* Results Info */}
+//       {(selectedBrandId || searchTerm) && (
+//         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+//           <div className="flex justify-between items-center">
+//             <div>
+//               <p className="text-blue-800">
+//                 Showing {filteredModels.length} of {models.length} models
+//                 {selectedBrandId && ` for brand: ${brands.find(b => b.id === parseInt(selectedBrandId))?.brandName || 'Selected Brand'}`}
+//                 {searchTerm && ` matching "${searchTerm}"`}
+//               </p>
+//             </div>
+//             <button
+//               onClick={() => {
+//                 setSelectedBrandId('');
+//                 setSearchTerm('');
+//               }}
+//               className="text-blue-600 hover:text-blue-800 font-medium"
+//             >
+//               Clear Filters
+//             </button>
+//           </div>
+//         </div>
+//       )}
 
 //       {/* Models Table */}
 //       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -161,7 +533,11 @@
 //                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 //               </svg>
 //               <h3 className="text-lg font-medium text-gray-900">No Models Found</h3>
-//               <p className="text-gray-600 mt-1">{searchTerm ? 'Try adjusting your search' : 'Create your first model to get started'}</p>
+//               <p className="text-gray-600 mt-1">
+//                 {searchTerm || selectedBrandId 
+//                   ? 'Try adjusting your filters' 
+//                   : 'Create your first model to get started'}
+//               </p>
 //             </div>
 //           </div>
 //         ) : (
@@ -170,6 +546,7 @@
 //               <thead className="bg-gray-50">
 //                 <tr>
 //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+//                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
 //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model Name</th>
 //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
 //                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -184,7 +561,18 @@
 //                       <span className="text-sm font-medium text-gray-900">#{model.id}</span>
 //                     </td>
 //                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="text-sm font-medium text-gray-900">{model.modelName}</span>
+//                       <div className="flex items-center">
+//                         <div>
+//                           <span className="text-sm font-medium text-gray-900">{model.brand?.brandName || 'N/A'}</span>
+//                           <p className="text-xs text-gray-500">Brand ID: {model.brand?.id || 'N/A'}</p>
+//                         </div>
+//                       </div>
+//                     </td>
+//                     <td className="px-6 py-4 whitespace-nowrap">
+//                       <div>
+//                         <span className="text-lg font-bold text-gray-900">{model.modelName}</span>
+//                         <p className="text-xs text-gray-500 font-mono mt-1">Model ID: {model.id}</p>
+//                       </div>
 //                     </td>
 //                     <td className="px-6 py-4">
 //                       <p className="text-sm text-gray-600 line-clamp-2">
@@ -199,6 +587,9 @@
 //                       }`}>
 //                         {model.isActive ? 'Active' : 'Inactive'}
 //                       </span>
+//                       {model.brand && !model.brand.isActive && (
+//                         <span className="ml-2 text-xs text-orange-600">(Brand inactive)</span>
+//                       )}
 //                     </td>
 //                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
 //                       {new Date(model.createdAt).toLocaleDateString('en-US', {
@@ -213,13 +604,13 @@
 //                           setSelectedModel(model);
 //                           setShowEditModal(true);
 //                         }}
-//                         className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+//                         className="text-blue-600 hover:text-blue-900 font-medium transition-colors px-2 py-1 rounded hover:bg-blue-50"
 //                       >
 //                         Edit
 //                       </button>
 //                       <button
 //                         onClick={() => handleDeleteModel(model.id)}
-//                         className="text-red-600 hover:text-red-900 font-medium transition-colors"
+//                         className="text-red-600 hover:text-red-900 font-medium transition-colors px-2 py-1 rounded hover:bg-red-50"
 //                       >
 //                         Delete
 //                       </button>
@@ -233,7 +624,7 @@
 //       </div>
 
 //       {/* Stats */}
-//       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+//       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 //         <div className="bg-white rounded-lg shadow p-6">
 //           <div className="flex items-center justify-between">
 //             <div>
@@ -252,7 +643,9 @@
 //           <div className="flex items-center justify-between">
 //             <div>
 //               <p className="text-sm text-gray-600">Active Models</p>
-//               <p className="text-3xl font-bold text-green-600">{models.filter(m => m.isActive).length}</p>
+//               <p className="text-3xl font-bold text-green-600">
+//                 {models.filter(m => m.isActive).length}
+//               </p>
 //             </div>
 //             <div className="bg-green-100 p-3 rounded-full">
 //               <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,11 +659,29 @@
 //           <div className="flex items-center justify-between">
 //             <div>
 //               <p className="text-sm text-gray-600">Inactive Models</p>
-//               <p className="text-3xl font-bold text-red-600">{models.filter(m => !m.isActive).length}</p>
+//               <p className="text-3xl font-bold text-red-600">
+//                 {models.filter(m => !m.isActive).length}
+//               </p>
 //             </div>
 //             <div className="bg-red-100 p-3 rounded-full">
 //               <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 //                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m2-2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+//               </svg>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="bg-white rounded-lg shadow p-6">
+//           <div className="flex items-center justify-between">
+//             <div>
+//               <p className="text-sm text-gray-600">Brands with Models</p>
+//               <p className="text-3xl font-bold text-purple-600">
+//                 {[...new Set(models.map(m => m.brand?.id).filter(Boolean))].length}
+//               </p>
+//             </div>
+//             <div className="bg-purple-100 p-3 rounded-full">
+//               <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
 //               </svg>
 //             </div>
 //           </div>
@@ -282,6 +693,7 @@
 //         <AddModelModal
 //           onAdd={handleAddModel}
 //           onClose={() => setShowAddModal(false)}
+//           brands={brands}  // Pass brands as prop
 //         />
 //       )}
 
@@ -293,6 +705,7 @@
 //             setShowEditModal(false);
 //             setSelectedModel(null);
 //           }}
+//           brands={brands}  // Pass brands as prop
 //         />
 //       )}
 //     </div>
@@ -300,6 +713,8 @@
 // };
 
 // export default ModelManagement;
+
+
 
 
 
@@ -376,7 +791,10 @@ const ModelManagement = () => {
       setShowAddModal(false);
       showSuccessMessage('Model added successfully!');
     } catch (err) {
-      setError(err.message || 'Failed to add model');
+      console.error('handleAddModel error:', err);
+      console.error('Error message:', err.message);
+      // Re-throw the error so the modal can catch it and display it
+      throw err;
     }
   };
 
@@ -391,17 +809,21 @@ const ModelManagement = () => {
       setSelectedModel(null);
       showSuccessMessage('Model updated successfully!');
     } catch (err) {
-      setError(err.message || 'Failed to update model');
+      console.error('handleUpdateModel error:', err);
+      console.error('Error message:', err.message);
+      // Re-throw the error so the modal can catch it and display it
+      throw err;
     }
   };
 
   const handleDeleteModel = async (id) => {
-    if (window.confirm('Are you sure you want to delete this model?')) {
+    if (window.confirm('Are you sure you want to delete this model? This will mark it as inactive.')) {
       try {
         await apiCall(`/api/models/${id}`, {
           method: 'DELETE'
         });
-        setModels(models.filter(model => model.id !== id));
+        // Refresh data to get updated status
+        await fetchData();
         showSuccessMessage('Model deleted successfully!');
       } catch (err) {
         setError(err.message || 'Failed to delete model');
@@ -411,8 +833,13 @@ const ModelManagement = () => {
 
   const showSuccessMessage = (message) => {
     const msg = document.createElement('div');
-    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-    msg.textContent = message;
+    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
+    msg.innerHTML = `
+      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+      </svg>
+      <span>${message}</span>
+    `;
     document.body.appendChild(msg);
     setTimeout(() => msg.remove(), 3000);
   };
@@ -450,7 +877,12 @@ const ModelManagement = () => {
       {/* Error Message */}
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
-          <span>{error}</span>
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span>{error}</span>
+          </div>
           <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">
             ✕
           </button>
@@ -693,7 +1125,7 @@ const ModelManagement = () => {
         <AddModelModal
           onAdd={handleAddModel}
           onClose={() => setShowAddModal(false)}
-          brands={brands}  // Pass brands as prop
+          brands={brands}
         />
       )}
 
@@ -705,7 +1137,7 @@ const ModelManagement = () => {
             setShowEditModal(false);
             setSelectedModel(null);
           }}
-          brands={brands}  // Pass brands as prop
+          brands={brands}
         />
       )}
     </div>
