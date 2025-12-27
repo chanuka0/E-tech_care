@@ -1,3 +1,5 @@
+
+
 // import { useState, useEffect } from 'react';
 // import { useApi } from '../services/apiService';
 // import { useAuth } from '../auth/AuthProvider';
@@ -10,6 +12,7 @@
 //   const [brands, setBrands] = useState([]);
 //   const [loading, setLoading] = useState(false);
 //   const [error, setError] = useState('');
+//   const [success, setSuccess] = useState('');
 //   const [searchTerm, setSearchTerm] = useState('');
   
 //   const [showAddModal, setShowAddModal] = useState(false);
@@ -23,8 +26,11 @@
 //       const data = await apiCall('/api/brands');
 //       setBrands(data);
 //     } catch (err) {
-//       setError(err.message || 'Failed to fetch brands');
-//       console.error(err);
+//       const errorMsg = err.response?.data?.message || 
+//                        err.message || 
+//                        'Failed to fetch brands';
+//       setError(errorMsg);
+//       console.error('Fetch brands error:', err);
 //     }
 //     setLoading(false);
 //   };
@@ -34,60 +40,78 @@
 //   }, []);
 
 //   const handleAddBrand = async (newBrand) => {
+//     setError('');
 //     try {
 //       const response = await apiCall('/api/brands', {
 //         method: 'POST',
-//         body: JSON.stringify(newBrand)
+//         body: JSON.stringify(newBrand),
+//         headers: {
+//           'Content-Type': 'application/json'
+//         }
 //       });
 //       setBrands([...brands, response]);
 //       setShowAddModal(false);
-//       showSuccessMessage('Brand added successfully!');
+//       setSuccess('Brand added successfully!');
+//       setTimeout(() => setSuccess(''), 3000);
 //     } catch (err) {
-//       setError(err.message || 'Failed to add brand');
+//       const errorMsg = err.response?.data?.message || 
+//                        err.message || 
+//                        'Failed to add brand';
+//       setError(errorMsg);
+//       console.error('Add brand error:', err);
 //     }
 //   };
 
 //   const handleUpdateBrand = async (updatedBrand) => {
+//     setError('');
 //     try {
 //       const response = await apiCall(`/api/brands/${selectedBrand.id}`, {
 //         method: 'PUT',
-//         body: JSON.stringify(updatedBrand)
+//         body: JSON.stringify(updatedBrand),
+//         headers: {
+//           'Content-Type': 'application/json'
+//         }
 //       });
 //       setBrands(brands.map(brand => brand.id === selectedBrand.id ? response : brand));
 //       setShowEditModal(false);
 //       setSelectedBrand(null);
-//       showSuccessMessage('Brand updated successfully!');
+//       setSuccess('Brand updated successfully!');
+//       setTimeout(() => setSuccess(''), 3000);
 //     } catch (err) {
-//       setError(err.message || 'Failed to update brand');
+//       const errorMsg = err.response?.data?.message || 
+//                        err.message || 
+//                        'Failed to update brand';
+//       setError(errorMsg);
+//       console.error('Update brand error:', err);
 //     }
 //   };
 
 //   const handleDeleteBrand = async (id) => {
-//     if (window.confirm('Are you sure you want to delete this brand?')) {
+//     const brandName = brands.find(b => b.id === id)?.brandName;
+//     if (window.confirm(`Are you sure you want to delete brand "${brandName}"? This will mark it as inactive.`)) {
+//       setError('');
 //       try {
 //         await apiCall(`/api/brands/${id}`, {
 //           method: 'DELETE'
 //         });
 //         setBrands(brands.filter(brand => brand.id !== id));
-//         showSuccessMessage('Brand deleted successfully!');
+//         setSuccess('Brand deleted successfully!');
+//         setTimeout(() => setSuccess(''), 3000);
 //       } catch (err) {
-//         setError(err.message || 'Failed to delete brand');
+//         const errorMsg = err.response?.data?.message || 
+//                          err.message || 
+//                          'Failed to delete brand';
+//         setError(errorMsg);
+//         console.error('Delete brand error:', err);
 //       }
 //     }
-//   };
-
-//   const showSuccessMessage = (message) => {
-//     const msg = document.createElement('div');
-//     msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-//     msg.textContent = message;
-//     document.body.appendChild(msg);
-//     setTimeout(() => msg.remove(), 3000);
 //   };
 
 //   const filteredBrands = brands.filter(brand => {
 //     const searchLower = searchTerm.toLowerCase();
 //     return (
 //       brand.brandName.toLowerCase().includes(searchLower) ||
+//       (brand.description && brand.description.toLowerCase().includes(searchLower)) ||
 //       brand.id.toString().includes(searchLower)
 //     );
 //   });
@@ -122,10 +146,30 @@
 //         </button>
 //       </div>
 
+//       {/* Success Message */}
+//       {success && (
+//         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg flex items-center justify-between">
+//           <div className="flex items-center">
+//             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+//             </svg>
+//             <span>{success}</span>
+//           </div>
+//           <button onClick={() => setSuccess('')} className="text-green-700 hover:text-green-900">
+//             ✕
+//           </button>
+//         </div>
+//       )}
+
 //       {/* Error Message */}
 //       {error && (
 //         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
-//           <span>{error}</span>
+//           <div className="flex items-center">
+//             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+//             </svg>
+//             <span>{error}</span>
+//           </div>
 //           <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">
 //             ✕
 //           </button>
@@ -140,28 +184,54 @@
 //           </svg>
 //           <input
 //             type="text"
-//             placeholder="Search by brand name or ID..."
+//             placeholder="Search by brand name, description, or ID..."
 //             value={searchTerm}
 //             onChange={(e) => setSearchTerm(e.target.value)}
 //             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
 //           />
+//           {searchTerm && (
+//             <button
+//               onClick={() => setSearchTerm('')}
+//               className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+//             >
+//               ✕
+//             </button>
+//           )}
 //         </div>
+//         <p className="text-xs text-gray-500 mt-2">
+//           Showing {filteredBrands.length} of {brands.length} brands
+//         </p>
 //       </div>
 
 //       {/* Brands Table */}
 //       <div className="bg-white rounded-lg shadow overflow-hidden">
 //         {loading ? (
 //           <div className="flex justify-center items-center h-64">
-//             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+//             <div className="text-center">
+//               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+//               <p className="text-gray-600">Loading brands...</p>
+//             </div>
 //           </div>
 //         ) : filteredBrands.length === 0 ? (
 //           <div className="flex justify-center items-center h-64">
 //             <div className="text-center">
-//               <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//               <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 //                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 //               </svg>
-//               <h3 className="text-lg font-medium text-gray-900">No Brands Found</h3>
-//               <p className="text-gray-600 mt-1">{searchTerm ? 'Try adjusting your search' : 'Create your first brand to get started'}</p>
+//               <h3 className="text-lg font-medium text-gray-900 mb-2">
+//                 {searchTerm ? 'No matching brands found' : 'No brands yet'}
+//               </h3>
+//               <p className="text-gray-600 max-w-md mx-auto mb-4">
+//                 {searchTerm ? 'Try adjusting your search terms' : 'Create your first brand to get started'}
+//               </p>
+//               {!searchTerm && (
+//                 <button
+//                   onClick={() => setShowAddModal(true)}
+//                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+//                 >
+//                   Add First Brand
+//                 </button>
+//               )}
 //             </div>
 //           </div>
 //         ) : (
@@ -184,11 +254,16 @@
 //                       <span className="text-sm font-medium text-gray-900">#{brand.id}</span>
 //                     </td>
 //                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="text-sm font-medium text-gray-900">{brand.brandName}</span>
+//                       <div className="flex items-center">
+//                         <span className="text-sm font-medium text-gray-900">{brand.brandName}</span>
+//                         {!brand.isActive && (
+//                           <span className="ml-2 text-xs text-gray-500">(Inactive)</span>
+//                         )}
+//                       </div>
 //                     </td>
 //                     <td className="px-6 py-4">
 //                       <p className="text-sm text-gray-600 line-clamp-2">
-//                         {brand.description || 'No description provided'}
+//                         {brand.description || <span className="text-gray-400">No description</span>}
 //                       </p>
 //                     </td>
 //                     <td className="px-6 py-4 whitespace-nowrap">
@@ -213,13 +288,15 @@
 //                           setSelectedBrand(brand);
 //                           setShowEditModal(true);
 //                         }}
-//                         className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+//                         className="text-blue-600 hover:text-blue-900 font-medium transition-colors px-2 py-1 hover:bg-blue-50 rounded"
+//                         title="Edit brand"
 //                       >
 //                         Edit
 //                       </button>
 //                       <button
 //                         onClick={() => handleDeleteBrand(brand.id)}
-//                         className="text-red-600 hover:text-red-900 font-medium transition-colors"
+//                         className="text-red-600 hover:text-red-900 font-medium transition-colors px-2 py-1 hover:bg-red-50 rounded"
+//                         title="Delete brand"
 //                       >
 //                         Delete
 //                       </button>
@@ -304,8 +381,6 @@
 
 
 
-
-
 import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
 import { useAuth } from '../auth/AuthProvider';
@@ -355,7 +430,9 @@ const BrandManagement = () => {
           'Content-Type': 'application/json'
         }
       });
-      setBrands([...brands, response]);
+      // Add modelCount to new brand
+      const brandWithCount = { ...response, modelCount: 0 };
+      setBrands([...brands, brandWithCount]);
       setShowAddModal(false);
       setSuccess('Brand added successfully!');
       setTimeout(() => setSuccess(''), 3000);
@@ -365,6 +442,7 @@ const BrandManagement = () => {
                        'Failed to add brand';
       setError(errorMsg);
       console.error('Add brand error:', err);
+      throw err;
     }
   };
 
@@ -378,7 +456,9 @@ const BrandManagement = () => {
           'Content-Type': 'application/json'
         }
       });
-      setBrands(brands.map(brand => brand.id === selectedBrand.id ? response : brand));
+      // Preserve modelCount from existing brand
+      const brandWithCount = { ...response, modelCount: selectedBrand.modelCount || 0 };
+      setBrands(brands.map(brand => brand.id === selectedBrand.id ? brandWithCount : brand));
       setShowEditModal(false);
       setSelectedBrand(null);
       setSuccess('Brand updated successfully!');
@@ -389,12 +469,13 @@ const BrandManagement = () => {
                        'Failed to update brand';
       setError(errorMsg);
       console.error('Update brand error:', err);
+      throw err;
     }
   };
 
   const handleDeleteBrand = async (id) => {
-    const brandName = brands.find(b => b.id === id)?.brandName;
-    if (window.confirm(`Are you sure you want to delete brand "${brandName}"? This will mark it as inactive.`)) {
+    const brand = brands.find(b => b.id === id);
+    if (window.confirm(`Are you sure you want to permanently delete brand "${brand.brandName}"?`)) {
       setError('');
       try {
         await apiCall(`/api/brands/${id}`, {
@@ -409,6 +490,9 @@ const BrandManagement = () => {
                          'Failed to delete brand';
         setError(errorMsg);
         console.error('Delete brand error:', err);
+        
+        // Scroll to top to show error message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
   };
@@ -548,6 +632,7 @@ const BrandManagement = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Models</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -571,6 +656,16 @@ const BrandManagement = () => {
                       <p className="text-sm text-gray-600 line-clamp-2">
                         {brand.description || <span className="text-gray-400">No description</span>}
                       </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <span className={`text-sm font-medium ${brand.modelCount > 0 ? 'text-blue-600' : 'text-gray-500'}`}>
+                          {brand.modelCount}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-1">
+                          {brand.modelCount === 1 ? 'model' : 'models'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -599,13 +694,22 @@ const BrandManagement = () => {
                       >
                         Edit
                       </button>
-                      <button
-                        onClick={() => handleDeleteBrand(brand.id)}
-                        className="text-red-600 hover:text-red-900 font-medium transition-colors px-2 py-1 hover:bg-red-50 rounded"
-                        title="Delete brand"
-                      >
-                        Delete
-                      </button>
+                      {brand.modelCount === 0 ? (
+                        <button
+                          onClick={() => handleDeleteBrand(brand.id)}
+                          className="text-red-600 hover:text-red-900 font-medium transition-colors px-2 py-1 hover:bg-red-50 rounded"
+                          title="Delete brand"
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <span 
+                          className="text-gray-400 font-medium px-2 py-1 cursor-not-allowed"
+                          title={`Cannot delete: ${brand.modelCount} model(s) linked`}
+                        >
+                          Delete
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

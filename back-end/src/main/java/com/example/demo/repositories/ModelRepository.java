@@ -20,4 +20,6 @@ public interface ModelRepository extends JpaRepository<Model, Long> {
 
     @Query("SELECT m FROM Model m WHERE m.brand.id = :brandId AND m.modelName = :modelName")
     Model findByBrandIdAndModelName(@Param("brandId") Long brandId, @Param("modelName") String modelName);
+
+    long countByBrandId(Long id);
 }
