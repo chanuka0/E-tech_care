@@ -1,14 +1,19 @@
 //
 //
+//
 //package com.example.demo.controller;
 //
 //import com.example.demo.entity.Model;
 //import com.example.demo.service.ModelService;
 //import lombok.RequiredArgsConstructor;
+//import org.springframework.http.HttpStatus;
 //import org.springframework.http.ResponseEntity;
 //import org.springframework.security.access.prepost.PreAuthorize;
 //import org.springframework.web.bind.annotation.*;
+//
+//import java.util.HashMap;
 //import java.util.List;
+//import java.util.Map;
 //
 //@RestController
 //@RequestMapping("/api/models")
@@ -19,8 +24,16 @@
 //
 //    @PostMapping
 //    @PreAuthorize("hasRole('ADMIN')")
-//    public ResponseEntity<Model> createModel(@RequestBody Model model) {
-//        return ResponseEntity.ok(modelService.createModel(model));
+//    public ResponseEntity<?> createModel(@RequestBody Model model) {
+//        try {
+//            Model createdModel = modelService.createModel(model);
+//            return ResponseEntity.ok(createdModel);
+//        } catch (RuntimeException e) {
+//            Map<String, String> errorResponse = new HashMap<>();
+//            errorResponse.put("error", e.getMessage());
+//            errorResponse.put("message", e.getMessage());
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+//        }
 //    }
 //
 //    @GetMapping
@@ -37,23 +50,48 @@
 //
 //    @GetMapping("/{id}")
 //    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-//    public ResponseEntity<Model> getModelById(@PathVariable Long id) {
-//        return ResponseEntity.ok(modelService.getModelById(id));
+//    public ResponseEntity<?> getModelById(@PathVariable Long id) {
+//        try {
+//            Model model = modelService.getModelById(id);
+//            return ResponseEntity.ok(model);
+//        } catch (RuntimeException e) {
+//            Map<String, String> errorResponse = new HashMap<>();
+//            errorResponse.put("error", e.getMessage());
+//            errorResponse.put("message", e.getMessage());
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+//        }
 //    }
 //
 //    @PutMapping("/{id}")
 //    @PreAuthorize("hasRole('ADMIN')")
-//    public ResponseEntity<Model> updateModel(@PathVariable Long id, @RequestBody Model model) {
-//        return ResponseEntity.ok(modelService.updateModel(id, model));
+//    public ResponseEntity<?> updateModel(@PathVariable Long id, @RequestBody Model model) {
+//        try {
+//            Model updatedModel = modelService.updateModel(id, model);
+//            return ResponseEntity.ok(updatedModel);
+//        } catch (RuntimeException e) {
+//            Map<String, String> errorResponse = new HashMap<>();
+//            errorResponse.put("error", e.getMessage());
+//            errorResponse.put("message", e.getMessage());
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+//        }
 //    }
 //
 //    @DeleteMapping("/{id}")
 //    @PreAuthorize("hasRole('ADMIN')")
-//    public ResponseEntity<Void> deleteModel(@PathVariable Long id) {
-//        modelService.deleteModel(id);
-//        return ResponseEntity.ok().build();
+//    public ResponseEntity<?> deleteModel(@PathVariable Long id) {
+//        try {
+//            modelService.deleteModel(id);
+//            return ResponseEntity.ok().build();
+//        } catch (RuntimeException e) {
+//            Map<String, String> errorResponse = new HashMap<>();
+//            errorResponse.put("error", e.getMessage());
+//            errorResponse.put("message", e.getMessage());
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+//        }
 //    }
 //}
+
+
 
 
 
@@ -119,6 +157,30 @@ public class ModelController {
         }
     }
 
+    /**
+     * Check if a model can be permanently deleted
+     */
+    @GetMapping("/{id}/can-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> canDeleteModel(@PathVariable Long id) {
+        try {
+            boolean canDelete = modelService.canPermanentlyDelete(id);
+            boolean isLinked = modelService.isModelLinkedToModelNumbers(id);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("canDelete", canDelete);
+            response.put("isLinked", isLinked);
+            response.put("modelId", id);
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("canDelete", false);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        }
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateModel(@PathVariable Long id, @RequestBody Model model) {
@@ -137,8 +199,19 @@ public class ModelController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteModel(@PathVariable Long id) {
         try {
+            boolean canPermanentlyDelete = modelService.canPermanentlyDelete(id);
             modelService.deleteModel(id);
-            return ResponseEntity.ok().build();
+
+            Map<String, Object> response = new HashMap<>();
+            if (canPermanentlyDelete) {
+                response.put("message", "Model permanently deleted from database");
+                response.put("deletionType", "permanent");
+            } else {
+                response.put("message", "Model marked as inactive (linked to model numbers)");
+                response.put("deletionType", "soft");
+            }
+
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());

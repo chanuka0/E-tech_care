@@ -20,4 +20,6 @@ public interface ModelNumberRepository extends JpaRepository<ModelNumber, Long> 
     List<ModelNumber> findByBrandId(@Param("brandId") Long brandId);
 
     List<ModelNumber> findByModelNumberContainingIgnoreCase(String modelNumber);
+
+    long countByModelId(Long modelId);
 }
