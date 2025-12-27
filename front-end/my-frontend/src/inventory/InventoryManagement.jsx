@@ -1679,26 +1679,7 @@ const InventoryManagement = () => {
                               >
                                 + Stock
                               </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedItem(item);
-                                  setShowDeductModal(true);
-                                }}
-                                className="text-orange-600 hover:text-orange-900 font-medium text-xs"
-                              >
-                                Use
-                              </button>
-                              {isAdmin() && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedItem(item);
-                                    setShowAdjustStockModal(true);
-                                  }}
-                                  className="text-yellow-600 hover:text-yellow-900 font-medium text-xs"
-                                >
-                                  Adjust
-                                </button>
-                              )}
+            
                               {item.hasSerialization && (
                                 <button
                                   onClick={() => {
