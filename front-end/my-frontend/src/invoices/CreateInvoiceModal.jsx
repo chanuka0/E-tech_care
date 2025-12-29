@@ -894,6 +894,7 @@ import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
 
 const WARRANTY_OPTIONS = [
+  { value: '-', label: '-' },
   { value: 'No Warranty', label: 'No Warranty' },
   { value: '7 days', label: '7 Days' },
   { value: '14 days', label: '14 Days' },
@@ -967,7 +968,7 @@ const CreateInvoiceModal = ({
   const [newItem, setNewItem] = useState({
     inventoryItemId: '',
     quantity: 1,
-    warranty: 'No Warranty',
+    warranty: '-',
     warrantyNumber: '', // ✅ NEW: Added warrantyNumber field
     serialNumbers: []
   });
