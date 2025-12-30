@@ -160,6 +160,10 @@ import StockReport from './inventory/StockReport';
 import IncomeExpenseReport from './faults/IncomeExpenseReport';
 import UserProfile from './components/UserProfile';
 import NotificationBell from './components/NotificationBell';
+import UsersManagement from './pages/UsersManagement';
+
+// In your main component or routing section:
+
 
 const MainContent = () => {
   const { user } = useAuth();
@@ -198,6 +202,10 @@ const MainContent = () => {
     if (currentPage === 'profile') {
       return <UserProfile />;
     }
+    if (currentPage === 'users') {
+      return <UsersManagement />;
+    }
+
     const CurrentComponent = pages[currentPage]?.component || Dashboard;
     return <CurrentComponent />;
   };
