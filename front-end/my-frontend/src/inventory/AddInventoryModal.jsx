@@ -1,13 +1,7 @@
-import { useState } from 'react';
 
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'LKR' // Change this to your preferred currency
-  }).format(value || 0);
-};
+import { useState, useEffect } from 'react';
 
-const AddInventoryModal = ({ onAdd, onClose }) => {
+const AddInventoryModal = ({ onAdd, onClose, existingItems }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -19,30 +13,63 @@ const AddInventoryModal = ({ onAdd, onClose }) => {
     specialPrice: 0,
     hasSerialization: false
   });
+  const [errors, setErrors] = useState({});
 
   const categories = ['Electronics', 'Hardware', 'Software', 'Accessories', 'Services', 'Other'];
+
+  // ✅ Validate for duplicate item name
+  const validateForm = () => {
+    const newErrors = {};
+    
+    // ✅ Check duplicate item name (case-insensitive)
+    const duplicateName = existingItems.find(
+      item => item.name.toLowerCase().trim() === formData.name.toLowerCase().trim()
+    );
+    
+    if (duplicateName) {
+      newErrors.name = `Item "${formData.name}" already exists! Please use a different name.`;
+    }
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Item name is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) : value)
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) || 0 : value)
     }));
+    
+    // ✅ Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      alert('Item name is required');
+    
+    // ✅ Validate before submitting
+    if (!validateForm()) {
       return;
     }
+    
     onAdd(formData);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-        <div className="bg-blue-600 text-white p-6 flex justify-between items-center sticky top-0">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-blue-600 text-white p-6 flex justify-between items-center sticky top-0 z-10">
           <h3 className="text-xl font-bold">Add New Item</h3>
           <button onClick={onClose} className="text-white hover:bg-blue-700 p-1 rounded">
             ✕
@@ -57,9 +84,25 @@ const AddInventoryModal = ({ onAdd, onClose }) => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                errors.name 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
               required
             />
+            {/* ✅ Error message display */}
+            {errors.name && (
+              <div className="mt-2 flex items-start text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
+                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="font-medium">{errors.name}</p>
+                  <p className="text-xs mt-1">Please choose a unique item name that doesn't already exist in the system.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -122,7 +165,7 @@ const AddInventoryModal = ({ onAdd, onClose }) => {
                 value={formData.purchasePrice}
                 onChange={handleChange}
                 min="0"
-                step="0"
+                step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -134,7 +177,7 @@ const AddInventoryModal = ({ onAdd, onClose }) => {
                 value={formData.sellingPrice}
                 onChange={handleChange}
                 min="0"
-                step="0"
+                step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -148,7 +191,7 @@ const AddInventoryModal = ({ onAdd, onClose }) => {
               value={formData.specialPrice}
               onChange={handleChange}
               min="0"
-              step="0"
+              step="0.01"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
