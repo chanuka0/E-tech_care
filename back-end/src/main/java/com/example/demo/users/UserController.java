@@ -1,6 +1,7 @@
 
 package com.example.demo.users;
 
+import com.example.demo.dto.ChangePasswordRequest;
 import com.example.demo.security.JwtService;
 import com.example.demo.security.LoginRequest;
 import lombok.extern.log4j.Log4j2;
@@ -342,7 +343,52 @@ public class UserController {
             return ResponseEntity.badRequest().body(Map.of("error", "Failed to fetch profile"));
         }
     }
+    @PostMapping("/change-password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
+        try {
+            // Get authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
 
+            log.info("Change password request received for user: " + username);
+            log.debug("Authentication principal: " + authentication.getPrincipal());
+            log.debug("Authentication authorities: " + authentication.getAuthorities());
+
+            // Validate request
+            if (request.getOldPassword() == null || request.getOldPassword().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Old password is required"));
+            }
+
+            if (request.getNewPassword() == null || request.getNewPassword().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "New password is required"));
+            }
+
+            // Optional: Check if confirmPassword matches newPassword
+            if (request.getConfirmPassword() != null &&
+                    !request.getNewPassword().equals(request.getConfirmPassword())) {
+                return ResponseEntity.badRequest().body(Map.of("error", "New password and confirm password do not match"));
+            }
+
+            // Call service to change password
+            userService.changePassword(username, request.getOldPassword(), request.getNewPassword());
+
+            log.info("Password changed successfully for user: " + username);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Password changed successfully");
+            response.put("username", username);
+
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            log.error("Error changing password: " + e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error changing password", e);
+            return ResponseEntity.status(500).body(Map.of("error", "An unexpected error occurred"));
+        }
+    }
     @GetMapping("/profile/{usernameOrEmail}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> getUserProfileByUsername(@PathVariable String usernameOrEmail) {

@@ -1,5 +1,3 @@
-
-// src/components/inventory/InventoryManagement.js
 import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
 import { useAuth } from '../auth/AuthProvider';
@@ -13,7 +11,7 @@ import StockAdjustmentModal from './StockAdjustmentModal';
 
 const InventoryManagement = () => {
   const { apiCall } = useApi();
-  const { isAdmin, isAuthenticated } = useAuth();
+  const { isAdmin, isAuthenticated, user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -337,17 +335,16 @@ const InventoryManagement = () => {
           <h2 className="text-3xl font-bold text-gray-900">Inventory Management</h2>
           <p className="text-gray-600 mt-1">Manage inventory items, stock levels, and serials</p>
         </div>
-        {isAdmin() && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add Item</span>
-          </button>
-        )}
+        {/* ✅ SHOW ADD BUTTON FOR BOTH ADMIN AND USER */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Add Item</span>
+        </button>
       </div>
 
       {error && (
@@ -521,31 +518,28 @@ const InventoryManagement = () => {
                               >
                                 View
                               </button>
-                              {isAdmin() && (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedItem(item);
-                                      setShowEditModal(true);
-                                    }}
-                                    className="text-green-600 hover:text-green-900 font-medium"
-                                  >
-                                    Edit
-                                  </button>
-                                  {/* ✅ Show delete button only when item can be deleted */}
-                                  {isDeletable && (
-                                    <button
-                                      onClick={() => handleDeleteItem(item)}
-                                      className="text-red-600 hover:text-red-900 font-medium"
-                                      title="Can delete - created within 24 hours and stock is 0"
-                                    >
-                                      Delete
-                                    </button>
-                                  )}
-                                </>
+                              {/* ✅ SHOW EDIT FOR BOTH ADMIN AND USER */}
+                              <button
+                                onClick={() => {
+                                  setSelectedItem(item);
+                                  setShowEditModal(true);
+                                }}
+                                className="text-green-600 hover:text-green-900 font-medium"
+                              >
+                                Edit
+                              </button>
+                              {/* ✅ Show delete button only for ADMIN and when item can be deleted */}
+                              {isAdmin() && isDeletable && (
+                                <button
+                                  onClick={() => handleDeleteItem(item)}
+                                  className="text-red-600 hover:text-red-900 font-medium"
+                                  title="Can delete - created within 24 hours and stock is 0"
+                                >
+                                  Delete
+                                </button>
                               )}
                             </div>
-                            {/* ✅ Hide stock buttons when in "add stock" mode */}
+                            {/* ✅ Stock buttons for BOTH ADMIN AND USER */}
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => {

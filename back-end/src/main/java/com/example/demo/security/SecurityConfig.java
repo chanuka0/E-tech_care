@@ -120,7 +120,8 @@ public class SecurityConfig {
                                 "/api/device-conditions/**",
                                 "/api/pdf/**",
                                 "/api/notifications",
-                                "/api/notifications/**"
+                                "/api/notifications/**",
+                                "/api/users/change-password"
                         ).authenticated()
 
                         .anyRequest().authenticated()
