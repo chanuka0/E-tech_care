@@ -23,7 +23,7 @@ public class ServiceCategoryController {
      * Get all service categories (Admin only)
      */
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<ServiceCategory>> getAllServiceCategories() {
         return ResponseEntity.ok(serviceCategoryService.getAllServiceCategories());
     }
@@ -51,7 +51,7 @@ public class ServiceCategoryController {
      * Get only inactive service categories (Admin only)
      */
     @GetMapping("/inactive")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<ServiceCategory>> getInactiveServiceCategories() {
         return ResponseEntity.ok(serviceCategoryService.getInactiveServiceCategories());
     }
