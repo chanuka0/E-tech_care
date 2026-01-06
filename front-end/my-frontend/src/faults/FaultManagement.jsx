@@ -956,7 +956,7 @@ const FaultManagement = () => {
       )}
       
       {/* Add custom animation for success message */}
-      <style jsx>{`
+      <style>{`
         @keyframes slide-in {
           from {
             transform: translateX(100%);
