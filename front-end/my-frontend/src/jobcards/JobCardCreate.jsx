@@ -55,7 +55,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
   });
 
   const deviceTypes = ['LAPTOP', 'DESKTOP', 'PRINTER', 'PROJECTOR', 'OTHER'];
-  const serialTypes = ['RAM_01', 'RAM_02', 'RAM_03', 'RAM_04', 'HDD_01', 'HDD_02', 'SSD_01', 'SSD_02', 'ADAPTOR', 'BATTERY'];
+  const serialTypes = ['RAM_01', 'RAM_02', 'RAM_03', 'RAM_04', 'HDD_01', 'HDD_02', 'SSD_01', 'SSD_02', 'ADAPTER', 'BATTERY'];
 
   // Prevent form submission on Enter key
   useEffect(() => {
