@@ -38,6 +38,7 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
     selectedFaults: [],
     selectedServices: [],
     oneDayService: false,
+    withCharger: false, // ADD THIS
   });
 
   const [originalData, setOriginalData] = useState(null);
@@ -133,6 +134,7 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
           selectedFaults: faultIds,
           selectedServices: serviceObjs,
           oneDayService: data.oneDayService || false, 
+          withCharger: data.withCharger || false, 
         });
         setOriginalData(data);
       } catch (err) {
@@ -408,7 +410,8 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
         estimatedCost: parseFloat(formData.estimatedCost) || 0,
         status: formData.status,
         usedItems: usedItems,
-        oneDayService: formData.oneDayService
+        oneDayService: formData.oneDayService,
+        withCharger: formData.withCharger
       };
 
       console.log('Sending payload:', payload);
@@ -725,6 +728,42 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
                   className="sr-only peer"
                 />
                 <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-yellow-600"></div>
+              </label>
+            </div>
+          </div>
+        {/* With Charger Checkbox */}
+          <div className="border-b border-gray-200 pb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Charger Status</h3>
+            <div className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+              formData.withCharger 
+                ? 'bg-green-50 border-green-300' 
+                : 'bg-gray-50 border-gray-300'
+            }`}>
+              <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.withCharger}
+                  onChange={(e) => setFormData(prev => ({ ...prev, withCharger: e.target.checked }))}
+                  className="w-6 h-6 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
+                />
+                <div className="flex-1">
+                  <span className="text-base font-semibold text-gray-900">
+                    Device received with charger
+                  </span>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {formData.withCharger 
+                      ? '✓ Charger will be returned with device'
+                      : 'Device received without charger'
+                    }
+                  </p>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-sm font-bold ${
+                  formData.withCharger 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-gray-300 text-gray-600'
+                }`}>
+                  {formData.withCharger ? '✓ YES' : '✗ NO'}
+                </div>
               </label>
             </div>
           </div>

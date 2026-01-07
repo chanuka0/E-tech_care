@@ -30,6 +30,7 @@ public class JobCardUpdateRequest {
     private Double estimatedCost;
     private JobStatus status;
     private Boolean oneDayService;
+    private Boolean withCharger;
 
     // Used items
     private List<UsedItemRequest> usedItems;

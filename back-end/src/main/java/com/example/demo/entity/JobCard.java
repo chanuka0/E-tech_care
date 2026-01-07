@@ -139,6 +139,9 @@ public class JobCard {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "with_charger", nullable = false)
+    private Boolean withCharger = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -148,6 +151,9 @@ public class JobCard {
         }
         if (oneDayService == null) {
             oneDayService = false;
+        }
+        if (withCharger == null) {
+            withCharger = false;
         }
     }
 

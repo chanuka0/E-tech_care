@@ -124,6 +124,9 @@ public class JobCardService {
         if (jobCard.getOneDayService() == null) {
             jobCard.setOneDayService(false);
         }
+        if (jobCard.getWithCharger() == null) {
+            jobCard.setWithCharger(false);
+        }
         if (jobCard.getTotalServicePrice() == null) {
             jobCard.setTotalServicePrice(0.0);
         }
@@ -286,6 +289,10 @@ public class JobCardService {
         // Update oneDayService
         if (updateRequest.getOneDayService() != null) {
             existing.setOneDayService(updateRequest.getOneDayService());
+        }
+
+        if (updateRequest.getWithCharger() != null) {
+            existing.setWithCharger(updateRequest.getWithCharger());
         }
 
         // Update faults (optional)
