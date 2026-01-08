@@ -2202,7 +2202,6 @@
 
 
 
-
 import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
 
@@ -2582,10 +2581,13 @@ const CreateInvoiceModal = ({
   const calculateTotals = () => {
     const itemsSubtotal = invoiceData.items.reduce((sum, item) => sum + item.total, 0);
     
-    // Add service category totals from job card
-    const serviceTotal = (jobCard?.serviceCategories || []).reduce((sum, service) => {
-      return sum + (service.servicePrice || 0);
-    }, 0);
+    // Add service category totals from job card (ONLY for job card invoices)
+    const isJobCardInvoice = jobCard != null;
+    const serviceTotal = isJobCardInvoice 
+      ? (jobCard?.serviceCategories || []).reduce((sum, service) => {
+          return sum + (service.servicePrice || 0);
+        }, 0)
+      : 0;
     
     const combinedSubtotal = itemsSubtotal + serviceTotal;
     const totalWithoutTax = combinedSubtotal - invoiceData.discount;
@@ -2604,13 +2606,19 @@ const CreateInvoiceModal = ({
     };
   };
 
-  // ✅ NEW: Check if invoice has at least services OR items
+  // ✅ UPDATED: Check if invoice has at least services OR items
   const hasContentForInvoice = () => {
-    const hasServices = jobCard?.serviceCategories && jobCard.serviceCategories.length > 0;
+    const isJobCardInvoice = jobCard != null;
+    const hasServices = isJobCardInvoice && jobCard?.serviceCategories && jobCard.serviceCategories.length > 0;
     const hasItems = invoiceData.items.length > 0;
     
-    // ✅ ALLOW invoice creation with ONLY services OR ONLY items OR BOTH
-    return hasServices || hasItems;
+    // ✅ For job card invoices: ALLOW invoice creation with ONLY services OR ONLY items OR BOTH
+    // ✅ For direct invoices: Require at least items (services not applicable)
+    if (isJobCardInvoice) {
+      return hasServices || hasItems;
+    } else {
+      return hasItems; // Direct invoice must have items
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -2621,7 +2629,8 @@ const CreateInvoiceModal = ({
 
     // ✅ UPDATED: Check if invoice has content (services or items)
     if (!hasContentForInvoice()) {
-      setError('Please add services or items to create invoice');
+      const isJobCardInvoice = jobCard != null;
+      setError(isJobCardInvoice ? 'Please add services or items to create invoice' : 'Please add items to create invoice');
       setLoading(false);
       return;
     }
@@ -2872,40 +2881,42 @@ const CreateInvoiceModal = ({
             </div>
           )}
 
-          {/* ✅ UPDATED: Service Categories from Job Card - Now shows even if empty */}
-          <div className="border-b pb-4">
-            <h4 className="font-semibold text-gray-900 mb-3">Services (From Job Card)</h4>
-            <div className="bg-green-50 border-2 border-green-300 p-4 rounded-lg">
-              {jobCard?.serviceCategories && jobCard.serviceCategories.length > 0 ? (
-                <>
-                  <div className="space-y-2">
-                    {jobCard.serviceCategories.map(service => (
-                      <div key={service.id} className="flex justify-between items-center bg-white p-3 rounded border border-green-200">
-                        <div>
-                          <p className="font-medium text-gray-900">{service.name}</p>
-                          {service.description && (
-                            <p className="text-xs text-gray-600">{service.description}</p>
-                          )}
+          {/* ✅ ONLY SHOW SERVICES FOR JOB CARD INVOICES */}
+          {isJobCardInvoice && (
+            <div className="border-b pb-4">
+              <h4 className="font-semibold text-gray-900 mb-3">Services (From Job Card)</h4>
+              <div className="bg-green-50 border-2 border-green-300 p-4 rounded-lg">
+                {jobCard?.serviceCategories && jobCard.serviceCategories.length > 0 ? (
+                  <>
+                    <div className="space-y-2">
+                      {jobCard.serviceCategories.map(service => (
+                        <div key={service.id} className="flex justify-between items-center bg-white p-3 rounded border border-green-200">
+                          <div>
+                            <p className="font-medium text-gray-900">{service.name}</p>
+                            {service.description && (
+                              <p className="text-xs text-gray-600">{service.description}</p>
+                            )}
+                          </div>
+                          <p className="font-bold text-green-700">Rs.{service.servicePrice?.toFixed(2) || '0.00'}</p>
                         </div>
-                        <p className="font-bold text-green-700">Rs.{service.servicePrice?.toFixed(2) || '0.00'}</p>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t-2 border-green-300 text-right">
+                      <p className="text-sm text-gray-600">Total Services:</p>
+                      <p className="text-2xl font-bold text-green-700">Rs.{totals.serviceTotal.toFixed(2)}</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-gray-600">No services added to this job card</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      You can still create an invoice with only parts/items
+                    </p>
                   </div>
-                  <div className="mt-3 pt-3 border-t-2 border-green-300 text-right">
-                    <p className="text-sm text-gray-600">Total Services:</p>
-                    <p className="text-2xl font-bold text-green-700">Rs.{totals.serviceTotal.toFixed(2)}</p>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-gray-600">No services added to this job card</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    You can still create an invoice with only parts/items
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Faults from Job Card */}
           {isJobCardInvoice && jobCard?.faults && jobCard.faults.length > 0 && (
@@ -2929,8 +2940,8 @@ const CreateInvoiceModal = ({
             </div>
           )}
 
-          {/* ✅ UPDATED: Show message if no services and no items */}
-          {!jobCard?.serviceCategories?.length && invoiceData.items.length === 0 && (
+          {/* ✅ UPDATED: Show message if no services and no items (ONLY for job card invoices) */}
+          {isJobCardInvoice && !jobCard?.serviceCategories?.length && invoiceData.items.length === 0 && (
             <div className="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-lg">
               <div className="flex items-center">
                 <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -2944,9 +2955,26 @@ const CreateInvoiceModal = ({
             </div>
           )}
 
+          {/* ✅ Show message if no items for DIRECT invoice */}
+          {!isJobCardInvoice && invoiceData.items.length === 0 && (
+            <div className="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-lg">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="font-semibold text-yellow-800">No items added yet</span>
+              </div>
+              <p className="text-sm text-yellow-700 mt-1">
+                You need to add at least one item to create an invoice
+              </p>
+            </div>
+          )}
+
           {/* Add Additional Items */}
           <div className="border-b pb-4">
-            <h4 className="font-semibold text-gray-900 mb-4">Add Parts/Items (Optional)</h4>
+            <h4 className="font-semibold text-gray-900 mb-4">
+              {isJobCardInvoice ? 'Add Parts/Items (Optional)' : 'Add Parts/Items *'}
+            </h4>
             <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
               <select
                 value={newItem.inventoryItemId}
@@ -2970,7 +2998,7 @@ const CreateInvoiceModal = ({
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
-                <option value="">Select Item (Optional)</option>
+                <option value="">{isJobCardInvoice ? 'Select Item (Optional)' : 'Select Item *'}</option>
                 {inventoryItems.map(item => (
                   <option key={item.id} value={item.id}>
                     {item.sku} - {item.name} 
@@ -3134,7 +3162,7 @@ const CreateInvoiceModal = ({
                 type="button"
                 onClick={handleAddItem}
                 disabled={(() => {
-                  if (!newItem.inventoryItemId) return false; // ✅ Allow empty selection
+                  if (!newItem.inventoryItemId) return !isJobCardInvoice; // ✅ For direct invoice, disabled if no item selected
                   const selectedItem = inventoryItems.find(i => i.id === parseInt(newItem.inventoryItemId));
                   if (selectedItem && selectedItem.hasSerialization) {
                     return newItem.serialNumbers.length !== newItem.quantity;
@@ -3143,12 +3171,12 @@ const CreateInvoiceModal = ({
                 })()}
                 className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium"
               >
-                {newItem.inventoryItemId ? 'Add Item to Invoice' : 'Skip Adding Items'}
+                {newItem.inventoryItemId ? 'Add Item to Invoice' : isJobCardInvoice ? 'Skip Adding Items' : 'Select Item to Add'}
               </button>
               
-              {/* ✅ NEW: Info message about optional items */}
+              {/* ✅ UPDATED: Info message about optional/required items */}
               <p className="text-xs text-gray-600 text-center">
-                Items are optional. You can create invoice with only services.
+                {isJobCardInvoice ? 'Items are optional. You can create invoice with only services.' : 'At least one item is required for direct invoice.'}
               </p>
             </div>
           </div>
@@ -3358,8 +3386,8 @@ const CreateInvoiceModal = ({
           <div className="border-b pb-4">
             <h4 className="font-semibold text-gray-900 mb-4">Invoice Summary</h4>
             <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-              {/* Show Services Total if any */}
-              {totals.serviceTotal > 0 && (
+              {/* Show Services Total ONLY if job card invoice and has services */}
+              {isJobCardInvoice && totals.serviceTotal > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Services Total:</span>
                   <span className="font-semibold text-green-700">Rs.{totals.serviceTotal.toFixed(2)}</span>
@@ -3465,20 +3493,22 @@ const CreateInvoiceModal = ({
                   <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
-                  <span className="font-semibold text-yellow-800">Add services or items to create invoice</span>
+                  <span className="font-semibold text-yellow-800">
+                    {isJobCardInvoice ? 'Add services or items to create invoice' : 'Add items to create invoice'}
+                  </span>
                 </>
               )}
             </div>
             <div className="mt-2 text-sm text-gray-700">
               <p>Invoice will include:</p>
               <ul className="list-disc pl-5 mt-1 space-y-1">
-                {jobCard?.serviceCategories?.length > 0 && (
+                {isJobCardInvoice && jobCard?.serviceCategories?.length > 0 && (
                   <li>{jobCard.serviceCategories.length} service(s) from job card</li>
                 )}
                 {invoiceData.items.length > 0 && (
                   <li>{invoiceData.items.length} part(s)/item(s)</li>
                 )}
-                {!jobCard?.serviceCategories?.length && invoiceData.items.length === 0 && (
+                {!hasContentForInvoice() && (
                   <li>No content added yet</li>
                 )}
               </ul>
