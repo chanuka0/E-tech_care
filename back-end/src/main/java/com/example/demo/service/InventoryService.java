@@ -1,4 +1,3 @@
-
 package com.example.demo.service;
 
 import com.example.demo.entity.*;
@@ -12,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -44,6 +45,14 @@ public class InventoryService {
         }
 
         InventoryItem saved = inventoryItemRepository.save(item);
+
+        // ✅ ADD NOTIFICATION
+        notificationService.sendNotification(
+                NotificationType.STOCK_UPDATE,
+                "Inventory item created: " + item.getName() + " (SKU: " + item.getSku() + ") | Initial Qty: " + item.getQuantity(),
+                saved,
+                NotificationSeverity.SUCCESS
+        );
 
         // Record initial stock if quantity > 0
         if (saved.getQuantity() > 0) {
@@ -110,6 +119,14 @@ public class InventoryService {
 
         InventoryItem saved = inventoryItemRepository.save(existing);
 
+        // ✅ ADD NOTIFICATION
+        notificationService.sendNotification(
+                NotificationType.JOB_UPDATED,
+                "Inventory item updated: " + existing.getName() + " (SKU: " + existing.getSku() + ")",
+                saved,
+                NotificationSeverity.INFO
+        );
+
         // Record stock change if quantity changed
         if (oldQuantity != saved.getQuantity()) {
             int diff = saved.getQuantity() - oldQuantity;
@@ -134,10 +151,12 @@ public class InventoryService {
 
         inventoryItemRepository.delete(item);
 
+        // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
                 NotificationType.ITEM_REMOVED,
                 "Item deleted: " + item.getName() + " (SKU: " + item.getSku() + ")",
-                item
+                item,
+                NotificationSeverity.WARNING
         );
     }
 
@@ -176,6 +195,14 @@ public class InventoryService {
             System.out.println("⚠️ No purchase price set - expense not created");
         }
 
+        // ✅ ADD NOTIFICATION
+        notificationService.sendNotification(
+                NotificationType.STOCK_UPDATE,
+                "Stock added: " + item.getName() + " | Qty: +" + quantity + " | New Stock: " + item.getQuantity(),
+                item,
+                NotificationSeverity.SUCCESS
+        );
+
         checkLowStock(item);
     }
 
@@ -193,6 +220,14 @@ public class InventoryService {
         MovementType movementType = diff > 0 ? MovementType.IN : MovementType.OUT;
         recordStockMovement(item, movementType, Math.abs(diff),
                 "ADJUSTMENT", null, null, reason, null, oldQty, newQuantity);
+
+        // ✅ ADD NOTIFICATION
+        notificationService.sendNotification(
+                NotificationType.JOB_UPDATED,
+                "Stock adjusted: " + item.getName() + " | From: " + oldQty + " → To: " + newQuantity + " | Reason: " + reason,
+                item,
+                NotificationSeverity.INFO
+        );
 
         checkLowStock(item);
     }
@@ -242,10 +277,12 @@ public class InventoryService {
 
         inventoryItemRepository.save(item);
 
+        // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
                 NotificationType.STOCK_UPDATE,
-                "Stock deducted for item: " + item.getName() + " | Qty: " + quantity,
-                item
+                "Stock deducted for item: " + item.getName() + " | Qty: -" + quantity + " | Remaining: " + item.getQuantity(),
+                item,
+                NotificationSeverity.WARNING
         );
 
         checkLowStock(item);
@@ -352,10 +389,12 @@ public class InventoryService {
 
         inventoryItemRepository.save(item);
 
+        // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
                 NotificationType.STOCK_UPDATE,
-                "Stock deducted for invoice: " + item.getName() + " | Qty: " + quantity,
-                item
+                "Stock deducted for invoice: " + item.getName() + " | Qty: -" + quantity + " | Remaining: " + item.getQuantity(),
+                item,
+                NotificationSeverity.WARNING
         );
 
         checkLowStock(item);
@@ -407,6 +446,14 @@ public class InventoryService {
             System.out.println("⚠️ No purchase price set - expense not created");
         }
 
+        // ✅ ADD NOTIFICATION
+        notificationService.sendNotification(
+                NotificationType.STOCK_UPDATE,
+                "Serial number added: " + serialNumber + " to item " + item.getName(),
+                saved,
+                NotificationSeverity.SUCCESS
+        );
+
         return saved;
     }
 
@@ -454,6 +501,14 @@ public class InventoryService {
             } else {
                 System.out.println("⚠️ No purchase price set - expense not created");
             }
+
+            // ✅ ADD NOTIFICATION
+            notificationService.sendNotification(
+                    NotificationType.STOCK_UPDATE,
+                    "Bulk serials added: " + addedCount + " units to " + item.getName(),
+                    item,
+                    NotificationSeverity.SUCCESS
+            );
         }
     }
 
@@ -661,6 +716,7 @@ public class InventoryService {
         return inventorySerialRepository.findByUsedInReferenceTypeAndUsedInReferenceId(referenceType, referenceId);
     }
 
+
     // ========== STOCK MOVEMENT MANAGEMENT ==========
 
     /**
@@ -787,8 +843,11 @@ public class InventoryService {
         if (item.getQuantity() <= item.getMinThreshold()) {
             notificationService.sendNotification(
                     NotificationType.LOW_STOCK,
-                    "Low stock alert: " + item.getName() + " (Qty: " + item.getQuantity() + ")",
-                    item
+                    "⚠️ LOW STOCK ALERT: " + item.getName() +
+                            " | Current: " + item.getQuantity() +
+                            " | Shortage: " + (item.getMinThreshold() - item.getQuantity()),
+                    item,
+                    NotificationSeverity.DANGER  // 🔴 RED
             );
         }
     }
