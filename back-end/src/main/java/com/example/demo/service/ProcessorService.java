@@ -2,6 +2,8 @@
 //package com.example.demo.service;
 //
 //import com.example.demo.entity.Processor;
+//import com.example.demo.entity.NotificationType;
+//import com.example.demo.entity.NotificationSeverity;
 //import com.example.demo.repositories.ProcessorRepository;
 //import lombok.RequiredArgsConstructor;
 //import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@
 //@RequiredArgsConstructor
 //public class ProcessorService {
 //    private final ProcessorRepository processorRepository;
+//    private final NotificationService notificationService;
 //
 //    @Transactional
 //    public Processor createProcessor(Processor processor) {
@@ -28,7 +31,17 @@
 //        }
 //
 //        processor.setIsActive(true);
-//        return processorRepository.save(processor);
+//        Processor saved = processorRepository.save(processor);
+//
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.STOCK_UPDATE,
+//                "Processor created: " + processor.getProcessorName(),
+//                saved,
+//                NotificationSeverity.SUCCESS
+//        );
+//
+//        return saved;
 //    }
 //
 //    public List<Processor> getAllActiveProcessors() {
@@ -63,7 +76,17 @@
 //        existing.setProcessorName(updates.getProcessorName().trim());
 //        existing.setDescription(updates.getDescription());
 //        existing.setIsActive(updates.getIsActive());
-//        return processorRepository.save(existing);
+//        Processor saved = processorRepository.save(existing);
+//
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.JOB_UPDATED,
+//                "Processor updated: " + existing.getProcessorName(),
+//                saved,
+//                NotificationSeverity.INFO
+//        );
+//
+//        return saved;
 //    }
 //
 //    @Transactional
@@ -73,6 +96,14 @@
 //
 //        // Permanently delete from database
 //        processorRepository.deleteById(id);
+//
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.ITEM_REMOVED,
+//                "Processor deleted: " + processor.getProcessorName(),
+//                processor,
+//                NotificationSeverity.WARNING
+//        );
 //    }
 //
 //    // Alternative method for soft delete (if needed in future)
@@ -80,9 +111,21 @@
 //    public void softDeleteProcessor(Long id) {
 //        Processor processor = getProcessorById(id);
 //        processor.setIsActive(false);
-//        processorRepository.save(processor);
+//        Processor saved = processorRepository.save(processor);
+//
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.ITEM_REMOVED,
+//                "Processor deactivated: " + processor.getProcessorName(),
+//                saved,
+//                NotificationSeverity.WARNING
+//        );
 //    }
 //}
+
+
+
+
 package com.example.demo.service;
 
 import com.example.demo.entity.Processor;
@@ -104,7 +147,6 @@ public class ProcessorService {
 
     @Transactional
     public Processor createProcessor(Processor processor) {
-        // Check for duplicate processor name (case-insensitive)
         Optional<Processor> existingProcessor = processorRepository
                 .findByProcessorNameIgnoreCase(processor.getProcessorName().trim());
 
@@ -117,7 +159,6 @@ public class ProcessorService {
         processor.setIsActive(true);
         Processor saved = processorRepository.save(processor);
 
-        // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
                 NotificationType.STOCK_UPDATE,
                 "Processor created: " + processor.getProcessorName(),
@@ -145,7 +186,6 @@ public class ProcessorService {
     public Processor updateProcessor(Long id, Processor updates) {
         Processor existing = getProcessorById(id);
 
-        // Check if the new name conflicts with another processor (case-insensitive)
         if (!existing.getProcessorName().equalsIgnoreCase(updates.getProcessorName().trim())) {
             Optional<Processor> duplicateProcessor = processorRepository
                     .findByProcessorNameIgnoreCaseAndIdNot(updates.getProcessorName().trim(), id);
@@ -162,7 +202,6 @@ public class ProcessorService {
         existing.setIsActive(updates.getIsActive());
         Processor saved = processorRepository.save(existing);
 
-        // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
                 NotificationType.JOB_UPDATED,
                 "Processor updated: " + existing.getProcessorName(),
@@ -173,15 +212,29 @@ public class ProcessorService {
         return saved;
     }
 
+    // ✅ NEW METHOD: Toggle processor status (Activate/Deactivate)
+    @Transactional
+    public Processor toggleProcessorStatus(Long id) {
+        Processor processor = getProcessorById(id);
+        boolean newStatus = !processor.getIsActive();
+        processor.setIsActive(newStatus);
+        Processor saved = processorRepository.save(processor);
+
+        notificationService.sendNotification(
+                newStatus ? NotificationType.STOCK_UPDATE : NotificationType.ITEM_REMOVED,
+                "Processor " + (newStatus ? "activated" : "deactivated") + ": " + processor.getProcessorName(),
+                saved,
+                newStatus ? NotificationSeverity.SUCCESS : NotificationSeverity.WARNING
+        );
+
+        return saved;
+    }
+
     @Transactional
     public void deleteProcessor(Long id) {
-        // Check if processor exists
         Processor processor = getProcessorById(id);
-
-        // Permanently delete from database
         processorRepository.deleteById(id);
 
-        // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
                 NotificationType.ITEM_REMOVED,
                 "Processor deleted: " + processor.getProcessorName(),
@@ -190,14 +243,12 @@ public class ProcessorService {
         );
     }
 
-    // Alternative method for soft delete (if needed in future)
     @Transactional
     public void softDeleteProcessor(Long id) {
         Processor processor = getProcessorById(id);
         processor.setIsActive(false);
         Processor saved = processorRepository.save(processor);
 
-        // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
                 NotificationType.ITEM_REMOVED,
                 "Processor deactivated: " + processor.getProcessorName(),
