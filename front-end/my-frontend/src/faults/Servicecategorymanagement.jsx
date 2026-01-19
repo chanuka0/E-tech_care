@@ -390,13 +390,12 @@
 
 
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
 import AddServiceCategoryModal from './AddServiceCategoryModal';
 import EditServiceCategoryModal from './Editservicecategorymodal';
 
 const ServiceCategoryManagement = () => {
-  const { apiCall } = useApi();
   const { isAdmin } = useAuth();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -631,7 +630,7 @@ const ServiceCategoryManagement = () => {
                         <span className="text-sm font-semibold text-gray-900">#{category.id}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-gray-900">{category.name}</span>
+                        <span className="text-sm font-bold text-gray-900">{category.name}</span>
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm text-gray-600 italic">

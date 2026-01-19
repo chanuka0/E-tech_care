@@ -1,13 +1,12 @@
 
 
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
 import JobCardEdit from './JobCardEdit';
 import JobCardView from './JobCardView';
 
 const JobCards = ({ onCreateNew }) => {
-  const { apiCall } = useApi();
   const { isAdmin } = useAuth();
   
   const [jobCards, setJobCards] = useState([]);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 // import { useApi } from './hooks/useApi';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { X, Plus, Search, Filter } from 'lucide-react';
 
 // Main Users Management Component
@@ -16,7 +16,6 @@ const UsersManagement = ({ onClose }) => {
   const [showModal, setShowModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [userType, setUserType] = useState('user'); // 'user' or 'admin'
-  const { apiCall } = useApi();
   const { isAdmin } = useAuth();
 
   useEffect(() => {

@@ -387,15 +387,13 @@
 
 
 
-
-import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import React, { useState, useEffect } from 'react'; // ✅ ADD THIS LINE
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
 import AddProcessorModal from './AddProcessorModal';
 import EditProcessorModal from './EditProcessorModal';
 
 const ProcessorManagement = () => {
-  const { apiCall } = useApi();
   const { isAdmin } = useAuth();
   const [processors, setProcessors] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -615,10 +613,10 @@ const ProcessorManagement = () => {
                       <span className="text-sm font-medium text-gray-900">#{processor.id}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">{processor.processorName}</span>
+                      <span className="text-sm font-bold text-gray-900">{processor.processorName}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-gray-600 line-clamp-2">
+                      <p className="text-sm text-gray-600 italic">
                         {processor.description || 'No description provided'}
                       </p>
                     </td>

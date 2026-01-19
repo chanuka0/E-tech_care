@@ -495,13 +495,12 @@
 
 
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
 import AddFaultModal from './AddFaultModal';
 import EditFaultModal from './EditFaultModal';
 
 const FaultManagement = () => {
-  const { apiCall } = useApi();
   const { isAdmin } = useAuth();
   const [faults, setFaults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -790,14 +789,14 @@ const FaultManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <span className="text-sm font-medium text-gray-900">{fault.faultName}</span>
+                        <span className="text-sm font-bold text-gray-900">{fault.faultName}</span>
                         {!fault.isActive && (
                           <span className="ml-2 text-xs text-gray-500 italic">(inactive)</span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-gray-600 line-clamp-2">
+                      <p className="text-sm text-gray-600 italic">
                         {fault.description || (
                           <span className="text-gray-400 italic">No description</span>
                         )}

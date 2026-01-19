@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 
 const JobCardCreate = ({ onSuccess, onCancel }) => {
-  const { apiCall } = useApi();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDeviceBarcodeScanner, setShowDeviceBarcodeScanner] = useState(false);

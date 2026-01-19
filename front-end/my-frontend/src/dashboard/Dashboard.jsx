@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { API_BASE_URL, API_ENDPOINTS, apiCall } from '../services/api';
 
-const useApi = () => {
-  return {
-    apiCall: async (url) => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8081${url}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) throw new Error('API call failed');
-      return response.json();
-    }
-  };
-};
+// const useApi = () => {
+//   return {
+//     apiCall: async (url) => {
+//       const token = localStorage.getItem('token');
+//       const response = await fetch(`http://localhost:8081${url}`, {
+//         headers: {
+//           'Authorization': `Bearer ${token}`,
+//           'Content-Type': 'application/json',
+//         },
+//       });
+//       if (!response.ok) throw new Error('API call failed');
+//       return response.json();
+//     }
+//   };
+// };
 
 const Dashboard = ({ onNavigate }) => {
-  const { apiCall } = useApi();
   const [dashboardData, setDashboardData] = useState(null);
   const [profitData, setProfitData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -82,12 +82,12 @@ const Dashboard = ({ onNavigate }) => {
     setLoading(true);
     setError('');
     try {
-      const data = await apiCall('/api/reports/dashboard');
+      const data = await apiCall(API_ENDPOINTS.DASHBOARD);
       console.log('📊 Dashboard API Response:', data);
       console.log('Available fields:', Object.keys(data));
       
       // Fetch job cards for counts
-      const jobCardsResponse = await apiCall('/api/jobcards');
+      const jobCardsResponse = await apiCall(API_ENDPOINTS.JOB_CARDS);
       console.log('📋 Job Cards Fetched:', jobCardsResponse.length);
       
       // Calculate job card counts
@@ -112,9 +112,7 @@ const Dashboard = ({ onNavigate }) => {
     setLoading(true);
     setError('');
     try {
-      const data = await apiCall(
-        `/api/reports/profit?start=${dateRange.start}&end=${dateRange.end}`
-      );
+      const data = await apiCall(`${API_ENDPOINTS.PROFIT_REPORT}?start=${dateRange.start}&end=${dateRange.end}`);
       console.log('Profit data:', data);
       setProfitData(data);
       setShowProfitReport(true);

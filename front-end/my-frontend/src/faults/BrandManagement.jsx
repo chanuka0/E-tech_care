@@ -409,13 +409,12 @@
 
 
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
 import AddBrandModal from './AddBrandModal';
 import EditBrandModal from './EditBrandModal';
 
 const BrandManagement = () => {
-  const { apiCall } = useApi();
   const { isAdmin } = useAuth();
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -671,14 +670,14 @@ const BrandManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <span className="text-sm font-medium text-gray-900">{brand.brandName}</span>
+                        <span className="text-sm font-bold text-gray-900">{brand.brandName}</span>
                         {!brand.isActive && (
                           <span className="ml-2 text-xs text-gray-500">(Inactive)</span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-gray-600 line-clamp-2">
+                      <p className="text-sm text-gray-600 italic">
                         {brand.description || <span className="text-gray-400">No description</span>}
                       </p>
                     </td>

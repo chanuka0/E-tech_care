@@ -1,14 +1,13 @@
 
 
 import { useState, useEffect, useMemo } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
 const StockReport = () => {
-  const { apiCall } = useApi();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   

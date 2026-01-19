@@ -1,10 +1,9 @@
 
 
 import { useState, useEffect, useRef } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 
 const DeductStockModal = ({ item, onDeduct, onClose, invoiceStatus, paidAmount, totalAmount }) => {
-  const { apiCall } = useApi();
   const [deductData, setDeductData] = useState({
     quantityUsed: 1,
     reason: 'REPAIR_USE',

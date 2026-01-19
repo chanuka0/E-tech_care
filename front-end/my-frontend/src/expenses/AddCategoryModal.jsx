@@ -192,6 +192,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
+import { API_BASE_URL, API_ENDPOINTS } from '../services/api';
 
 const AddCategoryModal = ({ onAdd, onClose, existingCategories }) => {
   const { token } = useAuth();
@@ -245,7 +246,7 @@ const AddCategoryModal = ({ onAdd, onClose, existingCategories }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:8081/api/expense-categories', {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSE_CATEGORIES}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

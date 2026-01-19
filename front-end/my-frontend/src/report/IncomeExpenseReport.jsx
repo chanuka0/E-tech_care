@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 
 const IncomeExpenseReport = () => {
-  const { apiCall } = useApi();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

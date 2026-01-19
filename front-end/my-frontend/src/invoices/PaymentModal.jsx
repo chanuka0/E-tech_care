@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 
 const PaymentModal = ({ invoice, onSuccess, onClose }) => {
-  const { apiCall } = useApi();
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [loading, setLoading] = useState(false);

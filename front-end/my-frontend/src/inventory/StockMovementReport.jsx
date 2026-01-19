@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 
 const StockMovementReport = () => {
-  const { apiCall } = useApi();
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

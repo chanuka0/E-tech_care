@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 
 const InvoiceEdit = ({ invoiceId, onSuccess, onClose }) => {
-  const { apiCall } = useApi();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');

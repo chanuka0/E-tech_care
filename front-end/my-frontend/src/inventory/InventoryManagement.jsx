@@ -680,7 +680,7 @@
 
 
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
 import AddInventoryModal from './AddInventoryModal';
 import EditInventoryModal from './EditInventoryModal';
@@ -691,7 +691,6 @@ import AddStockModal from './AddStockModal';
 import StockAdjustmentModal from './StockAdjustmentModal';
 
 const InventoryManagement = () => {
-  const { apiCall } = useApi();
   const { isAdmin, isAuthenticated, user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);

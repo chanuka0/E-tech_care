@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import CancelOrderModal from './CancelOrderModal';
 
 const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
-  const { apiCall } = useApi();
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [error, setError] = useState('');

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthProvider';
+import { API_BASE_URL, API_ENDPOINTS } from '../services/api';
 
 const AddExpenseModal = ({ onAdd, onClose }) => {
   const { token } = useAuth();
@@ -29,7 +30,7 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
     try {
       console.log('Fetching categories with token:', token);
       
-      const response = await fetch('http://localhost:8081/api/expense-categories', {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSE_CATEGORIES}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -94,7 +95,7 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
     console.log('Submitting expense:', expenseData);
 
     try {
-      const response = await fetch('http://localhost:8081/api/expenses', {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSES}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

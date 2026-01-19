@@ -1,0 +1,100 @@
+//*********************************************************************************
+// ************************** SYSTEM SETTINGS ***************************
+//*********************************************************************************
+
+1. add new one
+2.edit
+3.delete
+4.change
+5.search by ID or NAME
+6.deactive (if have)
+if it delete database should not delet it, it should add a status as deleted. we have to develop this feature.
+
+
+
+
+
+................................................................
+//*********************************************************************************
+// ************************** HAVE TO DEVELOP ***************************
+//*********************************************************************************
+
+cancle jobcard vala invoice number seen eka
+
+
+
+ubage front end eke gitignore ekata meka daganin
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.env.local
+  .env.*.local
+  .env
+
+
+................
+ back end eke gitignore ekata meka dapan
+
+ HELP.md
+ target/
+ .mvn/wrapper/maven-wrapper.jar
+ !**/src/main/**/target/
+ !**/src/test/**/target/
+
+ # Ignore Spring Boot application properties
+ src/main/resources/application.properties
+
+ # Ignore application.properties only
+ #!**src/main/resources/application.properties
+
+ ### STS ###
+ .apt_generated
+ .classpath
+ .factorypath
+ .project
+ .settings
+ .springBeans
+ .sts4-cache
+
+ ### IntelliJ IDEA ###
+ .idea
+ *.iws
+ *.iml
+ *.ipr
+
+ ### NetBeans ###
+ /nbproject/private/
+ /nbbuild/
+ /dist/
+ /nbdist/
+ /.nb-gradle/
+ build/
+ !**/src/main/**/build/
+ !**/src/test/**/build/
+
+ ### VS Code ###
+ .vscode/
+

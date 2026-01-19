@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
 const ReportsDashboard = () => {
-  const { apiCall } = useApi();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dateRange, setDateRange] = useState('30'); // days

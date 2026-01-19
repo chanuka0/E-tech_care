@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 
 const SearchJobCardModal = ({ onSelectJobCard, onClose }) => {
-  const { apiCall } = useApi();
   const [jobCardNumber, setJobCardNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

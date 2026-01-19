@@ -252,7 +252,7 @@ const Settings = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600 font-medium">Release Date</p>
-                      <p className="text-2xl font-bold text-gray-900">Dec 2024</p>
+                      <p className="text-2xl font-bold text-gray-900">Dec 2025</p>
                     </div>
                   </div>
                   <p className="text-sm text-gray-600">Current version release</p>
@@ -311,6 +311,14 @@ const Settings = () => {
                   </div>
                   <p className="text-gray-600 text-sm">
                     For technical support and assistance, please contact your system administrator or IT support team.
+                    <br />
+                    Email: chanukathanujaya2002@gmail.com
+                    <br />
+                    Phone: +94 777 931 400
+                    <br />
+                    Email: jjj@gmail.com
+                    <br />
+                    Phone: +94 000 000 000
                   </p>
                 </div>
 

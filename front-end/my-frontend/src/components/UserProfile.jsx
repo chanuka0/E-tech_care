@@ -225,6 +225,7 @@ import { useState, useEffect } from 'react';
 import { useApi } from '../services/apiService';
 import { useAuth } from '../auth/AuthProvider';
 import ChangePasswordModal from './ChangePasswordModal';
+import { API_ENDPOINTS } from '../services/api';
 
 const UserProfile = () => {
   const { apiCall } = useApi();
@@ -241,7 +242,7 @@ const UserProfile = () => {
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      const response = await apiCall('/api/users/profile');
+      const response = await apiCall(API_ENDPOINTS.USER_PROFILE);
       setUserProfile(response);
       setError('');
     } catch (err) {

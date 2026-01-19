@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthProvider';
+import { API_BASE_URL, API_ENDPOINTS } from '../services/api';
 
 const EditExpenseModal = ({ expense, onUpdate, onClose }) => {
   const { token } = useAuth();
@@ -30,7 +31,7 @@ const EditExpenseModal = ({ expense, onUpdate, onClose }) => {
   const fetchCategories = async () => {
     setLoadingCategories(true);
     try {
-      const response = await fetch('http://localhost:8081/api/expense-categories', {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSE_CATEGORIES}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -80,7 +81,7 @@ const EditExpenseModal = ({ expense, onUpdate, onClose }) => {
     };
 
     try {
-      const response = await fetch(`http://localhost:8081/api/expenses/${expense.id}`, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSES}/${expense.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -310,6 +310,7 @@
 import { useAuth } from '../auth/AuthProvider';
 import AddCategoryModal from './AddCategoryModal';
 import EditCategoryModal from '../faults/EditCategoryModal';
+import { API_BASE_URL, API_ENDPOINTS } from '../services/api'; 
 import { useState, useEffect } from 'react';
 
 const ExpenseCategoryManagement = () => {
@@ -327,7 +328,7 @@ const ExpenseCategoryManagement = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:8081/api/expense-categories', {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSE_CATEGORIES}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -372,7 +373,7 @@ const ExpenseCategoryManagement = () => {
         isActive: !category.isActive
       };
 
-      const response = await fetch(`http://localhost:8081/api/expense-categories/${category.id}`, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSE_CATEGORIES}/${category.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -397,7 +398,7 @@ const ExpenseCategoryManagement = () => {
   const handleDeleteCategory = async (id) => {
     if (window.confirm('Are you sure you want to delete this category?')) {
       try {
-        const response = await fetch(`http://localhost:8081/api/expense-categories/${id}`, {
+        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSE_CATEGORIES}/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -521,7 +522,7 @@ const ExpenseCategoryManagement = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-gray-600 line-clamp-2">
+                      <p className="text-sm text-gray-600 italic">
                         {category.description || 'No description provided'}
                       </p>
                     </td>

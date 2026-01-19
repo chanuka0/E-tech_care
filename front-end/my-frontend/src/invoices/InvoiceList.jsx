@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider'; // ✅ IMPORT useAuth
 import InvoiceView from './InvoiceView';
 import CreateInvoiceModal from './CreateInvoiceModal';
@@ -7,7 +7,6 @@ import InvoiceEdit from './InvoiceEdit';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 
 const InvoiceList = () => {
-  const { apiCall } = useApi();
   const { isAdmin } = useAuth(); // ✅ USE useAuth from AuthProvider
   
   const [invoices, setInvoices] = useState([]);

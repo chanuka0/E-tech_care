@@ -1,9 +1,8 @@
 // src/main/resources/static/js/components/UsedItemsSection.js
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 
 const UsedItemsSection = ({ items, usedItems, onAdd, onRemove }) => {
-  const { apiCall } = useApi();
   const [selectedItem, setSelectedItem] = useState('');
   const [quantity, setQuantity] = useState('');
   const [availableSerials, setAvailableSerials] = useState([]);

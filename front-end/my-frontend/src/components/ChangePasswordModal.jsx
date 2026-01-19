@@ -289,6 +289,7 @@
 
 import { useState } from 'react';
 import { useApi } from '../services/apiService';
+import { API_BASE_URL, API_ENDPOINTS } from '../services/api';
 
 // Change Password Modal Component
 const ChangePasswordModal = ({ isOpen, onClose, username }) => {
@@ -357,7 +358,7 @@ const ChangePasswordModal = ({ isOpen, onClose, username }) => {
     setLoading(true);
 
     try {
-      const response = await apiCall('/api/users/change-password', {
+      const response = await apiCall(API_ENDPOINTS.CHANGE_PASSWORD, {
         method: 'POST',
         body: JSON.stringify({
           oldPassword: formData.oldPassword,

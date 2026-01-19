@@ -1,3 +1,193 @@
+//package com.example.demo.security;
+//
+//import com.example.demo.users.UserService;
+//import org.springframework.context.annotation.Bean;
+//import org.springframework.context.annotation.Configuration;
+//import org.springframework.context.annotation.Lazy;
+//import org.springframework.security.authentication.AuthenticationManager;
+//import org.springframework.security.authentication.AuthenticationProvider;
+//import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+//import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+//import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+//import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+//import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+//import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+//import org.springframework.security.config.http.SessionCreationPolicy;
+//import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+//import org.springframework.security.crypto.password.PasswordEncoder;
+//import org.springframework.security.web.SecurityFilterChain;
+//import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+//import org.springframework.web.cors.CorsConfiguration;
+//import org.springframework.web.cors.CorsConfigurationSource;
+//import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+//
+//import java.util.Arrays;
+//
+//@Configuration
+//@EnableWebSecurity
+//@EnableMethodSecurity(prePostEnabled = true)
+//public class SecurityConfig {
+//
+//    private final UserService userService;
+//    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+//    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+//
+//    public SecurityConfig(@Lazy UserService userService,
+//                          @Lazy JwtAuthenticationFilter jwtAuthenticationFilter,
+//                          @Lazy JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+//        this.userService = userService;
+//        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+//        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+//    }
+//
+//    @Bean
+//    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+//        return configuration.getAuthenticationManager();
+//    }
+//
+//    @Bean
+//    public PasswordEncoder passwordEncoder() {
+//        return new BCryptPasswordEncoder(12);
+//    }
+//
+//    @Bean
+//    public AuthenticationProvider authenticationProvider() {
+//        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+//        authProvider.setUserDetailsService(userService);
+//        authProvider.setPasswordEncoder(passwordEncoder());
+//        return authProvider;
+//    }
+//
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//        http
+//                .csrf(AbstractHttpConfigurer::disable)
+//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+//
+//                .sessionManagement(session -> session
+//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+//                )
+//
+//                .authorizeHttpRequests(authz -> authz
+//                        // Public endpoints - Authentication endpoints
+//                        .requestMatchers(
+//                                "/api/auth/**",
+//                                "/api/users/register",
+//                                "/api/users/register/admin",
+//                                "/api/users/login",
+//                                "/api/users/login/user",
+//                                "/h2-console/**",
+//                                "/swagger-ui/**",
+//                                "/api/expenses/**",
+//                                "/v3/api-docs/**",
+//                                "/actuator/health",
+//                                "/ws/**"
+//                        ).permitAll()
+//
+//                        // Admin-only endpoints
+//                        .requestMatchers(
+//                                "/api/users/all",
+//                                "/api/users/admin/**",  // All admin endpoints
+//                                "/api/laptop-brands/all",
+//                                "/api/laptop-brands",
+//                                "/api/laptop-brands/*",
+//                                "/api/notifications/test"
+//                        ).hasRole("ADMIN")
+//
+//                        // User endpoints (both admin and user can access)
+//                        .requestMatchers(
+//                                "/api/users/profile",
+//                                "/api/notifications/**",
+//                                "/ws/**",
+//                                "/api/users/profile/*",
+//                                "/api/laptop-brands/active",
+//                                "/api/jobcards",
+//                                "/api/jobcards/**",
+//                                "/api/invoices/**",
+//                                "/api/invoices",
+//                                "/api/inventory/**",
+//                                "/api/inventory",
+//                                "/api/damages/**",
+//                                "/api/reports/**",
+//                                "/api/faults",
+//                                "/api/brands",
+//                                "/api/brands/**",
+//                                "/api/models",
+//                                "/api/models/**",
+//                                "/api/processors",
+//                                "/api/processors/**",
+//                                "/api/device-conditions",
+//                                "/api/device-conditions/**",
+//                                "/api/pdf/**",
+//                                "/api/notifications",
+//                                "/api/notifications/**",
+//                                "/api/users/change-password"
+//                        ).authenticated()
+//
+//                        .anyRequest().authenticated()
+//                )
+//
+//                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+//                .authenticationProvider(authenticationProvider())
+//                .exceptionHandling(exceptions -> exceptions
+//                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+//                );
+//
+//        http.headers(headers -> headers
+//                .frameOptions(frameOptions -> frameOptions.sameOrigin())
+//        );
+//
+//        return http.build();
+//    }
+//
+//    @Bean
+//    public CorsConfigurationSource corsConfigurationSource() {
+//        CorsConfiguration configuration = new CorsConfiguration();
+//
+//        configuration.setAllowedOrigins(Arrays.asList(
+//                "http://localhost:5173",       // Local development
+//                "http://16.16.203.25",         // EC2 Public IP (Frontend on Port 80)
+//                "http://16.16.203.25:5173"     // EC2 if you run dev server (not recommended for prod)
+//        ));
+//
+//        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+//        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
+//        configuration.setAllowCredentials(true);
+//        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+//
+//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//        source.registerCorsConfiguration("/**", configuration);
+//        return source;
+//    }
+////*********************************************************************************
+//// *******************************DONT DELETE THIS*********************************
+////*********************************************************************************
+//
+////    @Bean
+////    public CorsConfigurationSource corsConfigurationSource() {
+////        CorsConfiguration configuration = new CorsConfiguration();
+////
+////        configuration.setAllowedOrigins(Arrays.asList(
+////                "http://localhost:3000",
+////                "http://localhost:4200",
+////                "http://localhost:8080",
+////                "http://localhost:5173"
+////        ));
+////
+////        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+////        configuration.setAllowedHeaders(Arrays.asList("*"));
+////        configuration.setAllowCredentials(true);
+////        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+////
+////        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+////        source.registerCorsConfiguration("/**", configuration);
+////        return source;
+////    }
+//
+////*********************************************************************************
+//// *******************************DONT DELETE THIS*********************************
+////*********************************************************************************
+//}
 package com.example.demo.security;
 
 import com.example.demo.users.UserService;
@@ -22,7 +212,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
@@ -69,59 +258,62 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(authz -> authz
-                        // Public endpoints - Authentication endpoints
+                        // Public endpoints - Authentication only
                         .requestMatchers(
-                                "/api/auth/**",
                                 "/api/users/register",
                                 "/api/users/register/admin",
                                 "/api/users/login",
                                 "/api/users/login/user",
                                 "/h2-console/**",
                                 "/swagger-ui/**",
-                                "/api/expenses/**",
                                 "/v3/api-docs/**",
                                 "/actuator/health",
-                                "/ws/**"
+                                "/ws/**"  // WebSocket (should validate JWT internally)
                         ).permitAll()
 
                         // Admin-only endpoints
                         .requestMatchers(
                                 "/api/users/all",
-                                "/api/users/admin/**",  // All admin endpoints
-                                "/api/laptop-brands/all",
-                                "/api/laptop-brands",
-                                "/api/laptop-brands/*",
+                                "/api/users/admin/**",
+                                "/api/brands/*/delete",
+                                "/api/models/*/delete",
+                                "/api/model-numbers/*/delete",
+                                "/api/faults/*/delete",
+                                "/api/device-conditions/*/delete",
+                                "/api/processors/*/delete",
                                 "/api/notifications/test"
                         ).hasRole("ADMIN")
 
-                        // User endpoints (both admin and user can access)
+                        // All authenticated users can access these
                         .requestMatchers(
                                 "/api/users/profile",
+                                "/api/users/change-password",
                                 "/api/notifications/**",
-                                "/ws/**",
-                                "/api/users/profile/*",
-                                "/api/laptop-brands/active",
                                 "/api/jobcards",
                                 "/api/jobcards/**",
                                 "/api/invoices/**",
-                                "/api/invoices",
                                 "/api/inventory/**",
-                                "/api/inventory",
                                 "/api/damages/**",
                                 "/api/reports/**",
                                 "/api/faults",
+                                "/api/faults/**",
                                 "/api/brands",
                                 "/api/brands/**",
                                 "/api/models",
                                 "/api/models/**",
+                                "/api/model-numbers",
+                                "/api/model-numbers/**",
                                 "/api/processors",
                                 "/api/processors/**",
                                 "/api/device-conditions",
                                 "/api/device-conditions/**",
-                                "/api/pdf/**",
-                                "/api/notifications",
-                                "/api/notifications/**",
-                                "/api/users/change-password"
+                                "/api/expense-categories",
+                                "/api/expense-categories/**",
+                                "/api/service-categories",
+                                "/api/service-categories/**",
+                                "/api/expenses",
+                                "/api/expenses/**",
+                                "/api/pdf/**"
                         ).authenticated()
 
                         .anyRequest().authenticated()
@@ -144,17 +336,29 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
+        // ✅ GOOD: Specific origins instead of wildcard
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:4200",
-                "http://localhost:8080",
-                "http://localhost:5173"
+                "http://localhost:5173",        // Local development
+                "http://16.16.203.25",          // EC2 Production (Frontend)
+                "https://16.16.203.25"          // Add HTTPS when deployed
         ));
 
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+        ));
+
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With"
+        ));
+
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
+
+        // ⚠️ Add timeout for preflight requests
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
 import AddModelModal from './AddModelModal';
 import EditModelModal from './EditModelModal';
 
 const ModelManagement = () => {
-  const { apiCall } = useApi();
   const { isAdmin } = useAuth();
   
   const [models, setModels] = useState([]);
@@ -371,12 +370,12 @@ const ModelManagement = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <span className="text-lg font-bold text-gray-900">{model.modelName}</span>
+                          <span className="text-sm font-bold text-gray-900">{model.modelName}</span>
                           <p className="text-xs text-gray-500 font-mono mt-1">Model ID: {model.id}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 line-clamp-2">
+                        <p className="text-sm text-gray-600 italic">
                           {model.description || 'No description provided'}
                         </p>
                       </td>

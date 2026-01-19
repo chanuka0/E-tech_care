@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 
 const SerialNumberHistory = ({ serialNumber, onClose }) => {
-  const { apiCall } = useApi();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

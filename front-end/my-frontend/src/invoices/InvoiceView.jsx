@@ -1299,7 +1299,7 @@
 
 
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 import PaymentModal from './PaymentModal';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -1310,7 +1310,6 @@ import 'jspdf-autotable';
 
 
 const InvoiceView = ({ invoiceId, onClose, onRefresh }) => {
-  const { apiCall } = useApi();
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

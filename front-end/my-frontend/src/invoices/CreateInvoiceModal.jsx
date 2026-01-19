@@ -2203,7 +2203,7 @@
 
 
 import { useState, useEffect } from 'react';
-import { useApi } from '../services/apiService';
+import { apiCall, API_ENDPOINTS } from '../services/api';
 
 const WARRANTY_OPTIONS = [
   { value: '-', label: '-' },
@@ -2229,7 +2229,6 @@ const CreateInvoiceModal = ({
   onSuccess, 
   onClose 
 }) => {
-  const { apiCall } = useApi();
   const [loading, setLoading] = useState(isEditing && invoiceId ? true : false);
   const [error, setError] = useState('');
   const [inventoryItems, setInventoryItems] = useState([]);
