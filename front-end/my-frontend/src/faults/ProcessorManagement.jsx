@@ -657,12 +657,12 @@ const ProcessorManagement = () => {
                       >
                         {processor.isActive ? 'Deactivate' : 'Activate'}
                       </button>
-                      <button
+                      {/* <button
                         onClick={() => confirmDelete(processor)}
                         className="text-red-600 hover:text-red-900 font-medium transition-colors"
                       >
                         Delete
-                      </button>
+                      </button> */}
                     </td>
                   </tr>
                 ))}
@@ -717,7 +717,7 @@ const ProcessorManagement = () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal
       {showDeleteConfirm && processorToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
@@ -770,7 +770,7 @@ const ProcessorManagement = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Modals */}
       {showAddModal && (
