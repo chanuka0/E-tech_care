@@ -316,9 +316,9 @@ const Settings = () => {
                     <br />
                     Phone: +94 777 931 400
                     <br />
-                    Email: jjj@gmail.com
+                    Email: janudajinajith.1@gmail.com
                     <br />
-                    Phone: +94 000 000 000
+                    Phone: +94 768 583 301
                   </p>
                 </div>
 
