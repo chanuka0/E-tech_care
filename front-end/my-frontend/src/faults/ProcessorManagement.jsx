@@ -1,11 +1,10 @@
-// import { useState, useEffect } from 'react';
-// import { useApi } from '../services/apiService';
+// import React, { useState, useEffect } from 'react'; // ✅ ADD THIS LINE
+// import { apiCall, API_ENDPOINTS } from '../services/api';
 // import { useAuth } from '../auth/AuthProvider';
 // import AddProcessorModal from './AddProcessorModal';
 // import EditProcessorModal from './EditProcessorModal';
 
 // const ProcessorManagement = () => {
-//   const { apiCall } = useApi();
 //   const { isAdmin } = useAuth();
 //   const [processors, setProcessors] = useState([]);
 //   const [loading, setLoading] = useState(false);
@@ -62,6 +61,24 @@
 //       showSuccessMessage('Processor updated successfully!');
 //     } catch (err) {
 //       throw new Error(err.message || 'Failed to update processor');
+//     }
+//   };
+
+//   // ✅ NEW: Toggle processor status (activate/deactivate)
+//   const handleToggleStatus = async (processor) => {
+//     try {
+//       const response = await apiCall(`/api/processors/${processor.id}/toggle-status`, {
+//         method: 'PATCH'
+//       });
+      
+//       setProcessors(processors.map(p => 
+//         p.id === processor.id ? response.processor : p
+//       ));
+      
+//       const action = response.processor.isActive ? 'activated' : 'deactivated';
+//       showSuccessMessage(`Processor ${action} successfully!`);
+//     } catch (err) {
+//       setError(err.message || 'Failed to toggle processor status');
 //     }
 //   };
 
@@ -207,10 +224,10 @@
 //                       <span className="text-sm font-medium text-gray-900">#{processor.id}</span>
 //                     </td>
 //                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="text-sm font-medium text-gray-900">{processor.processorName}</span>
+//                       <span className="text-sm font-bold text-gray-900">{processor.processorName}</span>
 //                     </td>
 //                     <td className="px-6 py-4">
-//                       <p className="text-sm text-gray-600 line-clamp-2">
+//                       <p className="text-sm text-gray-600 italic">
 //                         {processor.description || 'No description provided'}
 //                       </p>
 //                     </td>
@@ -240,12 +257,23 @@
 //                       >
 //                         Edit
 //                       </button>
+//                       {/* ✅ Activate/Deactivate Button */}
 //                       <button
+//                         onClick={() => handleToggleStatus(processor)}
+//                         className={`${
+//                           processor.isActive 
+//                             ? 'text-orange-600 hover:text-orange-900' 
+//                             : 'text-green-600 hover:text-green-900'
+//                         } font-medium transition-colors`}
+//                       >
+//                         {processor.isActive ? 'Deactivate' : 'Activate'}
+//                       </button>
+//                       {/* <button
 //                         onClick={() => confirmDelete(processor)}
 //                         className="text-red-600 hover:text-red-900 font-medium transition-colors"
 //                       >
 //                         Delete
-//                       </button>
+//                       </button> */}
 //                     </td>
 //                   </tr>
 //                 ))}
@@ -300,7 +328,7 @@
 //         </div>
 //       </div>
 
-//       {/* Delete Confirmation Modal */}
+//       {/* Delete Confirmation Modal
 //       {showDeleteConfirm && processorToDelete && (
 //         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
 //           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
@@ -353,7 +381,7 @@
 //             </div>
 //           </div>
 //         </div>
-//       )}
+//       )} */}
 
 //       {/* Modals */}
 //       {showAddModal && (
@@ -386,8 +414,7 @@
 
 
 
-
-import React, { useState, useEffect } from 'react'; // ✅ ADD THIS LINE
+import React, { useState, useEffect } from 'react';
 import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
 import AddProcessorModal from './AddProcessorModal';
@@ -453,8 +480,27 @@ const ProcessorManagement = () => {
     }
   };
 
-  // ✅ NEW: Toggle processor status (activate/deactivate)
+  // ✅ Toggle processor status with window.confirm (like ServiceCategoryManagement)
   const handleToggleStatus = async (processor) => {
+    // Show confirmation for both activate and deactivate
+    if (processor.isActive) {
+      const confirmDeactivate = window.confirm(
+        `Are you sure you want to deactivate the processor "${processor.processorName}"?\n\nThis processor will not be available for new job cards.`
+      );
+      
+      if (!confirmDeactivate) {
+        return;
+      }
+    } else {
+      const confirmActivate = window.confirm(
+        `Are you sure you want to activate the processor "${processor.processorName}"?\n\nThis processor will be available for new job cards.`
+      );
+      
+      if (!confirmActivate) {
+        return;
+      }
+    }
+
     try {
       const response = await apiCall(`/api/processors/${processor.id}/toggle-status`, {
         method: 'PATCH'
@@ -646,7 +692,7 @@ const ProcessorManagement = () => {
                       >
                         Edit
                       </button>
-                      {/* ✅ Activate/Deactivate Button */}
+                      {/* ✅ Activate/Deactivate Button with window.confirm */}
                       <button
                         onClick={() => handleToggleStatus(processor)}
                         className={`${

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
@@ -62,12 +63,31 @@ const ServiceCategoryManagement = () => {
     }
   };
 
-  const handleToggleCategory = async (id) => {
+  const handleToggleCategory = async (category) => {
+    // Show confirmation for both activate and deactivate
+    if (category.isActive) {
+      const confirmDeactivate = window.confirm(
+        `Are you sure you want to deactivate the service category "${category.name}"?\n\nThis category will not be available for new job cards.`
+      );
+      
+      if (!confirmDeactivate) {
+        return;
+      }
+    } else {
+      const confirmActivate = window.confirm(
+        `Are you sure you want to activate the service category "${category.name}"?\n\nThis category will be available for new job cards.`
+      );
+      
+      if (!confirmActivate) {
+        return;
+      }
+    }
+
     try {
-      const response = await apiCall(`/api/service-categories/${id}/toggle`, {
+      const response = await apiCall(`/api/service-categories/${category.id}/toggle`, {
         method: 'PATCH'
       });
-      setCategories(categories.map(cat => cat.id === id ? response : cat));
+      setCategories(categories.map(cat => cat.id === category.id ? response : cat));
       showSuccessMessage(`Service category ${response.isActive ? 'activated' : 'deactivated'} successfully!`);
     } catch (err) {
       setError(err.message || 'Failed to toggle service category');
@@ -289,7 +309,7 @@ const ServiceCategoryManagement = () => {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleToggleCategory(category.id)}
+                          onClick={() => handleToggleCategory(category)}
                           className={`font-medium transition-colors inline-flex items-center ${
                             category.isActive
                               ? 'text-yellow-600 hover:text-yellow-900'

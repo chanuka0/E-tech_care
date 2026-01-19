@@ -1,6 +1,7 @@
 // import { useAuth } from '../auth/AuthProvider';
 // import AddCategoryModal from './AddCategoryModal';
 // import EditCategoryModal from '../faults/EditCategoryModal';
+// import { API_BASE_URL, API_ENDPOINTS } from '../services/api'; 
 // import { useState, useEffect } from 'react';
 
 // const ExpenseCategoryManagement = () => {
@@ -18,7 +19,7 @@
 //     setLoading(true);
 //     setError('');
 //     try {
-//       const response = await fetch('http://localhost:8081/api/expense-categories', {
+//       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSE_CATEGORIES}`, {
 //         method: 'GET',
 //         headers: {
 //           'Authorization': `Bearer ${token}`,
@@ -56,10 +57,39 @@
 //     showSuccessMessage('Category updated successfully!');
 //   };
 
+//   const handleToggleStatus = async (category) => {
+//     try {
+//       const updatedCategory = {
+//         ...category,
+//         isActive: !category.isActive
+//       };
+
+//       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSE_CATEGORIES}/${category.id}`, {
+//         method: 'PUT',
+//         headers: {
+//           'Authorization': `Bearer ${token}`,
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify(updatedCategory)
+//       });
+
+//       if (response.ok) {
+//         const result = await response.json();
+//         setCategories(categories.map(cat => cat.id === category.id ? result : cat));
+//         showSuccessMessage(`Category ${result.isActive ? 'activated' : 'deactivated'} successfully!`);
+//       } else {
+//         setError('Failed to update category status');
+//       }
+//     } catch (err) {
+//       console.error('Error toggling category status:', err);
+//       setError('Failed to update category status');
+//     }
+//   };
+
 //   const handleDeleteCategory = async (id) => {
 //     if (window.confirm('Are you sure you want to delete this category?')) {
 //       try {
-//         const response = await fetch(`http://localhost:8081/api/expense-categories/${id}`, {
+//         const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXPENSE_CATEGORIES}/${id}`, {
 //           method: 'DELETE',
 //           headers: {
 //             'Authorization': `Bearer ${token}`,
@@ -183,7 +213,7 @@
 //                       </span>
 //                     </td>
 //                     <td className="px-6 py-4">
-//                       <p className="text-sm text-gray-600 line-clamp-2">
+//                       <p className="text-sm text-gray-600 italic">
 //                         {category.description || 'No description provided'}
 //                       </p>
 //                     </td>
@@ -203,22 +233,55 @@
 //                         day: 'numeric'
 //                       })}
 //                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+//                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2 flex items-center">
 //                       <button
 //                         onClick={() => {
 //                           setSelectedCategory(category);
 //                           setShowEditModal(true);
 //                         }}
-//                         className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+//                         className="text-blue-600 hover:text-blue-900 font-medium transition-colors inline-flex items-center"
+//                         title="Edit"
 //                       >
+//                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+//                         </svg>
 //                         Edit
 //                       </button>
-//                       <button
+
+//                       {category.isActive ? (
+//                         <button
+//                           onClick={() => handleToggleStatus(category)}
+//                           className="text-orange-600 hover:text-orange-900 font-medium transition-colors inline-flex items-center"
+//                           title="Deactivate"
+//                         >
+//                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+//                           </svg>
+//                           Deactivate
+//                         </button>
+//                       ) : (
+//                         <button
+//                           onClick={() => handleToggleStatus(category)}
+//                           className="text-green-600 hover:text-green-900 font-medium transition-colors inline-flex items-center"
+//                           title="Activate"
+//                         >
+//                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+//                           </svg>
+//                           Activate
+//                         </button>
+//                       )}
+
+//                       {/* <button
 //                         onClick={() => handleDeleteCategory(category.id)}
-//                         className="text-red-600 hover:text-red-900 font-medium transition-colors"
+//                         className="text-red-600 hover:text-red-900 font-medium transition-colors inline-flex items-center"
+//                         title="Delete"
 //                       >
+//                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+//                         </svg>
 //                         Delete
-//                       </button>
+//                       </button> */}
 //                     </td>
 //                   </tr>
 //                 ))}
@@ -249,6 +312,7 @@
 //             <div>
 //               <p className="text-sm text-gray-600">Active Categories</p>
 //               <p className="text-3xl font-bold text-green-600">{categories.filter(c => c.isActive).length}</p>
+//               <p className="text-xs text-gray-500 mt-1">Available for new expenses</p>
 //             </div>
 //             <div className="bg-green-100 p-3 rounded-full">
 //               <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,18 +326,19 @@
 //           <div className="flex items-center justify-between">
 //             <div>
 //               <p className="text-sm text-gray-600">Inactive Categories</p>
-//               <p className="text-3xl font-bold text-red-600">{categories.filter(c => !c.isActive).length}</p>
+//               <p className="text-3xl font-bold text-orange-600">{categories.filter(c => !c.isActive).length}</p>
+//               <p className="text-xs text-gray-500 mt-1">Not available for new expenses</p>
 //             </div>
-//             <div className="bg-red-100 p-3 rounded-full">
-//               <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m2-2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+//             <div className="bg-orange-100 p-3 rounded-full">
+//               <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
 //               </svg>
 //             </div>
 //           </div>
 //         </div>
 //       </div>
 
-//       {/* ✅ MODALS WITH existingCategories PROP */}
+//       {/* Modals */}
 //       {showAddModal && (
 //         <AddCategoryModal
 //           onAdd={handleAddCategory}
@@ -298,7 +363,6 @@
 // };
 
 // export default ExpenseCategoryManagement;
-
 
 
 
@@ -367,6 +431,25 @@ const ExpenseCategoryManagement = () => {
   };
 
   const handleToggleStatus = async (category) => {
+    // Show confirmation for both activate and deactivate
+    if (category.isActive) {
+      const confirmDeactivate = window.confirm(
+        `Are you sure you want to deactivate the category "${category.name}"?\n\nThis category will not be available for new expenses.`
+      );
+      
+      if (!confirmDeactivate) {
+        return;
+      }
+    } else {
+      const confirmActivate = window.confirm(
+        `Are you sure you want to activate the category "${category.name}"?\n\nThis category will be available for new expenses.`
+      );
+      
+      if (!confirmActivate) {
+        return;
+      }
+    }
+
     try {
       const updatedCategory = {
         ...category,
