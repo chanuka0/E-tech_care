@@ -643,37 +643,26 @@ const ExpenseCategoryManagement = () => {
                       {category.isActive ? (
                         <button
                           onClick={() => handleToggleStatus(category)}
-                          className="text-orange-600 hover:text-orange-900 font-medium transition-colors inline-flex items-center"
-                          title="Deactivate"
+                          className="font-medium transition-colors px-3 py-1 rounded flex items-center space-x-1 text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50"
+                          title="Deactivate category"
                         >
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                           </svg>
-                          Deactivate
+                          <span>Deactivate</span>
                         </button>
                       ) : (
                         <button
                           onClick={() => handleToggleStatus(category)}
-                          className="text-green-600 hover:text-green-900 font-medium transition-colors inline-flex items-center"
-                          title="Activate"
+                          className="font-medium transition-colors px-3 py-1 rounded flex items-center space-x-1 text-green-600 hover:text-green-900 hover:bg-green-50"
+                          title="Activate category"
                         >
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
-                          Activate
+                          <span>Activate</span>
                         </button>
                       )}
-
-                      {/* <button
-                        onClick={() => handleDeleteCategory(category.id)}
-                        className="text-red-600 hover:text-red-900 font-medium transition-colors inline-flex items-center"
-                        title="Delete"
-                      >
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Delete
-                      </button> */}
                     </td>
                   </tr>
                 ))}
