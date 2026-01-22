@@ -425,8 +425,8 @@ const ModelManagement = () => {
                           </button>
                         )}
                         {isLinked && (
-                          <span className="text-gray-400 text-xs italic px-2 py-1">
-                            Cannot delete (linked)
+                          <span className="text-gray-400 font-medium transition-colors px-2 py-1 rounded hover:bg-red-50">
+                            Delete
                           </span>
                         )}
                       </td>

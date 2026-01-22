@@ -1,4 +1,5 @@
-// import React, { useState, useEffect } from 'react'; // ✅ ADD THIS LINE
+
+// import React, { useState, useEffect } from 'react';
 // import { apiCall, API_ENDPOINTS } from '../services/api';
 // import { useAuth } from '../auth/AuthProvider';
 // import AddProcessorModal from './AddProcessorModal';
@@ -64,8 +65,27 @@
 //     }
 //   };
 
-//   // ✅ NEW: Toggle processor status (activate/deactivate)
+//   // ✅ Toggle processor status with window.confirm (like ServiceCategoryManagement)
 //   const handleToggleStatus = async (processor) => {
+//     // Show confirmation for both activate and deactivate
+//     if (processor.isActive) {
+//       const confirmDeactivate = window.confirm(
+//         `Are you sure you want to deactivate the processor "${processor.processorName}"?\n\nThis processor will not be available for new job cards.`
+//       );
+      
+//       if (!confirmDeactivate) {
+//         return;
+//       }
+//     } else {
+//       const confirmActivate = window.confirm(
+//         `Are you sure you want to activate the processor "${processor.processorName}"?\n\nThis processor will be available for new job cards.`
+//       );
+      
+//       if (!confirmActivate) {
+//         return;
+//       }
+//     }
+
 //     try {
 //       const response = await apiCall(`/api/processors/${processor.id}/toggle-status`, {
 //         method: 'PATCH'
@@ -257,7 +277,7 @@
 //                       >
 //                         Edit
 //                       </button>
-//                       {/* ✅ Activate/Deactivate Button */}
+//                       {/* ✅ Activate/Deactivate Button with window.confirm */}
 //                       <button
 //                         onClick={() => handleToggleStatus(processor)}
 //                         className={`${
@@ -414,6 +434,10 @@
 
 
 
+
+
+
+
 import React, { useState, useEffect } from 'react';
 import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
@@ -430,8 +454,6 @@ const ProcessorManagement = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProcessor, setSelectedProcessor] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [processorToDelete, setProcessorToDelete] = useState(null);
 
   const fetchProcessors = async () => {
     setLoading(true);
@@ -480,7 +502,7 @@ const ProcessorManagement = () => {
     }
   };
 
-  // ✅ Toggle processor status with window.confirm (like ServiceCategoryManagement)
+  // Updated: Toggle status with window.confirm (like FaultManagement)
   const handleToggleStatus = async (processor) => {
     // Show confirmation for both activate and deactivate
     if (processor.isActive) {
@@ -514,29 +536,6 @@ const ProcessorManagement = () => {
       showSuccessMessage(`Processor ${action} successfully!`);
     } catch (err) {
       setError(err.message || 'Failed to toggle processor status');
-    }
-  };
-
-  const confirmDelete = (processor) => {
-    setProcessorToDelete(processor);
-    setShowDeleteConfirm(true);
-  };
-
-  const handleDeleteProcessor = async () => {
-    if (!processorToDelete) return;
-
-    try {
-      await apiCall(`/api/processors/${processorToDelete.id}`, {
-        method: 'DELETE'
-      });
-      setProcessors(processors.filter(processor => processor.id !== processorToDelete.id));
-      setShowDeleteConfirm(false);
-      setProcessorToDelete(null);
-      showSuccessMessage('Processor deleted permanently!');
-    } catch (err) {
-      setError(err.message || 'Failed to delete processor');
-      setShowDeleteConfirm(false);
-      setProcessorToDelete(null);
     }
   };
 
@@ -682,22 +681,28 @@ const ProcessorManagement = () => {
                         day: 'numeric'
                       }) : 'N/A'}
                     </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center space-x-3">
                         <button
                           onClick={() => {
                             setSelectedProcessor(processor);
                             setShowEditModal(true);
                           }}
-                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors px-3 py-1 hover:bg-blue-50 rounded flex items-center space-x-1"
+                          title="Edit processor"
                         >
-                          Edit
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          <span>Edit</span>
                         </button>
+                        
+                        {/* Updated: Like FaultManagement - Eye icon with cross line */}
                         <button
                           onClick={() => handleToggleStatus(processor)}
                           className={`font-medium transition-colors px-3 py-1 rounded flex items-center space-x-1 ${
-                            processor.isActive 
-                              ? 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50' 
+                            processor.isActive
+                              ? 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50'
                               : 'text-green-600 hover:text-green-900 hover:bg-green-50'
                           }`}
                           title={processor.isActive ? 'Deactivate processor' : 'Activate processor'}
@@ -713,7 +718,6 @@ const ProcessorManagement = () => {
                         </button>
                       </div>
                     </td>
-
                   </tr>
                 ))}
               </tbody>
@@ -766,61 +770,6 @@ const ProcessorManagement = () => {
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Modal
-      {showDeleteConfirm && processorToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="bg-red-600 text-white p-6">
-              <h3 className="text-xl font-bold flex items-center">
-                <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Confirm Permanent Deletion
-              </h3>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-800 font-medium">⚠️ Warning: This action cannot be undone!</p>
-                <p className="text-red-700 text-sm mt-2">
-                  This will permanently delete the processor from the database.
-                </p>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-2">You are about to delete:</p>
-                <p className="font-bold text-gray-900">#{processorToDelete.id} - {processorToDelete.processorName}</p>
-                {processorToDelete.description && (
-                  <p className="text-sm text-gray-600 mt-1">{processorToDelete.description}</p>
-                )}
-              </div>
-
-              <p className="text-sm text-gray-700">
-                Are you absolutely sure you want to permanently delete this processor?
-              </p>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(false);
-                    setProcessorToDelete(null);
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteProcessor}
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors font-medium"
-                >
-                  Yes, Delete Permanently
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )} */}
 
       {/* Modals */}
       {showAddModal && (
