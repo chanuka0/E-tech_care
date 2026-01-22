@@ -275,7 +275,7 @@ const ServiceCategoryManagement = () => {
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                           category.isActive
                             ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-600'
+                            : 'bg-red-100 text-red-800' 
                         }`}>
                           {category.isActive ? 'Active' : 'Inactive'}
                         </span>
