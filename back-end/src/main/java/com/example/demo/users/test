@@ -28,13 +28,13 @@ if it delete database should not delet it, it should add a status as deleted. we
 // ************************** HAVE TO DEVELOP ***************************
 //*********************************************************************************
 
-cancle jobcard vala invoice number seen eka
-job card number eka piliwelata enna hadanna ona (ok)
-paid invoice eka delete karana seen eka (ok)
+
 Model , brand,deactive karanna hadanna.
-invoice ekata return button ekak danna ona (ok)
 awruddaka data ganna seen eka
 invoice total ekathu wena thana
+cancel jobcard invoice service ain karanna
+fualts , user profile penanne na
+
 
 
 
