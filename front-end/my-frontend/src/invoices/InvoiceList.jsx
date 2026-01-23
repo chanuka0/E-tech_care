@@ -596,7 +596,14 @@ const InvoiceList = () => {
     }
 
     if (status !== 'ALL') {
-      filtered = filtered.filter(inv => inv.paymentStatus === status);
+      // Handle RETURNED status filter
+      if (status === 'RETURNED') {
+        filtered = filtered.filter(inv => inv.isReturned === true);
+      } else {
+        filtered = filtered.filter(inv => 
+          !inv.isReturned && inv.paymentStatus === status
+        );
+      }
     }
 
     setInvoices(filtered);
@@ -661,18 +668,41 @@ const InvoiceList = () => {
     setTimeout(() => msg.remove(), 3000);
   };
 
-  const getPaymentStatusColor = (status) => {
+  const getStatusBadge = (invoice) => {
+    // Check if invoice is returned
+    if (invoice.isReturned) {
+      return (
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
+            RETURNED
+          </span>
+        </div>
+      );
+    }
+    
+    // Regular payment status
     const colors = {
       PAID: 'bg-green-100 text-green-800',
       PARTIAL: 'bg-yellow-100 text-yellow-800',
       UNPAID: 'bg-red-100 text-red-800'
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${colors[invoice.paymentStatus] || 'bg-gray-100 text-gray-800'}`}>
+        {invoice.paymentStatus}
+      </span>
+    );
   };
 
   const filteredByStatus = filterStatus === 'ALL' 
     ? displayedInvoices 
-    : displayedInvoices.filter(inv => inv.paymentStatus === filterStatus);
+    : displayedInvoices.filter(inv => {
+        if (filterStatus === 'RETURNED') {
+          return inv.isReturned === true;
+        } else {
+          return !inv.isReturned && inv.paymentStatus === filterStatus;
+        }
+      });
 
   const hasMoreInvoices = invoices.length > displayCount;
 
@@ -780,6 +810,7 @@ const InvoiceList = () => {
               <option value="PAID">Paid</option>
               <option value="PARTIAL">Partial</option>
               <option value="UNPAID">Unpaid</option>
+              <option value="RETURNED">Returned</option>
             </select>
           </div>
         </div>
@@ -824,12 +855,6 @@ const InvoiceList = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-gray-900">{invoice.invoiceNumber}</span>
-                          {/* ✅ NEW: Show returned badge */}
-                          {invoice.isReturned && (
-                            <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-semibold">
-                              RETURNED
-                            </span>
-                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -847,9 +872,7 @@ const InvoiceList = () => {
                       <td className="px-6 py-4 text-green-600 font-semibold">Rs.{(invoice.paidAmount ?? 0).toFixed(2)}</td>
                       <td className="px-6 py-4 font-semibold text-gray-900">Rs.{(invoice.balance ?? 0).toFixed(2)}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusColor(invoice.paymentStatus)}`}>
-                          {invoice.paymentStatus}
-                        </span>
+                        {getStatusBadge(invoice)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {new Date(invoice.createdAt).toLocaleDateString()}
@@ -863,8 +886,8 @@ const InvoiceList = () => {
                             View
                           </button>
                           
-                          {/* Edit Button - only for unpaid/partial invoices */}
-                          {(invoice.paymentStatus === 'UNPAID' || invoice.paymentStatus === 'PARTIAL') && !invoice.isReturned && (
+                          {/* Edit Button - only for unpaid/partial invoices and not returned */}
+                          {!invoice.isReturned && (invoice.paymentStatus === 'UNPAID' || invoice.paymentStatus === 'PARTIAL') && (
                             <button
                               onClick={() => setEditingInvoice(invoice.id)}
                               className="text-green-600 hover:text-green-900 font-medium text-sm hover:underline"
@@ -873,8 +896,8 @@ const InvoiceList = () => {
                             </button>
                           )}
                           
-                          {/* ✅ UPDATED: DELETE Button - ONLY for ROLE_ADMIN users and NOT for PAID invoices */}
-                          {isAdmin() && invoice.paymentStatus !== 'PAID' && !invoice.isReturned && (
+                          {/* DELETE Button - ONLY for ROLE_ADMIN users and NOT for PAID or RETURNED invoices */}
+                          {isAdmin() && !invoice.isReturned && invoice.paymentStatus !== 'PAID' && (
                             <button
                               onClick={() => handleDeleteInvoice(invoice.id)}
                               className="text-red-600 hover:text-red-900 font-medium text-sm hover:underline"
@@ -933,7 +956,7 @@ const InvoiceList = () => {
           <div className="bg-white p-4 rounded-lg shadow">
             <p className="text-xs text-gray-600 font-medium mb-1">Total Outstanding</p>
             <p className="text-2xl font-bold text-red-600">
-              Rs.{filteredByStatus.reduce((sum, inv) => sum + inv.balance, 0).toFixed(2)}
+              Rs.{filteredByStatus.filter(inv => !inv.isReturned).reduce((sum, inv) => sum + inv.balance, 0).toFixed(2)}
             </p>
           </div>
         </div>
