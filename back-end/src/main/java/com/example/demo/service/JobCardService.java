@@ -1,3 +1,4 @@
+//
 //package com.example.demo.service;
 //
 //import com.example.demo.dto.JobCardUpdateRequest;
@@ -8,9 +9,14 @@
 //import org.springframework.stereotype.Service;
 //import org.springframework.transaction.annotation.Transactional;
 //
+//import java.time.LocalDate;
 //import java.time.LocalDateTime;
+//import java.time.format.DateTimeFormatter;
 //import java.util.ArrayList;
 //import java.util.List;
+//import java.util.Optional;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
 //
 //@Service
 //@RequiredArgsConstructor
@@ -29,6 +35,73 @@
 //    private final InventorySerialRepository inventorySerialRepository;
 //    private final StockMovementRepository stockMovementRepository;
 //    private final InvoiceRepository invoiceRepository;
+//
+//    // Add these constants at the class level
+//    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+//    private static final String JOB_NUMBER_PREFIX = "JOB-";
+//    private static final Pattern JOB_NUMBER_PATTERN = Pattern.compile("^JOB-(\\d{8})-(\\d{6})$");
+//
+//    /**
+//     * Generate job number in format: JOB-YYYYMMDD-XXXXXX
+//     * Where XXXXXX continues from the last job number, regardless of date
+//     */
+//    private String generateJobNumber() {
+//        String today = LocalDate.now().format(DATE_FORMATTER);
+//
+//        // Find the highest job number overall
+//        Optional<String> lastJobNumber = jobCardRepository.findMaxJobNumber();
+//
+//        int nextNumber;
+//        if (lastJobNumber.isPresent()) {
+//            // Extract the numeric part from the last job number
+//            String lastNumberStr = lastJobNumber.get();
+//            Matcher matcher = JOB_NUMBER_PATTERN.matcher(lastNumberStr);
+//
+//            if (matcher.matches()) {
+//                // Extract the 6-digit sequence number
+//                String sequenceStr = matcher.group(2);
+//                int lastSequence = Integer.parseInt(sequenceStr);
+//                nextNumber = lastSequence + 1; // Increment by 1
+//            } else {
+//                // Handle old format job numbers (JOB-timestamp)
+//                // Find the maximum sequence number among all job cards
+//                nextNumber = findMaxSequenceNumber() + 1;
+//            }
+//        } else {
+//            // No job cards exist yet, start from 000800
+//            nextNumber = 800;
+//        }
+//
+//        // Format as 6-digit number
+//        return String.format("JOB-%s-%06d", today, nextNumber);
+//    }
+//
+//    /**
+//     * Helper method to find maximum sequence number from existing job cards
+//     * Handles both new format (JOB-YYYYMMDD-XXXXXX) and old format (JOB-timestamp)
+//     */
+//    private int findMaxSequenceNumber() {
+//        List<JobCard> allJobCards = jobCardRepository.findAll();
+//        int maxSequence = 799; // Start from 799 so first new job will be 800
+//
+//        for (JobCard job : allJobCards) {
+//            String jobNumber = job.getJobNumber();
+//            Matcher matcher = JOB_NUMBER_PATTERN.matcher(jobNumber);
+//
+//            if (matcher.matches()) {
+//                try {
+//                    int sequence = Integer.parseInt(matcher.group(2));
+//                    if (sequence > maxSequence) {
+//                        maxSequence = sequence;
+//                    }
+//                } catch (NumberFormatException e) {
+//                    // Skip invalid numbers
+//                }
+//            }
+//        }
+//
+//        return maxSequence;
+//    }
 //
 //    /**
 //     * Create a new job card with serial state management
@@ -117,6 +190,8 @@
 //        jobCard.setFaults(validFaults);
 //        jobCard.setServiceCategories(validServices);
 //        jobCard.setDeviceConditions(validDeviceConditions);
+//
+//        // Generate new job number
 //        jobCard.setJobNumber(generateJobNumber());
 //        jobCard.setStatus(JobStatus.PENDING);
 //
@@ -1110,13 +1185,6 @@
 //        );
 //    }
 //
-//    /**
-//     * Generate unique job number
-//     */
-//    private String generateJobNumber() {
-//        return "JOB-" + System.currentTimeMillis();
-//    }
-//
 //    // ========== GETTER METHODS ==========
 //
 //    public List<JobCard> getAllJobCards() {
@@ -1132,6 +1200,7 @@
 //        return jobCardRepository.findByJobNumber(jobNumber)
 //                .orElseThrow(() -> new RuntimeException("Job card not found: " + jobNumber));
 //    }
+//
 //    public JobCard getJobCardByDeviceSerial(String jobNumber) {
 //        return jobCardRepository.findByJobNumber(jobNumber)
 //                .orElseThrow(() -> new RuntimeException("Job card not found: " + jobNumber));
@@ -1157,6 +1226,7 @@
 //    public List<JobCard> getJobsWaitingForApproval() {
 //        return jobCardRepository.findByStatus(JobStatus.WAITING_FOR_APPROVAL);
 //    }
+//
 //    // Add these methods to your JobCardService class
 //
 //    /**
@@ -1188,7 +1258,7 @@
 //    }
 //
 //    /**
-//     * Get job card statistics
+//     * Get job card statistics including sequence info
 //     */
 //    public JobCardStatistics getJobCardStatistics() {
 //        Long total = jobCardRepository.count();
@@ -1200,8 +1270,13 @@
 //        Long delivered = jobCardRepository.countByStatus(JobStatus.DELIVERED);
 //        Long cancelled = jobCardRepository.countByStatus(JobStatus.CANCELLED);
 //
+//        // Get last job number
+//        String lastJobNumber = jobCardRepository.findMaxJobNumber().orElse("No jobs yet");
+//        String nextJobNumber = generateJobNumber();
+//
 //        return new JobCardStatistics(total, pending, inProgress, waitingForParts,
-//                waitingForApproval, completed, delivered, cancelled);
+//                waitingForApproval, completed, delivered, cancelled,
+//                lastJobNumber, nextJobNumber);
 //    }
 //
 //    public Object removeServiceCategoryFromJobCard(Long id, Long serviceCategoryId) {
@@ -1209,7 +1284,27 @@
 //    }
 //
 //    /**
-//     * Statistics DTO
+//     * Get next job number preview (for testing)
+//     */
+//    public String getNextJobNumberPreview() {
+//        return generateJobNumber();
+//    }
+//
+//    /**
+//     * Get today's job numbers
+//     */
+//    @Transactional(readOnly = true)
+//    public List<String> getTodayJobNumbers() {
+//        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+//        return jobCardRepository.findAll().stream()
+//                .filter(job -> job.getCreatedAt().isAfter(startOfDay))
+//                .map(JobCard::getJobNumber)
+//                .sorted()
+//                .toList();
+//    }
+//
+//    /**
+//     * Statistics DTO - updated to include sequence info
 //     */
 //    public static class JobCardStatistics {
 //        public final Long total;
@@ -1220,10 +1315,13 @@
 //        public final Long completed;
 //        public final Long delivered;
 //        public final Long cancelled;
+//        public final String lastJobNumber;
+//        public final String nextJobNumber;
 //
 //        public JobCardStatistics(Long total, Long pending, Long inProgress,
 //                                 Long waitingForParts, Long waitingForApproval,
-//                                 Long completed, Long delivered, Long cancelled) {
+//                                 Long completed, Long delivered, Long cancelled,
+//                                 String lastJobNumber, String nextJobNumber) {
 //            this.total = total;
 //            this.pending = pending;
 //            this.inProgress = inProgress;
@@ -1232,9 +1330,15 @@
 //            this.completed = completed;
 //            this.delivered = delivered;
 //            this.cancelled = cancelled;
+//            this.lastJobNumber = lastJobNumber;
+//            this.nextJobNumber = nextJobNumber;
 //        }
 //    }
 //}
+
+
+
+
 
 
 
@@ -1250,10 +1354,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -1315,6 +1421,18 @@ public class JobCardService {
 
         // Format as 6-digit number
         return String.format("JOB-%s-%06d", today, nextNumber);
+    }
+
+    /**
+     * ✅ NEW: Generate invoice number using same format as InvoiceService
+     * Format: INV-YYYYMMDD-XXXXX
+     */
+    private String generateInvoiceNumber() {
+        Long count = invoiceRepository.count();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String datePart = sdf.format(new Date());
+        String sequencePart = String.format("%05d", (count + 1));
+        return "INV-" + datePart + "-" + sequencePart;
     }
 
     /**
@@ -1888,12 +2006,13 @@ public class JobCardService {
     }
 
     /**
-     * NEW: Create cancellation invoice with UNPAID status
+     * ✅ UPDATED: Create cancellation invoice using same numbering as regular invoices
+     * Now uses: INV-YYYYMMDD-XXXXX format instead of CANCEL-JOB-... format
      */
     private void createCancellationInvoice(JobCard jobCard, Double fee, String reason) {
         try {
-            // Generate invoice number
-            String invoiceNumber = "CANCEL-" + jobCard.getJobNumber() + "-" + System.currentTimeMillis();
+            // ✅ FIXED: Use same invoice numbering system as regular invoices
+            String invoiceNumber = generateInvoiceNumber();
 
             Invoice invoice = new Invoice();
             invoice.setInvoiceNumber(invoiceNumber);
@@ -1906,7 +2025,8 @@ public class JobCardService {
             // Create cancellation fee item
             InvoiceItem feeItem = new InvoiceItem();
             feeItem.setInvoice(invoice);
-            feeItem.setItemName("Cancellation Fee");
+            feeItem.setItemName("Cancellation Fee - " + jobCard.getJobNumber());
+            feeItem.setItemCode("CANCEL-FEE");
             feeItem.setQuantity(1);
             feeItem.setUnitPrice(fee);
             feeItem.setTotal(fee);
@@ -1926,18 +2046,25 @@ public class JobCardService {
             // Save invoice
             invoiceRepository.save(invoice);
 
-            System.out.println("📄 Created cancellation invoice: " + invoiceNumber + " for job: " + jobCard.getJobNumber());
+            System.out.println("✅ Created cancellation invoice: " + invoiceNumber + " for job: " + jobCard.getJobNumber());
+            System.out.println("   Amount: Rs." + fee);
+            System.out.println("   Status: UNPAID");
+            System.out.println("   Reason: " + reason);
 
             notificationService.sendNotification(
                     NotificationType.INVOICE_CREATED,
                     "Cancellation invoice created: " + invoiceNumber +
                             " | Amount: Rs." + fee +
                             " | Job: " + jobCard.getJobNumber(),
-                    invoice
-            );
+                    // ========== CONTINUATION OF JobCardService.java ==========
+
+                            invoice,
+                            NotificationSeverity.WARNING
+                    );
 
         } catch (Exception e) {
             System.err.println("❌ Failed to create cancellation invoice: " + e.getMessage());
+            e.printStackTrace();
             // Don't throw - cancellation should proceed even if invoice creation fails
         }
     }
@@ -2467,8 +2594,6 @@ public class JobCardService {
     public List<JobCard> getJobsWaitingForApproval() {
         return jobCardRepository.findByStatus(JobStatus.WAITING_FOR_APPROVAL);
     }
-
-    // Add these methods to your JobCardService class
 
     /**
      * Search job cards by device serial number (from JobCardSerial)
