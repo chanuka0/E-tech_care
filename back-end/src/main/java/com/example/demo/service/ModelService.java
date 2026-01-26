@@ -3,6 +3,8 @@
 //
 //import com.example.demo.entity.Model;
 //import com.example.demo.entity.Brand;
+//import com.example.demo.entity.NotificationType;
+//import com.example.demo.entity.NotificationSeverity;
 //import com.example.demo.repositories.ModelRepository;
 //import com.example.demo.repositories.BrandRepository;
 //import com.example.demo.repositories.ModelNumberRepository;
@@ -17,6 +19,7 @@
 //    private final ModelRepository modelRepository;
 //    private final BrandRepository brandRepository;
 //    private final ModelNumberRepository modelNumberRepository;
+//    private final NotificationService notificationService;
 //
 //    @Transactional
 //    public Model createModel(Model model) {
@@ -43,7 +46,17 @@
 //        model.setIsActive(true);
 //        model.setBrand(brand);
 //        model.setModelName(model.getModelName().trim());
-//        return modelRepository.save(model);
+//        Model saved = modelRepository.save(model);
+//
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.STOCK_UPDATE,
+//                "Model created: " + model.getModelName() + " for brand " + model.getBrand().getBrandName(),
+//                saved,
+//                NotificationSeverity.SUCCESS
+//        );
+//
+//        return saved;
 //    }
 //
 //    public List<Model> getAllActiveModels() {
@@ -107,8 +120,17 @@
 //        existing.setModelName(newModelName);
 //        existing.setDescription(updates.getDescription());
 //        existing.setIsActive(updates.getIsActive());
+//        Model saved = modelRepository.save(existing);
 //
-//        return modelRepository.save(existing);
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.JOB_UPDATED,
+//                "Model updated: " + existing.getModelName(),
+//                saved,
+//                NotificationSeverity.INFO
+//        );
+//
+//        return saved;
 //    }
 //
 //    /**
@@ -136,6 +158,14 @@
 //
 //        // Model is not linked - perform hard delete from database
 //        modelRepository.deleteById(id);
+//
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.ITEM_REMOVED,
+//                "Model deleted: " + model.getModelName(),
+//                model,
+//                NotificationSeverity.WARNING
+//        );
 //    }
 //
 //    /**
@@ -145,6 +175,9 @@
 //        return !isModelLinkedToModelNumbers(modelId);
 //    }
 //}
+
+
+
 
 package com.example.demo.service;
 
@@ -289,36 +322,36 @@ public class ModelService {
     }
 
     /**
-     * Delete a model - only allows permanent deletion if not linked to any model numbers
-     * Throws an error if the model is linked to prevent deletion
-     */
-    @Transactional
-    public void deleteModel(Long id) {
-        Model model = getModelById(id);
-
-        // Check if model is linked to any model numbers
-        if (isModelLinkedToModelNumbers(id)) {
-            // Model is linked - throw error to prevent deletion
-            throw new RuntimeException("Cannot delete model '" + model.getModelName() +
-                    "' because it is linked to model numbers. Please delete all associated model numbers first.");
-        }
-
-        // Model is not linked - perform hard delete from database
-        modelRepository.deleteById(id);
-
-        // ✅ ADD NOTIFICATION
-        notificationService.sendNotification(
-                NotificationType.ITEM_REMOVED,
-                "Model deleted: " + model.getModelName(),
-                model,
-                NotificationSeverity.WARNING
-        );
-    }
-
-    /**
      * Check if a model can be permanently deleted
      */
     public boolean canPermanentlyDelete(Long modelId) {
         return !isModelLinkedToModelNumbers(modelId);
+    }
+
+    // ✅ NEW: Toggle active/inactive status
+    @Transactional
+    public Model toggleModelActive(Long id) {
+        Model model = getModelById(id);
+
+        // Check if model is linked to any model numbers
+        if (isModelLinkedToModelNumbers(id)) {
+            throw new RuntimeException("Cannot change status of model '" + model.getModelName() +
+                    "' because it is linked to model numbers. Please delete all associated model numbers first.");
+        }
+
+        // Toggle the active status
+        model.setIsActive(!model.getIsActive());
+        Model saved = modelRepository.save(model);
+
+        // ✅ ADD NOTIFICATION
+        String action = saved.getIsActive() ? "activated" : "deactivated";
+        notificationService.sendNotification(
+                NotificationType.JOB_UPDATED,
+                "Model " + action + ": " + model.getModelName(),
+                saved,
+                saved.getIsActive() ? NotificationSeverity.SUCCESS : NotificationSeverity.WARNING
+        );
+
+        return saved;
     }
 }
