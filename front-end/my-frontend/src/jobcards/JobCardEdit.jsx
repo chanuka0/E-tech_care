@@ -2463,6 +2463,7 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
                   name="advancePayment"
                   value={formData.advancePayment}
                   onChange={handleChange}
+                  onWheel={(e) => e.target.blur()}
                   min="0"
                   step="0.01"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -2481,6 +2482,7 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
                   name="estimatedCost"
                   value={formData.estimatedCost}
                   onChange={handleChange}
+                  onWheel={(e) => e.target.blur()}
                   min="0"
                   step="0.01"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

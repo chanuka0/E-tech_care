@@ -331,6 +331,7 @@ const EditServiceCategoryModal = ({ category, onUpdate, onClose, existingCategor
                 name="servicePrice"
                 value={formData.servicePrice}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
                 placeholder="0.00"
                 step="0.01"
                 min="0"

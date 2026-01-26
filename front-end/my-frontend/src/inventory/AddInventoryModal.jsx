@@ -138,6 +138,7 @@ const AddInventoryModal = ({ onAdd, onClose, existingItems }) => {
                 type="number"
                 name="quantity"
                 value={formData.quantity}
+                onWheel={(e) => e.target.blur()}
                 onChange={handleChange}
                 min="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -150,6 +151,7 @@ const AddInventoryModal = ({ onAdd, onClose, existingItems }) => {
                 name="minThreshold"
                 value={formData.minThreshold}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
                 min="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -164,6 +166,7 @@ const AddInventoryModal = ({ onAdd, onClose, existingItems }) => {
                 name="purchasePrice"
                 value={formData.purchasePrice}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
                 min="0"
                 step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -176,6 +179,7 @@ const AddInventoryModal = ({ onAdd, onClose, existingItems }) => {
                 name="sellingPrice"
                 value={formData.sellingPrice}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
                 min="0"
                 step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -190,6 +194,7 @@ const AddInventoryModal = ({ onAdd, onClose, existingItems }) => {
               name="specialPrice"
               value={formData.specialPrice}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               min="0"
               step="0.01"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

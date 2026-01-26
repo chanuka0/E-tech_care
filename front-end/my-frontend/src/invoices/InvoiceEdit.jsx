@@ -445,6 +445,7 @@ const InvoiceEdit = ({ invoiceId, onSuccess, onClose }) => {
                 name="discount"
                 value={formData.discount}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
                 min="0"
                 step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -457,6 +458,7 @@ const InvoiceEdit = ({ invoiceId, onSuccess, onClose }) => {
                 name="tax"
                 value={formData.tax}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
                 min="0"
                 step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -502,6 +504,7 @@ const InvoiceEdit = ({ invoiceId, onSuccess, onClose }) => {
                   type="number"
                   name="paidAmount"
                   value={formData.paidAmount}
+                  onWheel={(e) => e.target.blur()}
                   onChange={handleChange}
                   min="0"
                   step="0.01"

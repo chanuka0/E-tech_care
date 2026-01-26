@@ -193,6 +193,7 @@ const AddExpenseModal = ({ onAdd, onClose }) => {
                 type="number"
                 name="price"
                 value={formData.price}
+                onWheel={(e) => e.target.blur()}
                 onChange={handleChange}
                 placeholder="0.00"
                 step="0.01"

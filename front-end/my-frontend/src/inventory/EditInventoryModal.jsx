@@ -73,6 +73,7 @@ const EditInventoryModal = ({ item, onUpdate, onClose }) => {
                 type="number"
                 name="quantity"
                 value={formData.quantity}
+                onWheel={(e) => e.target.blur()}
                 onChange={handleChange}
                 min="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -84,6 +85,7 @@ const EditInventoryModal = ({ item, onUpdate, onClose }) => {
                 type="number"
                 name="minThreshold"
                 value={formData.minThreshold || 0}
+                onWheel={(e) => e.target.blur()}
                 onChange={handleChange}
                 min="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -98,6 +100,7 @@ const EditInventoryModal = ({ item, onUpdate, onClose }) => {
                 type="number"
                 name="purchasePrice"
                 value={formData.purchasePrice || 0}
+                onWheel={(e) => e.target.blur()}
                 onChange={handleChange}
                 min="0"
                 step="0.01"
@@ -110,6 +113,7 @@ const EditInventoryModal = ({ item, onUpdate, onClose }) => {
                 type="number"
                 name="sellingPrice"
                 value={formData.sellingPrice || 0}
+                onWheel={(e) => e.target.blur()}
                 onChange={handleChange}
                 min="0"
                 step="0.01"
@@ -124,6 +128,7 @@ const EditInventoryModal = ({ item, onUpdate, onClose }) => {
               type="number"
               name="specialPrice"
               value={formData.specialPrice || 0}
+              onWheel={(e) => e.target.blur()}
               onChange={handleChange}
               min="0"
               step="0.01"

@@ -304,6 +304,7 @@ const CancelOrderModal = ({ jobCard, onSuccess, onClose }) => {
                         type="number"
                         name="fee"
                         value={cancelData.fee}
+                        onWheel={(e) => e.target.blur()}
                         onChange={handleChange}
                         min="0"
                         step="0.01"

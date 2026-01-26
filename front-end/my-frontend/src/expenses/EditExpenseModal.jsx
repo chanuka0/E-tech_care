@@ -170,6 +170,7 @@ const EditExpenseModal = ({ expense, onUpdate, onClose }) => {
                 type="number"
                 name="amount"
                 value={formData.amount}
+                onWheel={(e) => e.target.blur()}
                 onChange={handleChange}
                 placeholder="0.00"
                 step="0.01"
