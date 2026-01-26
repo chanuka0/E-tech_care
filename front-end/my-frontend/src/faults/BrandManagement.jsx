@@ -1,11 +1,12 @@
+
+
 // import { useState, useEffect } from 'react';
-// import { useApi } from '../services/apiService';
+// import { apiCall, API_ENDPOINTS } from '../services/api';
 // import { useAuth } from '../auth/AuthProvider';
 // import AddBrandModal from './AddBrandModal';
 // import EditBrandModal from './EditBrandModal';
 
 // const BrandManagement = () => {
-//   const { apiCall } = useApi();
 //   const { isAdmin } = useAuth();
 //   const [brands, setBrands] = useState([]);
 //   const [loading, setLoading] = useState(false);
@@ -57,9 +58,8 @@
 //       const errorMsg = err.response?.data?.message || 
 //                        err.message || 
 //                        'Failed to add brand';
-//       setError(errorMsg);
-//       console.error('Add brand error:', err);
-//       throw err;
+//       // Re-throw error so modal can display it
+//       throw new Error(errorMsg);
 //     }
 //   };
 
@@ -84,9 +84,8 @@
 //       const errorMsg = err.response?.data?.message || 
 //                        err.message || 
 //                        'Failed to update brand';
-//       setError(errorMsg);
-//       console.error('Update brand error:', err);
-//       throw err;
+//       // Re-throw error so modal can display it
+//       throw new Error(errorMsg);
 //     }
 //   };
 
@@ -263,14 +262,14 @@
 //                     </td>
 //                     <td className="px-6 py-4 whitespace-nowrap">
 //                       <div className="flex items-center">
-//                         <span className="text-sm font-medium text-gray-900">{brand.brandName}</span>
+//                         <span className="text-sm font-bold text-gray-900">{brand.brandName}</span>
 //                         {!brand.isActive && (
 //                           <span className="ml-2 text-xs text-gray-500">(Inactive)</span>
 //                         )}
 //                       </div>
 //                     </td>
 //                     <td className="px-6 py-4">
-//                       <p className="text-sm text-gray-600 line-clamp-2">
+//                       <p className="text-sm text-gray-600 italic">
 //                         {brand.description || <span className="text-gray-400">No description</span>}
 //                       </p>
 //                     </td>
@@ -386,6 +385,7 @@
 //         <AddBrandModal
 //           onAdd={handleAddBrand}
 //           onClose={() => setShowAddModal(false)}
+//           existingBrands={brands}
 //         />
 //       )}
 
@@ -397,6 +397,7 @@
 //             setShowEditModal(false);
 //             setSelectedBrand(null);
 //           }}
+//           existingBrands={brands}
 //         />
 //       )}
 //     </div>
@@ -408,13 +409,17 @@
 
 
 
+
+
+
 import { useState, useEffect } from 'react';
-import { apiCall, API_ENDPOINTS } from '../services/api';
+import { useApi } from '../services/apiService';
 import { useAuth } from '../auth/AuthProvider';
 import AddBrandModal from './AddBrandModal';
 import EditBrandModal from './EditBrandModal';
 
 const BrandManagement = () => {
+  const { apiCall } = useApi();
   const { isAdmin } = useAuth();
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -497,23 +502,32 @@ const BrandManagement = () => {
     }
   };
 
-  const handleDeleteBrand = async (id) => {
+  // ✅ NEW: Toggle active/inactive
+  const handleToggleActive = async (id, currentStatus) => {
     const brand = brands.find(b => b.id === id);
-    if (window.confirm(`Are you sure you want to permanently delete brand "${brand.brandName}"?`)) {
+    const newStatus = !currentStatus;
+    const confirmMessage = newStatus 
+      ? `Are you sure you want to activate brand "${brand.brandName}"?`
+      : `Are you sure you want to deactivate brand "${brand.brandName}"?\n\nNote: Deactivating will prevent it from being used in new job cards.`;
+    
+    if (window.confirm(confirmMessage)) {
       setError('');
       try {
-        await apiCall(`/api/brands/${id}`, {
-          method: 'DELETE'
+        const response = await apiCall(`/api/brands/${id}/toggle-active`, {
+          method: 'PATCH'
         });
-        setBrands(brands.filter(brand => brand.id !== id));
-        setSuccess('Brand deleted successfully!');
+        
+        // Preserve modelCount
+        const brandWithCount = { ...response, modelCount: brand.modelCount || 0 };
+        setBrands(brands.map(b => b.id === id ? brandWithCount : b));
+        setSuccess(`Brand ${newStatus ? 'activated' : 'deactivated'} successfully!`);
         setTimeout(() => setSuccess(''), 3000);
       } catch (err) {
         const errorMsg = err.response?.data?.message || 
                          err.message || 
-                         'Failed to delete brand';
+                         `Failed to ${newStatus ? 'activate' : 'deactivate'} brand`;
         setError(errorMsg);
-        console.error('Delete brand error:', err);
+        console.error('Toggle brand error:', err);
         
         // Scroll to top to show error message
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -707,33 +721,44 @@ const BrandManagement = () => {
                         day: 'numeric'
                       })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                      <button
-                        onClick={() => {
-                          setSelectedBrand(brand);
-                          setShowEditModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900 font-medium transition-colors px-2 py-1 hover:bg-blue-50 rounded"
-                        title="Edit brand"
-                      >
-                        Edit
-                      </button>
-                      {brand.modelCount === 0 ? (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center space-x-3">
                         <button
-                          onClick={() => handleDeleteBrand(brand.id)}
-                          className="text-red-600 hover:text-red-900 font-medium transition-colors px-2 py-1 hover:bg-red-50 rounded"
-                          title="Delete brand"
+                          onClick={() => {
+                            setSelectedBrand(brand);
+                            setShowEditModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors px-3 py-1 hover:bg-blue-50 rounded flex items-center space-x-1"
+                          title="Edit brand"
                         >
-                          Delete
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          <span>Edit</span>
                         </button>
-                      ) : (
-                        <span 
-                          className="text-gray-400 font-medium px-2 py-1 cursor-not-allowed"
-                          title={`Cannot delete: ${brand.modelCount} model(s) linked`}
-                        >
-                          Delete
-                        </span>
-                      )}
+                        
+                        {/* ✅ NEW: Toggle Active/Inactive Button - Only show if modelCount is 0 */}
+                        {brand.modelCount === 0 && (
+                          <button
+                            onClick={() => handleToggleActive(brand.id, brand.isActive)}
+                            className={`font-medium transition-colors px-3 py-1 rounded flex items-center space-x-1 ${
+                              brand.isActive
+                                ? 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50'
+                                : 'text-green-600 hover:text-green-900 hover:bg-green-50'
+                            }`}
+                            title={brand.isActive ? 'Deactivate brand' : 'Activate brand'}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              {brand.isActive ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              )}
+                            </svg>
+                            <span>{brand.isActive ? 'Deactivate' : 'Activate'}</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

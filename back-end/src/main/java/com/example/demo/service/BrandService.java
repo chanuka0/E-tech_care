@@ -1,6 +1,9 @@
+//
 //package com.example.demo.service;
 //
 //import com.example.demo.entity.Brand;
+//import com.example.demo.entity.NotificationType;
+//import com.example.demo.entity.NotificationSeverity;
 //import com.example.demo.repositories.BrandRepository;
 //import com.example.demo.repositories.ModelRepository;
 //import lombok.RequiredArgsConstructor;
@@ -16,6 +19,7 @@
 //public class BrandService {
 //    private final BrandRepository brandRepository;
 //    private final ModelRepository modelRepository;
+//    private final NotificationService notificationService;
 //
 //    @Transactional
 //    public Brand createBrand(Brand brand) {
@@ -26,7 +30,17 @@
 //        }
 //
 //        brand.setIsActive(true);
-//        return brandRepository.save(brand);
+//        Brand saved = brandRepository.save(brand);
+//
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.STOCK_UPDATE,
+//                "Brand created: " + brand.getBrandName(),
+//                saved,
+//                NotificationSeverity.SUCCESS
+//        );
+//
+//        return saved;
 //    }
 //
 //    public List<Brand> getAllActiveBrands() {
@@ -68,7 +82,17 @@
 //        existing.setBrandName(updates.getBrandName());
 //        existing.setDescription(updates.getDescription());
 //        existing.setIsActive(updates.getIsActive());
-//        return brandRepository.save(existing);
+//        Brand saved = brandRepository.save(existing);
+//
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.JOB_UPDATED,
+//                "Brand updated: " + existing.getBrandName(),
+//                saved,
+//                NotificationSeverity.INFO
+//        );
+//
+//        return saved;
 //    }
 //
 //    @Transactional
@@ -85,8 +109,22 @@
 //
 //        // If no models are linked, permanently delete the brand
 //        brandRepository.delete(brand);
+//
+//        // ✅ ADD NOTIFICATION
+//        notificationService.sendNotification(
+//                NotificationType.ITEM_REMOVED,
+//                "Brand deleted: " + brand.getBrandName(),
+//                brand,
+//                NotificationSeverity.WARNING
+//        );
 //    }
 //}
+//
+//
+//
+//
+//
+//
 
 
 package com.example.demo.service;
@@ -185,27 +223,32 @@ public class BrandService {
         return saved;
     }
 
+    // ✅ NEW: Toggle active/inactive status
     @Transactional
-    public void deleteBrand(Long id) {
+    public Brand toggleBrandActive(Long id) {
         Brand brand = getBrandById(id);
 
         // Check if brand is linked to any models
         long modelCount = modelRepository.countByBrandId(id);
 
         if (modelCount > 0) {
-            throw new RuntimeException("Cannot delete brand '" + brand.getBrandName() +
+            throw new RuntimeException("Cannot change status of brand '" + brand.getBrandName() +
                     "'. It is linked to " + modelCount + " model(s). Please remove or reassign the models first.");
         }
 
-        // If no models are linked, permanently delete the brand
-        brandRepository.delete(brand);
+        // Toggle the active status
+        brand.setIsActive(!brand.getIsActive());
+        Brand saved = brandRepository.save(brand);
 
         // ✅ ADD NOTIFICATION
+        String action = saved.getIsActive() ? "activated" : "deactivated";
         notificationService.sendNotification(
-                NotificationType.ITEM_REMOVED,
-                "Brand deleted: " + brand.getBrandName(),
-                brand,
-                NotificationSeverity.WARNING
+                NotificationType.JOB_UPDATED,
+                "Brand " + action + ": " + brand.getBrandName(),
+                saved,
+                saved.getIsActive() ? NotificationSeverity.SUCCESS : NotificationSeverity.WARNING
         );
+
+        return saved;
     }
 }
