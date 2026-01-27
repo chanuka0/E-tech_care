@@ -1678,8 +1678,8 @@ const InvoiceView = ({ invoiceId, onClose, onRefresh }) => {
     <tbody>
         <tr>
             <td>1</td>
-            <td>CANCEL-FEE</td>
-            <td>Cancellation Fee - ${jobNumber}</td>
+            <td> - </td>
+            <td>Cancellation Fee </td>
             <td>1</td>
             <td>${feeAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             <td>${feeAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
