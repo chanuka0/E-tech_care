@@ -147,7 +147,16 @@ const JobCards = ({ onCreateNew }) => {
   };
 
   // ✅ UPDATED: Filter job cards
-  const filteredJobCards = (isSearching && searchResults.length > 0 ? searchResults : jobCards).filter(job => {
+  // const filteredJobCards = (isSearching && searchResults.length > 0 ? searchResults : jobCards).filter(job => {
+  //   // If we're searching, show all search results
+  //   if (isSearching && searchResults.length > 0) {
+  //     return true;
+  //   }
+  const filteredJobCards = (isSearching && searchResults.length > 0 ? searchResults : jobCards)
+  .filter(job => {
+    // ✅ Filter out undefined/null jobs
+    if (!job || !job.id) return false;
+    
     // If we're searching, show all search results
     if (isSearching && searchResults.length > 0) {
       return true;
@@ -157,12 +166,23 @@ const JobCards = ({ onCreateNew }) => {
     if (filterStatus === 'ONE_DAY_SERVICE') {
       if (!job.oneDayService) return false;
     } else {
-      const statusMatch = filterStatus === 'ALL' || job.status === filterStatus;
+      const statusMatch = filterStatus === 'ALL' || (job.status === filterStatus);
       if (!statusMatch) return false;
     }
     
     return true;
   });
+    
+  //   // Handle ONE_DAY_SERVICE filter separately since it's a boolean flag
+  //   if (filterStatus === 'ONE_DAY_SERVICE') {
+  //     if (!job.oneDayService) return false;
+  //   } else {
+  //     const statusMatch = filterStatus === 'ALL' || job.status === filterStatus;
+  //     if (!statusMatch) return false;
+  //   }
+    
+  //   return true;
+  // });
 
   // Get only the visible job cards (first N items)
   const visibleJobCards = filteredJobCards.slice(0, visibleCount);
@@ -195,10 +215,18 @@ const JobCards = ({ onCreateNew }) => {
     return `${baseStyle} bg-gray-100 text-gray-700 hover:bg-gray-200`;
   };
 
-  // ✅ Get urgent one day service job cards
+  // // ✅ Get urgent one day service job cards
+  // const getUrgentOneDayServiceJobCards = () => {
+  //   return jobCards.filter(job => 
+  //     job.oneDayService && 
+  //     (job.status === 'PENDING' || job.status === 'IN_PROGRESS')
+  //   );
+  // };
   const getUrgentOneDayServiceJobCards = () => {
     return jobCards.filter(job => 
-      job.oneDayService && 
+      job && // ✅ Check if job exists
+      job.oneDayService === true && // ✅ Explicit true check
+      job.status && // ✅ Check if status exists
       (job.status === 'PENDING' || job.status === 'IN_PROGRESS')
     );
   };
