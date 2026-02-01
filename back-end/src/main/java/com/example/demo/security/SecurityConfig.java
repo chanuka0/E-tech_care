@@ -681,7 +681,8 @@ public class SecurityConfig {
                                 "/api/service-categories/**",
                                 "/api/expenses",
                                 "/api/expenses/**",
-                                "/api/pdf/**"
+                                "/api/pdf/**",
+                                "/api/customers/**"
                         ).authenticated()
 
                         .anyRequest().authenticated()
