@@ -304,7 +304,6 @@ import { apiCall } from '../services/api';
 
 const IncomeExpenseReport = () => {
   const [report, setReport] = useState(null);
-  const [allMonthsData, setAllMonthsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedDates, setExpandedDates] = useState({});
@@ -320,8 +319,9 @@ const IncomeExpenseReport = () => {
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [availableYears, setAvailableYears] = useState([]);
 
-  // Month options
+  // ✅ Month options with "All Months"
   const MONTHS = [
+    { value: 'ALL', label: 'All Months' },
     { value: 1, label: 'January' },
     { value: 2, label: 'February' },
     { value: 3, label: 'March' },
@@ -339,23 +339,38 @@ const IncomeExpenseReport = () => {
   // Generate year options (last 5 years + current + next year)
   const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 5 + i);
 
-  // ✅ Fetch monthly report
-  const fetchMonthlyReport = async (year, month) => {
+  // ✅ Fetch report - handles both monthly and yearly (all months)
+  const fetchReport = async (year, month) => {
     setLoading(true);
     setError('');
     setExpandedDates({}); // Reset expanded dates
     setDailyDetails({}); // Reset cached details
     
     try {
-      console.log(`📊 Fetching report for ${year}-${month}`);
+      let data;
       
-      const data = await apiCall(
-        `/api/reports/income-expenses/monthly?year=${year}&month=${month}`
-      );
+      if (month === 'ALL') {
+        // ✅ Fetch entire year data
+        console.log(`📊 Fetching ALL MONTHS report for year ${year}`);
+        
+        const startDate = `${year}-01-01`;
+        const endDate = `${year}-12-31`;
+        
+        data = await apiCall(
+          `/api/reports/income-expenses?startDate=${startDate}&endDate=${endDate}`
+        );
+      } else {
+        // ✅ Fetch specific month data
+        console.log(`📊 Fetching report for ${year}-${month}`);
+        
+        data = await apiCall(
+          `/api/reports/income-expenses/monthly?year=${year}&month=${month}`
+        );
+      }
       
       if (data) {
         setReport(data);
-        console.log('Monthly report data:', data);
+        console.log('Report data:', data);
       } else {
         setError('No data received from server');
       }
@@ -411,12 +426,12 @@ const IncomeExpenseReport = () => {
   useEffect(() => {
     // Set available years
     setAvailableYears(yearOptions);
-    fetchMonthlyReport(selectedYear, selectedMonth);
+    fetchReport(selectedYear, selectedMonth);
   }, []);
 
   // Load data when year/month changes
   useEffect(() => {
-    fetchMonthlyReport(selectedYear, selectedMonth);
+    fetchReport(selectedYear, selectedMonth);
   }, [selectedYear, selectedMonth]);
 
   const handleYearChange = (e) => {
@@ -424,7 +439,8 @@ const IncomeExpenseReport = () => {
   };
 
   const handleMonthChange = (e) => {
-    setSelectedMonth(parseInt(e.target.value));
+    const value = e.target.value;
+    setSelectedMonth(value === 'ALL' ? 'ALL' : parseInt(value));
   };
 
   // ✅ Reset all filters
@@ -438,12 +454,23 @@ const IncomeExpenseReport = () => {
     setSelectedMonth(currentMonth);
   };
 
+  // ✅ New: Load entire current year
+  const loadCurrentYear = () => {
+    setSelectedYear(currentYear);
+    setSelectedMonth('ALL');
+  };
+
   const exportToCSV = () => {
     if (!report) return;
 
+    const monthLabel = selectedMonth === 'ALL' 
+      ? 'All Months' 
+      : MONTHS.find(m => m.value === selectedMonth)?.label;
+
     const rows = [
       ['Income & Expense Report'],
-      [`Year: ${selectedYear}, Month: ${MONTHS.find(m => m.value === selectedMonth)?.label}`],
+      [`Year: ${selectedYear}, Period: ${monthLabel}`],
+      [`From: ${report.startDate} To: ${report.endDate}`],
       [''],
       ['Summary'],
       ['Total Income', report.totalIncome.toFixed(2)],
@@ -454,17 +481,14 @@ const IncomeExpenseReport = () => {
       ['Date', 'Income', 'Expenses', 'Net']
     ];
 
-    // Sort dates in ascending order for CSV export
-    Object.entries(report.dailyBreakdown || {})
-      .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
-      .forEach(([date, daily]) => {
-        rows.push([
-          date,
-          daily.income.toFixed(2),
-          daily.expenses.toFixed(2),
-          (daily.income - daily.expenses).toFixed(2)
-        ]);
-      });
+    Object.entries(report.dailyBreakdown || {}).forEach(([date, daily]) => {
+      rows.push([
+        date,
+        daily.income.toFixed(2),
+        daily.expenses.toFixed(2),
+        (daily.income - daily.expenses).toFixed(2)
+      ]);
+    });
 
     const csvContent = rows
       .map(row => row.map(cell => `"${cell}"`).join(','))
@@ -474,20 +498,16 @@ const IncomeExpenseReport = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `income-expense-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.csv`;
+    
+    const filename = selectedMonth === 'ALL'
+      ? `income-expense-${selectedYear}-all-months.csv`
+      : `income-expense-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.csv`;
+    
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-  };
-
-  // Helper function to sort dates in ascending order (from start to end of month)
-  const sortDatesAscending = (dates) => {
-    return dates.sort(([dateA], [dateB]) => {
-      const dateAObj = new Date(dateA);
-      const dateBObj = new Date(dateB);
-      return dateAObj - dateBObj; // Ascending order
-    });
   };
 
   if (loading && !report) {
@@ -507,9 +527,15 @@ const IncomeExpenseReport = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">💰 Income & Expenses Report</h1>
-          <p className="text-gray-600 mt-1">Track your business income and expenses by month</p>
+          <p className="text-gray-600 mt-1">Track your business income and expenses by month or year</p>
         </div>
         <div className="flex space-x-3">
+          <button
+            onClick={loadCurrentYear}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+          >
+            Current Year
+          </button>
           <button
             onClick={loadCurrentMonth}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -546,7 +572,7 @@ const IncomeExpenseReport = () => {
             </svg>
             <h3 className="text-lg font-semibold text-gray-900">Date Filter</h3>
             <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded">
-              Showing: {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}
+              Showing: {selectedMonth === 'ALL' ? 'All Months' : MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </span>
           </div>
           <button
@@ -633,11 +659,16 @@ const IncomeExpenseReport = () => {
               </strong>
             </span>
             <span className="text-blue-600 font-medium">
-              in {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}
+              in {selectedMonth === 'ALL' ? 'entire year' : MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </span>
             {selectedYear === currentYear && selectedMonth === currentMonth && (
               <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
                 Current Month
+              </span>
+            )}
+            {selectedYear === currentYear && selectedMonth === 'ALL' && (
+              <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded">
+                Current Year
               </span>
             )}
           </div>
@@ -716,7 +747,7 @@ const IncomeExpenseReport = () => {
                 <div>
                   <p className="text-purple-600 text-sm font-medium">Selected Period</p>
                   <p className="text-lg font-bold text-purple-900 mt-2">
-                    {MONTHS.find(m => m.value === selectedMonth)?.label}
+                    {selectedMonth === 'ALL' ? 'Entire Year' : MONTHS.find(m => m.value === selectedMonth)?.label}
                   </p>
                   <p className="text-purple-700 text-xs mt-2">
                     {report.startDate} to {report.endDate}
@@ -731,7 +762,7 @@ const IncomeExpenseReport = () => {
             </div>
           </div>
 
-          {/* ✅ Daily Breakdown Table with Expandable Rows - Sorted from start to end of month */}
+          {/* Daily Breakdown Table - keeping your existing detailed expandable table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b bg-gray-50">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
@@ -739,9 +770,6 @@ const IncomeExpenseReport = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
                 Daily Breakdown
-                <span className="text-sm font-normal text-gray-600 ml-2">
-                  (Showing from {report.startDate} to {report.endDate})
-                </span>
               </h2>
               <p className="text-sm text-gray-600 mt-1">Click on any date to view detailed income and expense breakdown</p>
             </div>
@@ -757,8 +785,8 @@ const IncomeExpenseReport = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {/* Sort dates in ascending order (from start to end of month) */}
-                  {sortDatesAscending(Object.entries(report.dailyBreakdown || {}))
+                  {Object.entries(report.dailyBreakdown || {})
+                    .sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA))
                     .map(([date, daily]) => {
                       const net = daily.income - daily.expenses;
                       const isExpanded = expandedDates[date];
@@ -782,10 +810,6 @@ const IncomeExpenseReport = () => {
                                     month: 'short',
                                     year: 'numeric'
                                   })}
-                                </span>
-                                {/* Show day of month indicator */}
-                                <span className="text-xs text-gray-500">
-                                  ({new Date(date).getDate()}{getDaySuffix(new Date(date).getDate())})
                                 </span>
                               </div>
                             </td>
@@ -813,7 +837,7 @@ const IncomeExpenseReport = () => {
                             </td>
                           </tr>
 
-                          {/* ✅ Expanded Details Row */}
+                          {/* Expanded Details Row - Your existing detailed design */}
                           {isExpanded && (
                             <tr>
                               <td colSpan="5" className="px-6 py-4 bg-gray-50">
@@ -950,7 +974,11 @@ const IncomeExpenseReport = () => {
             
             <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
               <p className="text-sm text-gray-600">
-                Showing {Object.keys(report.dailyBreakdown || {}).length} days for {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}
+                Showing {Object.keys(report.dailyBreakdown || {}).length} days for {
+                  selectedMonth === 'ALL' 
+                    ? `entire year ${selectedYear}` 
+                    : `${MONTHS.find(m => m.value === selectedMonth)?.label} ${selectedYear}`
+                }
               </p>
             </div>
           </div>
@@ -967,17 +995,6 @@ const IncomeExpenseReport = () => {
       )}
     </div>
   );
-};
-
-// Helper function to get day suffix (st, nd, rd, th)
-const getDaySuffix = (day) => {
-  if (day > 3 && day < 21) return 'th';
-  switch (day % 10) {
-    case 1: return 'st';
-    case 2: return 'nd';
-    case 3: return 'rd';
-    default: return 'th';
-  }
 };
 
 export default IncomeExpenseReport;
