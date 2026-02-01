@@ -162,7 +162,7 @@ public class BrandService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.BRAND_UPDATE,
+                NotificationType.STOCK_UPDATE,
                 "Brand created: " + brand.getBrandName(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -214,7 +214,7 @@ public class BrandService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.BRAND_UPDATE,
+                NotificationType.JOB_UPDATED,
                 "Brand updated: " + existing.getBrandName(),
                 saved,
                 NotificationSeverity.INFO
@@ -243,7 +243,7 @@ public class BrandService {
         // ✅ ADD NOTIFICATION
         String action = saved.getIsActive() ? "activated" : "deactivated";
         notificationService.sendNotification(
-                NotificationType.BRAND_UPDATE,
+                NotificationType.JOB_UPDATED,
                 "Brand " + action + ": " + brand.getBrandName(),
                 saved,
                 saved.getIsActive() ? NotificationSeverity.SUCCESS : NotificationSeverity.WARNING

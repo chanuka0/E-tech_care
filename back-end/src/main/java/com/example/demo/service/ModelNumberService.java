@@ -199,7 +199,7 @@ public class ModelNumberService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.MODELNUM_UPDATE,
+                NotificationType.STOCK_UPDATE,
                 "Model number created: " + modelNumber.getModelNumber() + " for model " + model.getModelName(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -274,7 +274,7 @@ public class ModelNumberService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.MODELNUM_UPDATE,
+                NotificationType.JOB_UPDATED,
                 "Model number updated: " + existing.getModelNumber(),
                 saved,
                 NotificationSeverity.INFO
@@ -295,7 +295,7 @@ public class ModelNumberService {
         ModelNumber saved = modelNumberRepository.save(modelNumber);
 
         notificationService.sendNotification(
-                NotificationType.MODELNUM_UPDATE,
+                NotificationType.STOCK_UPDATE,
                 "Model number activated: " + modelNumber.getModelNumber(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -316,7 +316,7 @@ public class ModelNumberService {
         ModelNumber saved = modelNumberRepository.save(modelNumber);
 
         notificationService.sendNotification(
-                NotificationType.MODELNUM_UPDATE,
+                NotificationType.ITEM_REMOVED,
                 "Model number deactivated: " + modelNumber.getModelNumber(),
                 saved,
                 NotificationSeverity.WARNING

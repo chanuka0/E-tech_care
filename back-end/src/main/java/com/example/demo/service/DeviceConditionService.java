@@ -111,7 +111,7 @@ public class DeviceConditionService {
         DeviceCondition saved = deviceConditionRepository.save(deviceCondition);
 
         notificationService.sendNotification(
-                NotificationType.DEVICECONDITON_UPDATE,
+                NotificationType.STOCK_UPDATE,
                 "Device condition created: " + deviceCondition.getConditionName(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -144,7 +144,7 @@ public class DeviceConditionService {
         DeviceCondition saved = deviceConditionRepository.save(existing);
 
         notificationService.sendNotification(
-                NotificationType.DEVICECONDITON_UPDATE,
+                NotificationType.JOB_UPDATED,
                 "Device condition updated: " + existing.getConditionName(),
                 saved,
                 NotificationSeverity.INFO
@@ -161,7 +161,7 @@ public class DeviceConditionService {
         DeviceCondition saved = deviceConditionRepository.save(deviceCondition);
 
         notificationService.sendNotification(
-                NotificationType.DEVICECONDITON_UPDATE,
+                NotificationType.STOCK_UPDATE,
                 "Device condition activated: " + deviceCondition.getConditionName(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -178,7 +178,7 @@ public class DeviceConditionService {
         DeviceCondition saved = deviceConditionRepository.save(deviceCondition);
 
         notificationService.sendNotification(
-                NotificationType.DEVICECONDITON_UPDATE,
+                NotificationType.ITEM_REMOVED,
                 "Device condition deactivated: " + deviceCondition.getConditionName(),
                 saved,
                 NotificationSeverity.WARNING
