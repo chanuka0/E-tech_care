@@ -230,7 +230,7 @@ public class ModelService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.STOCK_UPDATE,
+                NotificationType.MODEL_UPDATE,
                 "Model created: " + model.getModelName() + " for brand " + model.getBrand().getBrandName(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -304,7 +304,7 @@ public class ModelService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.JOB_UPDATED,
+                NotificationType.MODEL_UPDATE,
                 "Model updated: " + existing.getModelName(),
                 saved,
                 NotificationSeverity.INFO
@@ -346,7 +346,7 @@ public class ModelService {
         // ✅ ADD NOTIFICATION
         String action = saved.getIsActive() ? "activated" : "deactivated";
         notificationService.sendNotification(
-                NotificationType.JOB_UPDATED,
+                NotificationType.MODEL_UPDATE,
                 "Model " + action + ": " + model.getModelName(),
                 saved,
                 saved.getIsActive() ? NotificationSeverity.SUCCESS : NotificationSeverity.WARNING

@@ -266,7 +266,7 @@ public class ExpenseService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.STOCK_UPDATE,
+                NotificationType.EXPENSES_UPDATE,
                 "Expense created: " + expense.getCategory() + " | Amount: Rs." + expense.getAmount(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -409,7 +409,7 @@ public class ExpenseService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.JOB_UPDATED,
+                NotificationType.EXPENSES_UPDATE,
                 "Expense updated: " + existing.getCategory() + " | Amount: Rs." + existing.getAmount(),
                 saved,
                 NotificationSeverity.INFO
@@ -428,7 +428,7 @@ public class ExpenseService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.ITEM_REMOVED,
+                NotificationType.EXPENSES_UPDATE,
                 "Expense deleted: " + expense.getCategory() + " | Amount: Rs." + expense.getAmount(),
                 expense,
                 NotificationSeverity.WARNING
@@ -451,7 +451,7 @@ public class ExpenseService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.STOCK_UPDATE,
+                NotificationType.EXPENSES_UPDATE,
                 "Expense category created: " + category.getName(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -492,7 +492,7 @@ public class ExpenseService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.JOB_UPDATED,
+                NotificationType.EXPENSES_UPDATE,
                 "Expense category updated: " + existing.getName(),
                 saved,
                 NotificationSeverity.INFO
@@ -508,7 +508,7 @@ public class ExpenseService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.ITEM_REMOVED,
+                NotificationType.EXPENSES_UPDATE,
                 "Expense category deleted: " + category.getName(),
                 category,
                 NotificationSeverity.WARNING

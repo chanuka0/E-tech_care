@@ -160,7 +160,7 @@ public class ProcessorService {
         Processor saved = processorRepository.save(processor);
 
         notificationService.sendNotification(
-                NotificationType.STOCK_UPDATE,
+                NotificationType.PROCESSOR_UPDATE,
                 "Processor created: " + processor.getProcessorName(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -203,7 +203,7 @@ public class ProcessorService {
         Processor saved = processorRepository.save(existing);
 
         notificationService.sendNotification(
-                NotificationType.JOB_UPDATED,
+                NotificationType.PROCESSOR_UPDATE,
                 "Processor updated: " + existing.getProcessorName(),
                 saved,
                 NotificationSeverity.INFO
@@ -236,7 +236,7 @@ public class ProcessorService {
         processorRepository.deleteById(id);
 
         notificationService.sendNotification(
-                NotificationType.ITEM_REMOVED,
+                NotificationType.PROCESSOR_UPDATE,
                 "Processor deleted: " + processor.getProcessorName(),
                 processor,
                 NotificationSeverity.WARNING
@@ -250,7 +250,7 @@ public class ProcessorService {
         Processor saved = processorRepository.save(processor);
 
         notificationService.sendNotification(
-                NotificationType.ITEM_REMOVED,
+                NotificationType.PROCESSOR_UPDATE,
                 "Processor deactivated: " + processor.getProcessorName(),
                 saved,
                 NotificationSeverity.WARNING

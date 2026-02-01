@@ -294,7 +294,7 @@ public class ServiceCategoryService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.STOCK_UPDATE,
+                NotificationType.SERVICE_UPDATE,
                 "Service category created: " + serviceCategory.getName() + " (Rs." + serviceCategory.getServicePrice() + ")",
                 saved,
                 NotificationSeverity.SUCCESS
@@ -356,7 +356,7 @@ public class ServiceCategoryService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.JOB_UPDATED,
+                NotificationType.SERVICE_UPDATE,
                 "Service category updated: " + existing.getName(),
                 saved,
                 NotificationSeverity.INFO
@@ -375,7 +375,7 @@ public class ServiceCategoryService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.JOB_UPDATED,
+                NotificationType.SERVICE_UPDATE,
                 "Service category toggled: " + existing.getName() + " - Status: " + (existing.getIsActive() ? "ACTIVE" : "INACTIVE"),
                 saved,
                 NotificationSeverity.INFO
@@ -398,7 +398,7 @@ public class ServiceCategoryService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.ITEM_REMOVED,
+                NotificationType.SERVICE_UPDATE,
                 "Service category deleted: " + category.getName(),
                 category,
                 NotificationSeverity.WARNING

@@ -101,7 +101,7 @@ public class FaultService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.STOCK_UPDATE,
+                NotificationType.FAULT_UPDATE,
                 "Fault created: " + fault.getFaultName(),
                 saved,
                 NotificationSeverity.SUCCESS
@@ -142,7 +142,7 @@ public class FaultService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.JOB_UPDATED,
+                NotificationType.FAULT_UPDATE,
                 "Fault updated: " + existing.getFaultName(),
                 saved,
                 NotificationSeverity.INFO
@@ -159,7 +159,7 @@ public class FaultService {
 
         // ✅ ADD NOTIFICATION
         notificationService.sendNotification(
-                NotificationType.ITEM_REMOVED,
+                NotificationType.FAULT_UPDATE,
                 "Fault deactivated: " + fault.getFaultName(),
                 fault,
                 NotificationSeverity.WARNING
