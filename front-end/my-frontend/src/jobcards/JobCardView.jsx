@@ -640,11 +640,48 @@ ${jobCard.notes ? `
 `;
   };
 
+  // const handleCancelSuccess = (response) => {
+  //   setJobCard(response);
+  //   setShowCancelModal(false);
+  //   if (onStatusChange) onStatusChange();
+  // };
   const handleCancelSuccess = (response) => {
-    setJobCard(response);
+  try {
+    // Update job card with cancelled status
+    if (response && response.id) {
+      setJobCard(response);
+    }
+    
+    // Close modal immediately
     setShowCancelModal(false);
-    if (onStatusChange) onStatusChange();
-  };
+    
+    // Show success message
+    const msg = document.createElement('div');
+    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    msg.textContent = '✅ Job card cancelled successfully!';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 3000);
+    
+    // Delay callback to allow UI to update first
+    setTimeout(() => {
+      if (onStatusChange) {
+        try {
+          onStatusChange();
+        } catch (err) {
+          console.error('Error in onStatusChange callback:', err);
+        }
+      }
+      
+      // Auto-close the view after cancellation completes
+      setTimeout(() => {
+        if (onClose) onClose();
+      }, 1000);
+    }, 500);
+  } catch (err) {
+    console.error('Error in handleCancelSuccess:', err);
+    setShowCancelModal(false);
+  }
+};
 
   const handleInvoiceSuccess = (response) => {
     setShowCreateInvoiceModal(false);
