@@ -110,7 +110,7 @@ public class CustomerController {
     // Get customer by ID
     @GetMapping("/{customerId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> getCustomerById(@PathVariable Integer customerId) {
+    public ResponseEntity<?> getCustomerById(@PathVariable Long customerId) {
         try {
             return customerService.getCustomerById(customerId)
                     .map(customer -> ResponseEntity.ok(toCustomerResponse(customer)))
@@ -125,7 +125,7 @@ public class CustomerController {
     @PutMapping("/{customerId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateCustomer(
-            @PathVariable Integer customerId,
+            @PathVariable Long customerId,
             @RequestBody Customer customerDetails) {
         try {
             log.info("Updating customer: {}", customerId);
@@ -149,7 +149,7 @@ public class CustomerController {
     @PostMapping("/{customerId}/add-credit")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> addCredit(
-            @PathVariable Integer customerId,
+            @PathVariable Long customerId,
             @RequestBody Map<String, Double> request) {
         try {
             Double amount = request.get("amount");
@@ -178,7 +178,7 @@ public class CustomerController {
     @PostMapping("/{customerId}/deduct-credit")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> deductCredit(
-            @PathVariable Integer customerId,
+            @PathVariable Long customerId,
             @RequestBody Map<String, Double> request) {
         try {
             Double amount = request.get("amount");
@@ -206,7 +206,7 @@ public class CustomerController {
     // Delete customer (soft delete)
     @DeleteMapping("/{customerId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> deleteCustomer(@PathVariable Integer customerId) {
+    public ResponseEntity<?> deleteCustomer(@PathVariable Long customerId) {
         try {
             log.info("Deleting customer: {}", customerId);
             customerService.deleteCustomer(customerId);
@@ -228,7 +228,7 @@ public class CustomerController {
     // Restore customer - Admin only
     @PostMapping("/{customerId}/restore")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<?> restoreCustomer(@PathVariable Integer customerId) {
+    public ResponseEntity<?> restoreCustomer(@PathVariable Long customerId) {
         try {
             log.info("Restoring customer: {}", customerId);
             Customer restored = customerService.restoreCustomer(customerId);

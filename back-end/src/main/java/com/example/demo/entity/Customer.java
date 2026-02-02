@@ -18,7 +18,7 @@ public class Customer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer customerId;
+    private Long customerId;  // Changed from long to Long
 
     @NotBlank(message = "Customer name cannot be blank")
     @Column(nullable = false, length = 100)
@@ -60,6 +60,10 @@ public class Customer {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public Long getId() {
+        return customerId;
     }
 
     @Override

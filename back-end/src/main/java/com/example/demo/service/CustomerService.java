@@ -1,5 +1,5 @@
-package com.example.demo.service;
 
+package com.example.demo.service;
 
 import com.example.demo.entity.Customer;
 import com.example.demo.repositories.CustomerRepository;
@@ -20,14 +20,11 @@ public class CustomerService {
     @Autowired
     private CustomerRepository customerRepository;
 
-    // Create new customer
     public Customer createCustomer(Customer customer) {
-        // Validate email is unique
         if (customerRepository.findByEmail(customer.getEmail()).isPresent()) {
             throw new RuntimeException("Customer with this email already exists");
         }
 
-        // Validate phone is unique
         if (customerRepository.findByPhoneNumber(customer.getPhoneNumber()).isPresent()) {
             throw new RuntimeException("Customer with this phone number already exists");
         }
@@ -43,22 +40,18 @@ public class CustomerService {
         return saved;
     }
 
-    // Get customer by ID
-    public Optional<Customer> getCustomerById(Integer customerId) {
+    public Optional<Customer> getCustomerById(Long customerId) {  // ✅ Changed to Long
         return customerRepository.findById(customerId);
     }
 
-    // Get all active customers
     public List<Customer> getAllActiveCustomers() {
         return customerRepository.findByIsActiveTrueOrderByCustomerNameAsc();
     }
 
-    // Get all customers (active and inactive)
     public List<Customer> getAllCustomers() {
         return customerRepository.findAllByOrderByCreatedAtDesc();
     }
 
-    // Search customers
     public List<Customer> searchCustomers(String searchTerm) {
         if (searchTerm == null || searchTerm.isEmpty()) {
             return getAllActiveCustomers();
@@ -66,19 +59,16 @@ public class CustomerService {
         return customerRepository.searchCustomers(searchTerm);
     }
 
-    // Update customer
-    public Customer updateCustomer(Integer customerId, Customer customerDetails) {
+    public Customer updateCustomer(Long customerId, Customer customerDetails) {  // ✅ Changed to Long
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
 
-        // Check if email is being changed and is unique
         if (!customer.getEmail().equals(customerDetails.getEmail())) {
             if (customerRepository.findByEmail(customerDetails.getEmail()).isPresent()) {
                 throw new RuntimeException("Customer with this email already exists");
             }
         }
 
-        // Check if phone is being changed and is unique
         if (!customer.getPhoneNumber().equals(customerDetails.getPhoneNumber())) {
             if (customerRepository.findByPhoneNumber(customerDetails.getPhoneNumber()).isPresent()) {
                 throw new RuntimeException("Customer with this phone number already exists");
@@ -97,8 +87,7 @@ public class CustomerService {
         return updated;
     }
 
-    // Add credit to customer
-    public Customer addCredit(Integer customerId, Double creditAmount) {
+    public Customer addCredit(Long customerId, Double creditAmount) {  // ✅ Changed to Long
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
 
@@ -111,8 +100,7 @@ public class CustomerService {
         return updated;
     }
 
-    // Deduct credit from customer
-    public Customer deductCredit(Integer customerId, Double creditAmount) {
+    public Customer deductCredit(Long customerId, Double creditAmount) {  // ✅ Changed to Long
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
 
@@ -129,8 +117,7 @@ public class CustomerService {
         return updated;
     }
 
-    // Update service count
-    public Customer incrementServiceCount(Integer customerId) {
+    public Customer incrementServiceCount(Long customerId) {  // ✅ Changed to Long
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
 
@@ -141,8 +128,7 @@ public class CustomerService {
         return customerRepository.save(customer);
     }
 
-    // Update last visit
-    public Customer updateLastVisit(Integer customerId) {
+    public Customer updateLastVisit(Long customerId) {  // ✅ Changed to Long
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
 
@@ -152,8 +138,7 @@ public class CustomerService {
         return customerRepository.save(customer);
     }
 
-    // Delete customer (soft delete - deactivate)
-    public void deleteCustomer(Integer customerId) {
+    public void deleteCustomer(Long customerId) {  // ✅ Changed to Long
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
 
@@ -164,8 +149,7 @@ public class CustomerService {
         log.info("Customer deactivated: {} (ID: {})", customer.getCustomerName(), customerId);
     }
 
-    // Restore customer
-    public Customer restoreCustomer(Integer customerId) {
+    public Customer restoreCustomer(Long customerId) {  // ✅ Changed to Long
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
 
@@ -177,12 +161,10 @@ public class CustomerService {
         return restored;
     }
 
-    // Get customers with credit balance
     public List<Customer> getCustomersWithCredit() {
         return customerRepository.findCustomersWithCredit();
     }
 
-    // Get customer stats
     public int getTotalActiveCustomers() {
         return getAllActiveCustomers().size();
     }

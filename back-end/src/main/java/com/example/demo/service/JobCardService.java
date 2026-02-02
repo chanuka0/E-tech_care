@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 public class JobCardService {
+    private final CustomerRepository customerRepository;
     private final JobCardRepository jobCardRepository;
     private final FaultRepository faultRepository;
     private final InventoryItemRepository inventoryItemRepository;
@@ -120,8 +121,22 @@ public class JobCardService {
     /**
      * Create a new job card with serial state management
      */
+    // ✅ UPDATED: createJobCard method with regular customer support
     @Transactional
     public JobCard createJobCard(JobCard jobCard) {
+        // ✅ NEW: Handle regular customer
+        if (jobCard.getIsRegularCustomer() != null && jobCard.getIsRegularCustomer() && jobCard.getCustomer() != null) {
+            // Load the regular customer
+            Customer regularCustomer = customerRepository.findById(jobCard.getCustomer().getCustomerId())
+                    .orElseThrow(() -> new RuntimeException("Customer not found"));
+            // Auto-populate customer data from regular customer
+            jobCard.loadCustomerData(regularCustomer);
+
+            System.out.println("✓ Regular customer loaded: " + regularCustomer.getCustomerName());
+            System.out.println("  Phone: " + regularCustomer.getPhoneNumber());
+            System.out.println("  Credit Balance: Rs." + regularCustomer.getCreditBalance());
+        }
+
         // Validate required fields
         if (jobCard.getCustomerName() == null || jobCard.getCustomerName().trim().isEmpty()) {
             throw new RuntimeException("Customer name is required");
@@ -293,6 +308,21 @@ public class JobCardService {
         // Save job card first to get ID
         JobCard saved = jobCardRepository.save(jobCard);
 
+        // ✅ NEW: Increment service count and update last visit for regular customer
+        if (saved.getIsRegularCustomer() && saved.getCustomer() != null) {
+            Customer customer = customerRepository.findById((long) saved.getCustomer().getCustomerId())
+                    .orElse(null);
+
+            if (customer != null) {
+                customer.setTotalServiceCount((customer.getTotalServiceCount() != null ? customer.getTotalServiceCount() : 0) + 1);
+                customer.setLastVisit(LocalDateTime.now());
+                customerRepository.save(customer);
+
+                System.out.println("📊 Customer service count updated: " + customer.getTotalServiceCount());
+                System.out.println("📅 Last visit updated: " + customer.getLastVisit());
+            }
+        }
+
         // Now mark serials as USED with the job card ID
         if (saved.getUsedItems() != null && !saved.getUsedItems().isEmpty()) {
             for (UsedItem item : saved.getUsedItems()) {
@@ -307,6 +337,193 @@ public class JobCardService {
         sendJobCreatedNotification(saved);
         return saved;
     }
+//    @Transactional
+//    public JobCard createJobCard(JobCard jobCard) {
+//        // Validate required fields
+//        if (jobCard.getCustomerName() == null || jobCard.getCustomerName().trim().isEmpty()) {
+//            throw new RuntimeException("Customer name is required");
+//        }
+//        if (jobCard.getCustomerPhone() == null || jobCard.getCustomerPhone().trim().isEmpty()) {
+//            throw new RuntimeException("Customer phone is required");
+//        }
+//        if (jobCard.getDeviceType() == null || jobCard.getDeviceType().trim().isEmpty()) {
+//            throw new RuntimeException("Device type is required");
+//        }
+//
+//        // Check if barcode already exists
+//        if (jobCard.getDeviceBarcode() != null && !jobCard.getDeviceBarcode().trim().isEmpty()) {
+//            boolean barcodeExists = checkBarcodeExists(jobCard.getDeviceBarcode());
+//            if (barcodeExists) {
+//                throw new RuntimeException("Device barcode already exists: " + jobCard.getDeviceBarcode());
+//            }
+//        }
+//
+//        // Load and validate faults if provided (optional)
+//        List<Fault> validFaults = new ArrayList<>();
+//        if (jobCard.getFaults() != null && !jobCard.getFaults().isEmpty()) {
+//            for (Fault fault : jobCard.getFaults()) {
+//                if (fault.getId() == null) {
+//                    throw new RuntimeException("Invalid fault");
+//                }
+//
+//                Fault dbFault = faultRepository.findById(fault.getId())
+//                        .orElseThrow(() -> new RuntimeException("Fault not found"));
+//
+//                if (!dbFault.getIsActive()) {
+//                    throw new RuntimeException("Selected fault is inactive: " + dbFault.getFaultName());
+//                }
+//                validFaults.add(dbFault);
+//            }
+//        }
+//
+//        // Validate service categories if provided (optional)
+//        List<ServiceCategory> validServices = new ArrayList<>();
+//        if (jobCard.getServiceCategories() != null && !jobCard.getServiceCategories().isEmpty()) {
+//            for (ServiceCategory service : jobCard.getServiceCategories()) {
+//                if (service.getId() == null) {
+//                    throw new RuntimeException("Invalid service category");
+//                }
+//
+//                ServiceCategory dbService = serviceCategoryRepository.findById(service.getId())
+//                        .orElseThrow(() -> new RuntimeException("Service category not found: " + service.getId()));
+//
+//                if (!dbService.getIsActive()) {
+//                    throw new RuntimeException("Selected service category is inactive: " + dbService.getName());
+//                }
+//                validServices.add(dbService);
+//            }
+//        }
+//
+//        // Load and validate device conditions if provided (optional)
+//        List<DeviceCondition> validDeviceConditions = new ArrayList<>();
+//        if (jobCard.getDeviceConditions() != null && !jobCard.getDeviceConditions().isEmpty()) {
+//            for (DeviceCondition condition : jobCard.getDeviceConditions()) {
+//                if (condition.getId() == null) {
+//                    throw new RuntimeException("Invalid device condition");
+//                }
+//
+//                DeviceCondition dbCondition = deviceConditionRepository.findById(condition.getId())
+//                        .orElseThrow(() -> new RuntimeException("Device condition not found: " + condition.getId()));
+//
+//                if (!dbCondition.getIsActive()) {
+//                    throw new RuntimeException("Selected device condition is inactive: " + dbCondition.getConditionName());
+//                }
+//                validDeviceConditions.add(dbCondition);
+//            }
+//        }
+//
+//        // Load and validate related entities (all optional)
+//        jobCard.setBrand(loadBrand(jobCard.getBrand()));
+//        jobCard.setModel(loadModel(jobCard.getModel()));
+//        jobCard.setProcessor(loadProcessor(jobCard.getProcessor()));
+//
+//        // Set validated collections (can be empty)
+//        jobCard.setFaults(validFaults);
+//        jobCard.setServiceCategories(validServices);
+//        jobCard.setDeviceConditions(validDeviceConditions);
+//
+//        // Generate new job number
+//        jobCard.setJobNumber(generateJobNumber());
+//        jobCard.setStatus(JobStatus.PENDING);
+//
+//        // Set defaults
+//        if (jobCard.getOneDayService() == null) {
+//            jobCard.setOneDayService(false);
+//        }
+//        if (jobCard.getWithCharger() == null) {
+//            jobCard.setWithCharger(false);
+//        }
+//        if (jobCard.getTotalServicePrice() == null) {
+//            jobCard.setTotalServicePrice(0.0);
+//        }
+//
+//        // Calculate total service price
+//        jobCard.calculateTotalServicePrice();
+//
+//        // Handle device barcode - add as serial
+//        if (jobCard.getDeviceBarcode() != null && !jobCard.getDeviceBarcode().trim().isEmpty()) {
+//            JobCardSerial deviceSerial = new JobCardSerial();
+//            deviceSerial.setSerialType("DEVICE_SERIAL");
+//            deviceSerial.setSerialValue(jobCard.getDeviceBarcode().trim());
+//            deviceSerial.setJobCard(jobCard);
+//
+//            if (jobCard.getSerials() == null) {
+//                jobCard.setSerials(new ArrayList<>());
+//            }
+//            jobCard.getSerials().add(deviceSerial);
+//        }
+//
+//        // Handle other serials
+//        if (jobCard.getSerials() != null) {
+//            for (JobCardSerial serial : jobCard.getSerials()) {
+//                serial.setJobCard(jobCard);
+//            }
+//        }
+//
+//        // Handle used items - MARK SERIALS AS USED
+//        if (jobCard.getUsedItems() != null && !jobCard.getUsedItems().isEmpty()) {
+//            for (UsedItem item : jobCard.getUsedItems()) {
+//                item.setJobCard(jobCard);
+//
+//                // Validate inventory item exists
+//                InventoryItem invItem = inventoryItemRepository.findById(item.getInventoryItem().getId())
+//                        .orElseThrow(() -> new RuntimeException("Inventory item not found: " + item.getInventoryItem().getId()));
+//
+//                // Set unit price if not provided
+//                if (item.getUnitPrice() == null || item.getUnitPrice() == 0) {
+//                    item.setUnitPrice(invItem.getSellingPrice());
+//                }
+//
+//                // Set default warranty if not provided
+//                if (item.getWarrantyPeriod() == null) {
+//                    item.setWarrantyPeriod("No Warranty");
+//                }
+//
+//                // Validate serial numbers for serialized items AND MARK THEM AS USED
+//                if (invItem.getHasSerialization()) {
+//                    if (item.getUsedSerialNumbers() == null || item.getUsedSerialNumbers().isEmpty()) {
+//                        throw new RuntimeException("Serial numbers required for item: " + invItem.getName());
+//                    }
+//                    if (item.getUsedSerialNumbers().size() != item.getQuantityUsed()) {
+//                        throw new RuntimeException("Number of serials must match quantity for item: " + invItem.getName());
+//                    }
+//
+//                    // Validate serials are available AND MARK THEM AS USED
+//                    for (String serialNumber : item.getUsedSerialNumbers()) {
+//                        if (!inventoryService.isSerialAvailable(serialNumber)) {
+//                            throw new RuntimeException("Serial number not available: " + serialNumber);
+//                        }
+//                        // MARK SERIAL AS USED (job card will be saved first to get ID)
+//                    }
+//                } else {
+//                    // For non-serialized items, check stock availability
+//                    if (invItem.getQuantity() < item.getQuantityUsed()) {
+//                        throw new RuntimeException("Not enough stock for item: " + invItem.getName() +
+//                                ". Available: " + invItem.getQuantity() + ", Requested: " + item.getQuantityUsed());
+//                    }
+//                }
+//
+//                checkInventoryAndNotify(invItem);
+//            }
+//        }
+//
+//        // Save job card first to get ID
+//        JobCard saved = jobCardRepository.save(jobCard);
+//
+//        // Now mark serials as USED with the job card ID
+//        if (saved.getUsedItems() != null && !saved.getUsedItems().isEmpty()) {
+//            for (UsedItem item : saved.getUsedItems()) {
+//                if (item.getInventoryItem().getHasSerialization() && item.getUsedSerialNumbers() != null) {
+//                    for (String serialNumber : item.getUsedSerialNumbers()) {
+//                        inventoryService.markSerialAsUsed(serialNumber, saved.getId(), saved.getJobNumber());
+//                    }
+//                }
+//            }
+//        }
+//
+//        sendJobCreatedNotification(saved);
+//        return saved;
+//    }
 
     /**
      * Check if barcode already exists

@@ -138,4 +138,36 @@ public interface JobCardRepository extends JpaRepository<JobCard, Long> {
 
     // Existing method (if you have it)
     List<JobCard> findAllByOrderByCreatedAtAsc();
+
+    // ✅ ADD THESE METHODS TO JobCardRepository.java
+
+    /**
+     * Find job cards by customer
+     */
+    @Query("SELECT j FROM JobCard j WHERE j.customer.id = :customerId ORDER BY j.createdAt DESC")
+    List<JobCard> findByCustomerId(@Param("customerId") Long customerId);
+
+    /**
+     * Find job cards by customer and status
+     */
+    @Query("SELECT j FROM JobCard j WHERE j.customer.id = :customerId AND j.status = :status ORDER BY j.createdAt DESC")
+    List<JobCard> findByCustomerIdAndStatus(@Param("customerId") Long customerId, @Param("status") JobStatus status);
+
+    /**
+     * Count job cards for a customer
+     */
+    @Query("SELECT COUNT(j) FROM JobCard j WHERE j.customer.id = :customerId")
+    Long countByCustomerId(@Param("customerId") Long customerId);
+
+    /**
+     * Find job cards created by regular customers
+     */
+    @Query("SELECT j FROM JobCard j WHERE j.isRegularCustomer = true ORDER BY j.createdAt DESC")
+    List<JobCard> findAllRegularCustomerJobCards();
+
+    /**
+     * Get total service cost for a customer
+     */
+    @Query("SELECT COALESCE(SUM(j.totalServicePrice), 0) FROM JobCard j WHERE j.customer.id = :customerId")
+    Double getTotalServiceCostForCustomer(@Param("customerId") Long customerId);
 }
