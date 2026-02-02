@@ -188,4 +188,5 @@ public class Invoice {
         if (items == null) items = new ArrayList<>();
         if (payments == null) payments = new ArrayList<>();
     }
+
 }
