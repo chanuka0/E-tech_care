@@ -1,4 +1,6 @@
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\controller\BrandController.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\controller\CustomerController.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\controller\CustomerSummaryController.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\controller\DamagedItemController.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\controller\DeviceConditionController.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\controller\ExpenseController.java
@@ -18,6 +20,8 @@ F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\dto\ChangePasswordRequest.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\dto\JobCardUpdateRequest.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\entity\Brand.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\entity\Customer.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\entity\CustomerSummary.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\entity\DamagedItem.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\entity\DeviceCondition.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\entity\Expense.java
@@ -46,6 +50,8 @@ F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\entity\StockMovement.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\entity\UsedItem.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\repositories\BrandRepository.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\repositories\CustomerRepository.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\repositories\CustomerSummaryRepository.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\repositories\DamagedItemRepository.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\repositories\DeviceConditionRepository.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\repositories\ExpenseCategoryRepository.java
@@ -75,15 +81,19 @@ F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\security\WebSocketConfig.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\BrandService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\CreateInvoiceRequest.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\CustomerService.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\CustomerSummaryService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\DamagedItemService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\DeviceConditionService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\ExpenseService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\FaultService.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\InventoryMonitoringService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\InventoryService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\InvoiceService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\JobCardService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\ModelNumberService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\ModelService.java
+F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\NotificationSchedulerService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\NotificationService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\ProcessorService.java
 F:\sliit_2\3Y1Y\e-tech-care\E-tech_care\back-end\src\main\java\com\example\demo\service\ReportService.java
