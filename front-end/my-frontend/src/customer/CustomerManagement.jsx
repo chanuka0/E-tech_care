@@ -292,7 +292,7 @@ const CustomerManagement = () => {
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
               <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292 4 4 0 010-5.292zM15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9.354a4 4 0 110 5.292 4 4 0 010-5.292zM15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
           </div>
