@@ -1,497 +1,143 @@
-////
-////package com.example.demo.controller;
-////
-////import com.example.demo.entity.Customer;
-////import com.example.demo.entity.JobCard;
-////import com.example.demo.entity.JobStatus;
-////import com.example.demo.repositories.CustomerRepository;
-////import com.example.demo.repositories.JobCardRepository;
-////import lombok.RequiredArgsConstructor;
-////import org.springframework.http.HttpStatus;
-////import org.springframework.http.ResponseEntity;
-////import org.springframework.security.access.prepost.PreAuthorize;
-////import org.springframework.web.bind.annotation.*;
-////
-////import java.time.LocalDateTime;
-////import java.util.HashMap;
-////import java.util.List;
-////import java.util.Map;
-////import java.util.stream.Collectors;
-////
-////@RestController
-////@RequiredArgsConstructor
-////@CrossOrigin(origins = "*")
-////public class CustomerSummaryController {  // ✅ REMOVED @RequestMapping
-////
-////    private final CustomerRepository customerRepository;
-////    private final JobCardRepository jobCardRepository;
-////
-////    /**
-////     * Main endpoint for customer summary
-////     */
-////    @GetMapping("/api/customer-summary/{customerId}")
-////    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-////    public ResponseEntity<?> getCustomerSummary(@PathVariable Long customerId) {
-////        return getCustomerSummaryData(customerId);
-////    }
-////
-////    /**
-////     * Alias endpoint for job card creation (frontend compatibility)
-////     */
-////    @GetMapping("/api/jobcards/customers/{customerId}/summary")
-////    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-////    public ResponseEntity<?> getCustomerSummaryForJobCard(@PathVariable Long customerId) {
-////        return getCustomerSummaryData(customerId);
-////    }
-////
-////    /**
-////     * Common method to get customer summary data
-////     */
-////    private ResponseEntity<?> getCustomerSummaryData(Long customerId) {
-////        try {
-////            Customer customer = customerRepository.findById(customerId)
-////                    .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
-////
-////            List<JobCard> jobCards = jobCardRepository.findByCustomerId(customerId);
-////
-////            Map<String, Object> summary = new HashMap<>();
-////            summary.put("customerId", customer.getCustomerId());
-////            summary.put("customerName", customer.getCustomerName());
-////            summary.put("phoneNumber", customer.getPhoneNumber());
-////            summary.put("email", customer.getEmail());
-////            summary.put("address", customer.getAddress());
-////            summary.put("totalServiceCount", customer.getTotalServiceCount() != null ? customer.getTotalServiceCount() : 0);
-////            summary.put("creditBalance", customer.getCreditBalance() != null ? customer.getCreditBalance() : 0.0);
-////            summary.put("totalJobCards", jobCards.size());
-////
-////            Map<String, Long> statusCounts = jobCards.stream()
-////                    .collect(Collectors.groupingBy(
-////                            jc -> jc.getStatus() != null ? jc.getStatus().toString() : "UNKNOWN",
-////                            Collectors.counting()
-////                    ));
-////            summary.put("jobsByStatus", statusCounts);
-////
-////            Double totalServiceCost = jobCards.stream()
-////                    .mapToDouble(jc -> jc.getTotalServicePrice() != null ? jc.getTotalServicePrice() : 0.0)
-////                    .sum();
-////            summary.put("totalServiceCost", totalServiceCost);
-////
-////            summary.put("lastVisit", customer.getLastVisit());
-////            summary.put("createdAt", customer.getCreatedAt());
-////            summary.put("isActive", customer.getIsActive() != null ? customer.getIsActive() : true);
-////            summary.put("notes", customer.getNotes());
-////
-////            return ResponseEntity.ok(summary);
-////
-////        } catch (RuntimeException e) {
-////            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-////                    .body(Map.of(
-////                            "error", e.getMessage(),
-////                            "timestamp", LocalDateTime.now(),
-////                            "status", "NOT_FOUND"
-////                    ));
-////        } catch (Exception e) {
-////            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-////                    .body(Map.of(
-////                            "error", "Error retrieving customer summary: " + e.getMessage(),
-////                            "timestamp", LocalDateTime.now(),
-////                            "status", "ERROR"
-////                    ));
-////        }
-////    }
-////
-////    @GetMapping("/api/customer-summary/{customerId}/job-count")
-////    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-////    public ResponseEntity<?> getCustomerJobCount(@PathVariable Long customerId) {
-////        try {
-////            customerRepository.findById(customerId)
-////                    .orElseThrow(() -> new RuntimeException("Customer not found"));
-////
-////            List<JobCard> jobCards = jobCardRepository.findByCustomerId(customerId);
-////
-////            return ResponseEntity.ok(Map.of(
-////                    "customerId", customerId,
-////                    "totalJobCards", jobCards.size(),
-////                    "timestamp", LocalDateTime.now()
-////            ));
-////        } catch (Exception e) {
-////            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-////                    .body(Map.of("error", e.getMessage(), "timestamp", LocalDateTime.now()));
-////        }
-////    }
-////
-////    @GetMapping("/api/customer-summary/{customerId}/jobs")
-////    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-////    public ResponseEntity<?> getCustomerJobCards(
-////            @PathVariable Long customerId,
-////            @RequestParam(required = false) String status) {
-////        try {
-////            Customer customer = customerRepository.findById(customerId)
-////                    .orElseThrow(() -> new RuntimeException("Customer not found"));
-////
-////            List<JobCard> jobCards;
-////            if (status != null && !status.isEmpty()) {
-////                try {
-////                    JobStatus jobStatus = JobStatus.valueOf(status.toUpperCase());
-////                    jobCards = jobCardRepository.findByCustomerIdAndStatus(customerId, jobStatus);
-////                } catch (IllegalArgumentException e) {
-////                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-////                            .body(Map.of("error", "Invalid status", "timestamp", LocalDateTime.now()));
-////                }
-////            } else {
-////                jobCards = jobCardRepository.findByCustomerId(customerId);
-////            }
-////
-////            return ResponseEntity.ok(Map.of(
-////                    "customerId", customerId,
-////                    "customerName", customer.getCustomerName(),
-////                    "jobCards", jobCards,
-////                    "totalCount", jobCards.size(),
-////                    "timestamp", LocalDateTime.now()
-////            ));
-////        } catch (Exception e) {
-////            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-////                    .body(Map.of("error", e.getMessage(), "timestamp", LocalDateTime.now()));
-////        }
-////    }
-////
-////    @GetMapping("/api/customer-summary/{customerId}/total-spending")
-////    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-////    public ResponseEntity<?> getCustomerTotalSpending(@PathVariable Long customerId) {
-////        try {
-////            customerRepository.findById(customerId)
-////                    .orElseThrow(() -> new RuntimeException("Customer not found"));
-////
-////            List<JobCard> jobCards = jobCardRepository.findByCustomerId(customerId);
-////
-////            Double totalSpending = jobCards.stream()
-////                    .mapToDouble(jc -> jc.getTotalServicePrice() != null ? jc.getTotalServicePrice() : 0.0)
-////                    .sum();
-////
-////            return ResponseEntity.ok(Map.of(
-////                    "customerId", customerId,
-////                    "totalSpending", totalSpending,
-////                    "jobCardCount", jobCards.size(),
-////                    "averageSpending", jobCards.isEmpty() ? 0.0 : totalSpending / jobCards.size(),
-////                    "timestamp", LocalDateTime.now()
-////            ));
-////        } catch (Exception e) {
-////            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-////                    .body(Map.of("error", e.getMessage(), "timestamp", LocalDateTime.now()));
-////        }
-////    }
-////}
 //
 //package com.example.demo.controller;
 //
-//import com.example.demo.entity.Customer;
-//import com.example.demo.entity.JobCard;
-//import com.example.demo.entity.JobStatus;
 //import com.example.demo.entity.CustomerSummary;
-//import com.example.demo.repositories.CustomerRepository;
-//import com.example.demo.repositories.JobCardRepository;
 //import com.example.demo.service.CustomerSummaryService;
 //import lombok.RequiredArgsConstructor;
-//import org.springframework.http.HttpStatus;
+//import lombok.extern.log4j.Log4j2;
 //import org.springframework.http.ResponseEntity;
-//import org.springframework.security.access.prepost.PreAuthorize;
 //import org.springframework.web.bind.annotation.*;
 //
-//import java.time.LocalDateTime;
-//import java.util.HashMap;
-//import java.util.List;
 //import java.util.Map;
-//import java.util.stream.Collectors;
 //
+//@Log4j2
 //@RestController
+//@RequestMapping("/api")
 //@RequiredArgsConstructor
 //@CrossOrigin(origins = "*")
 //public class CustomerSummaryController {
 //
-//    private final CustomerRepository customerRepository;
-//    private final JobCardRepository jobCardRepository;
 //    private final CustomerSummaryService customerSummaryService;
 //
-//    /**
-//     * Main endpoint for customer summary (legacy support)
-//     */
-//    @GetMapping("/api/customer-summary/{customerId}")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-//    public ResponseEntity<?> getCustomerSummary(@PathVariable Long customerId) {
-//        return getCustomerSummaryData(customerId);
+//    // ✅ Legacy endpoint - Quick overview for job card creation
+//    @GetMapping("/customer-summary/{customerId}")
+//    public ResponseEntity<?> getCustomerSummaryQuick(@PathVariable Long customerId) {
+//        try {
+//            log.info("Fetching quick summary for customer ID: {}", customerId);
+//            Map<String, Object> summary = customerSummaryService.getSummaryStats(customerId);
+//            return ResponseEntity.ok(summary);
+//        } catch (Exception e) {
+//            log.error("Error fetching quick summary for customer {}: {}", customerId, e.getMessage());
+//            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+//        }
 //    }
 //
-//    /**
-//     * Alias endpoint for job card creation (frontend compatibility)
-//     */
-//    @GetMapping("/api/jobcards/customers/{customerId}/summary")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+//    // ✅ Alias for job card creation - same as legacy endpoint
+//    @GetMapping("/jobcards/customers/{customerId}/summary")
 //    public ResponseEntity<?> getCustomerSummaryForJobCard(@PathVariable Long customerId) {
-//        return getCustomerSummaryData(customerId);
+//        return getCustomerSummaryQuick(customerId);
 //    }
 //
-//    /**
-//     * NEW: Get detailed customer summary with full history
-//     */
-//    @GetMapping("/api/customers/{customerId}/summary/detailed")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+//    // ✅ NEW: Detailed summary with full history - For CustomerManagement View
+//    @GetMapping("/customers/{customerId}/summary/detailed")
 //    public ResponseEntity<?> getDetailedCustomerSummary(@PathVariable Long customerId) {
 //        try {
+//            log.info("Fetching detailed summary for customer ID: {}", customerId);
 //            Map<String, Object> detailedSummary = customerSummaryService.getDetailedSummary(customerId);
 //            return ResponseEntity.ok(detailedSummary);
-//        } catch (RuntimeException e) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                    .body(Map.of(
-//                            "error", e.getMessage(),
-//                            "timestamp", LocalDateTime.now(),
-//                            "status", "NOT_FOUND"
-//                    ));
 //        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(Map.of(
-//                            "error", "Error retrieving detailed summary: " + e.getMessage(),
-//                            "timestamp", LocalDateTime.now(),
-//                            "status", "ERROR"
-//                    ));
+//            log.error("Error fetching detailed summary for customer {}: {}", customerId, e.getMessage());
+//            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
 //        }
 //    }
 //
-//    /**
-//     * NEW: Update customer summary (manually trigger update)
-//     */
-//    @PostMapping("/api/customers/{customerId}/summary/update")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-//    public ResponseEntity<?> updateCustomerSummary(@PathVariable Long customerId) {
+//    // ✅ NEW: Quick stats only
+//    @GetMapping("/customers/{customerId}/summary/stats")
+//    public ResponseEntity<?> getCustomerStats(@PathVariable Long customerId) {
 //        try {
-//            CustomerSummary summary = customerSummaryService.updateSummary(customerId);
-//
-//            Map<String, Object> response = new HashMap<>();
-//            response.put("message", "Customer summary updated successfully");
-//            response.put("customerId", customerId);
-//            response.put("lastUpdated", summary.getLastUpdated());
-//            response.put("summary", buildSummaryResponse(summary));
-//
-//            return ResponseEntity.ok(response);
-//        } catch (RuntimeException e) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                    .body(Map.of(
-//                            "error", e.getMessage(),
-//                            "timestamp", LocalDateTime.now(),
-//                            "status", "NOT_FOUND"
-//                    ));
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(Map.of(
-//                            "error", "Error updating summary: " + e.getMessage(),
-//                            "timestamp", LocalDateTime.now(),
-//                            "status", "ERROR"
-//                    ));
-//        }
-//    }
-//
-//    /**
-//     * NEW: Get customer summary stats only (quick overview)
-//     */
-//    @GetMapping("/api/customers/{customerId}/summary/stats")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-//    public ResponseEntity<?> getCustomerSummaryStats(@PathVariable Long customerId) {
-//        try {
+//            log.info("Fetching stats for customer ID: {}", customerId);
 //            Map<String, Object> stats = customerSummaryService.getSummaryStats(customerId);
 //            return ResponseEntity.ok(stats);
-//        } catch (RuntimeException e) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                    .body(Map.of(
-//                            "error", e.getMessage(),
-//                            "timestamp", LocalDateTime.now(),
-//                            "status", "NOT_FOUND"
-//                    ));
 //        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(Map.of(
-//                            "error", "Error retrieving summary stats: " + e.getMessage(),
-//                            "timestamp", LocalDateTime.now(),
-//                            "status", "ERROR"
-//                    ));
+//            log.error("Error fetching stats for customer {}: {}", customerId, e.getMessage());
+//            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
 //        }
 //    }
 //
-//    /**
-//     * NEW: Refresh all customer summaries (Admin only)
-//     */
-//    @PostMapping("/api/customers/summary/refresh-all")
-//    @PreAuthorize("hasRole('ADMIN')")
-//    public ResponseEntity<?> refreshAllCustomerSummaries() {
+//    // ✅ NEW: Manual trigger to update/refresh summary
+//    @PostMapping("/customers/{customerId}/summary/update")
+//    public ResponseEntity<?> updateCustomerSummary(@PathVariable Long customerId) {
 //        try {
-//            customerSummaryService.refreshAllSummaries();
-//
-//            Map<String, Object> response = new HashMap<>();
-//            response.put("message", "All customer summaries refreshed successfully");
-//            response.put("timestamp", LocalDateTime.now());
-//
-//            return ResponseEntity.ok(response);
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(Map.of(
-//                            "error", "Error refreshing summaries: " + e.getMessage(),
-//                            "timestamp", LocalDateTime.now(),
-//                            "status", "ERROR"
-//                    ));
-//        }
-//    }
-//
-//    /**
-//     * Common method to get customer summary data (legacy format)
-//     */
-//    private ResponseEntity<?> getCustomerSummaryData(Long customerId) {
-//        try {
-//            Customer customer = customerRepository.findById(customerId)
-//                    .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
-//
-//            List<JobCard> jobCards = jobCardRepository.findByCustomerId(customerId);
-//
-//            Map<String, Object> summary = new HashMap<>();
-//            summary.put("customerId", customer.getCustomerId());
-//            summary.put("customerName", customer.getCustomerName());
-//            summary.put("phoneNumber", customer.getPhoneNumber());
-//            summary.put("email", customer.getEmail());
-//            summary.put("address", customer.getAddress());
-//            summary.put("totalServiceCount", customer.getTotalServiceCount() != null ? customer.getTotalServiceCount() : 0);
-//            summary.put("creditBalance", customer.getCreditBalance() != null ? customer.getCreditBalance() : 0.0);
-//            summary.put("totalJobCards", jobCards.size());
-//
-//            Map<String, Long> statusCounts = jobCards.stream()
-//                    .collect(Collectors.groupingBy(
-//                            jc -> jc.getStatus() != null ? jc.getStatus().toString() : "UNKNOWN",
-//                            Collectors.counting()
-//                    ));
-//            summary.put("jobsByStatus", statusCounts);
-//
-//            Double totalServiceCost = jobCards.stream()
-//                    .mapToDouble(jc -> jc.getTotalServicePrice() != null ? jc.getTotalServicePrice() : 0.0)
-//                    .sum();
-//            summary.put("totalServiceCost", totalServiceCost);
-//
-//            summary.put("lastVisit", customer.getLastVisit());
-//            summary.put("createdAt", customer.getCreatedAt());
-//            summary.put("isActive", customer.getIsActive() != null ? customer.getIsActive() : true);
-//            summary.put("notes", customer.getNotes());
-//
-//            return ResponseEntity.ok(summary);
-//
-//        } catch (RuntimeException e) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                    .body(Map.of(
-//                            "error", e.getMessage(),
-//                            "timestamp", LocalDateTime.now(),
-//                            "status", "NOT_FOUND"
-//                    ));
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(Map.of(
-//                            "error", "Error retrieving customer summary: " + e.getMessage(),
-//                            "timestamp", LocalDateTime.now(),
-//                            "status", "ERROR"
-//                    ));
-//        }
-//    }
-//
-//    @GetMapping("/api/customer-summary/{customerId}/job-count")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-//    public ResponseEntity<?> getCustomerJobCount(@PathVariable Long customerId) {
-//        try {
-//            customerRepository.findById(customerId)
-//                    .orElseThrow(() -> new RuntimeException("Customer not found"));
-//
-//            List<JobCard> jobCards = jobCardRepository.findByCustomerId(customerId);
-//
+//            log.info("Manually updating summary for customer ID: {}", customerId);
+//            CustomerSummary updated = customerSummaryService.updateSummary(customerId);
 //            return ResponseEntity.ok(Map.of(
-//                    "customerId", customerId,
-//                    "totalJobCards", jobCards.size(),
-//                    "timestamp", LocalDateTime.now()
+//                    "message", "Customer summary updated successfully",
+//                    "summary", updated
 //            ));
 //        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-//                    .body(Map.of("error", e.getMessage(), "timestamp", LocalDateTime.now()));
+//            log.error("Error updating summary for customer {}: {}", customerId, e.getMessage());
+//            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
 //        }
 //    }
 //
-//    @GetMapping("/api/customer-summary/{customerId}/jobs")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-//    public ResponseEntity<?> getCustomerJobCards(
+//    // ✅ NEW: Admin endpoint to refresh all customer summaries
+//    @PostMapping("/customers/summary/refresh-all")
+//    public ResponseEntity<?> refreshAllCustomerSummaries() {
+//        try {
+//            log.info("Refreshing all customer summaries");
+//            customerSummaryService.refreshAllSummaries();
+//            return ResponseEntity.ok(Map.of("message", "All customer summaries refreshed successfully"));
+//        } catch (Exception e) {
+//            log.error("Error refreshing all summaries: {}", e.getMessage());
+//            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+//        }
+//    }
+//
+//    // Filter jobs by status (existing functionality)
+//    @GetMapping("/customer-summary/{customerId}/jobs")
+//    public ResponseEntity<?> getCustomerJobsByStatus(
 //            @PathVariable Long customerId,
 //            @RequestParam(required = false) String status) {
 //        try {
-//            Customer customer = customerRepository.findById(customerId)
-//                    .orElseThrow(() -> new RuntimeException("Customer not found"));
+//            Map<String, Object> detailedSummary = customerSummaryService.getDetailedSummary(customerId);
 //
-//            List<JobCard> jobCards;
 //            if (status != null && !status.isEmpty()) {
-//                try {
-//                    JobStatus jobStatus = JobStatus.valueOf(status.toUpperCase());
-//                    jobCards = jobCardRepository.findByCustomerIdAndStatus(customerId, jobStatus);
-//                } catch (IllegalArgumentException e) {
-//                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-//                            .body(Map.of("error", "Invalid status", "timestamp", LocalDateTime.now()));
-//                }
-//            } else {
-//                jobCards = jobCardRepository.findByCustomerId(customerId);
+//                Map<String, Object> jobHistory = (Map<String, Object>) detailedSummary.get("jobHistory");
+//                return ResponseEntity.ok(Map.of(
+//                        "status", status,
+//                        "jobs", jobHistory.get("jobs")
+//                ));
 //            }
 //
-//            return ResponseEntity.ok(Map.of(
-//                    "customerId", customerId,
-//                    "customerName", customer.getCustomerName(),
-//                    "jobCards", jobCards,
-//                    "totalCount", jobCards.size(),
-//                    "timestamp", LocalDateTime.now()
-//            ));
+//            return ResponseEntity.ok(detailedSummary.get("jobHistory"));
 //        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-//                    .body(Map.of("error", e.getMessage(), "timestamp", LocalDateTime.now()));
+//            log.error("Error fetching jobs for customer {}: {}", customerId, e.getMessage());
+//            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
 //        }
 //    }
 //
-//    @GetMapping("/api/customer-summary/{customerId}/total-spending")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+//    // Get total spending analytics
+//    @GetMapping("/customer-summary/{customerId}/total-spending")
 //    public ResponseEntity<?> getCustomerTotalSpending(@PathVariable Long customerId) {
 //        try {
-//            customerRepository.findById(customerId)
-//                    .orElseThrow(() -> new RuntimeException("Customer not found"));
-//
-//            List<JobCard> jobCards = jobCardRepository.findByCustomerId(customerId);
-//
-//            Double totalSpending = jobCards.stream()
-//                    .mapToDouble(jc -> jc.getTotalServicePrice() != null ? jc.getTotalServicePrice() : 0.0)
-//                    .sum();
+//            Map<String, Object> summary = customerSummaryService.getSummaryStats(customerId);
+//            Map<String, Object> summaryData = (Map<String, Object>) summary.get("summary");
 //
 //            return ResponseEntity.ok(Map.of(
-//                    "customerId", customerId,
-//                    "totalSpending", totalSpending,
-//                    "jobCardCount", jobCards.size(),
-//                    "averageSpending", jobCards.isEmpty() ? 0.0 : totalSpending / jobCards.size(),
-//                    "timestamp", LocalDateTime.now()
+//                    "totalSpent", summaryData.get("totalSpent"),
+//                    "totalPaid", summaryData.get("totalPaid"),
+//                    "outstandingBalance", summaryData.get("outstandingBalance")
 //            ));
 //        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-//                    .body(Map.of("error", e.getMessage(), "timestamp", LocalDateTime.now()));
+//            log.error("Error fetching spending for customer {}: {}", customerId, e.getMessage());
+//            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
 //        }
 //    }
-//
-//    // Helper method to build summary response
-//    private Map<String, Object> buildSummaryResponse(CustomerSummary summary) {
-//        Map<String, Object> response = new HashMap<>();
-//        response.put("totalJobs", summary.getTotalJobs());
-//        response.put("completedJobs", summary.getCompletedJobs());
-//        response.put("pendingJobs", summary.getPendingJobs());
-//        response.put("cancelledJobs", summary.getCancelledJobs());
-//        response.put("totalSpent", summary.getTotalSpent());
-//        response.put("totalPaid", summary.getTotalPaid());
-//        response.put("outstandingBalance", summary.getOutstandingBalance());
-//        response.put("averageJobValue", summary.getAverageJobValue());
-//        response.put("lastJobDate", summary.getLastJobDate());
-//        response.put("lastPaymentDate", summary.getLastPaymentDate());
-//        return response;
-//    }
 //}
+
+
+
+
 
 
 package com.example.demo.controller;
@@ -500,7 +146,9 @@ import com.example.demo.entity.CustomerSummary;
 import com.example.demo.service.CustomerSummaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -509,58 +157,78 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"http://localhost:5173", "http://16.16.203.25"})
 public class CustomerSummaryController {
 
     private final CustomerSummaryService customerSummaryService;
 
-    // ✅ Legacy endpoint - Quick overview for job card creation
+    // ─── Legacy endpoint – quick overview for job card creation ────────────
     @GetMapping("/customer-summary/{customerId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getCustomerSummaryQuick(@PathVariable Long customerId) {
         try {
             log.info("Fetching quick summary for customer ID: {}", customerId);
             Map<String, Object> summary = customerSummaryService.getSummaryStats(customerId);
             return ResponseEntity.ok(summary);
+        } catch (RuntimeException e) {
+            log.error("Customer not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error fetching quick summary for customer {}: {}", customerId, e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch summary"));
         }
     }
 
-    // ✅ Alias for job card creation - same as legacy endpoint
+    // ─── Alias for job card creation – same as legacy endpoint ─────────────
     @GetMapping("/jobcards/customers/{customerId}/summary")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getCustomerSummaryForJobCard(@PathVariable Long customerId) {
         return getCustomerSummaryQuick(customerId);
     }
 
-    // ✅ NEW: Detailed summary with full history - For CustomerManagement View
+    // ─── Detailed summary with full job history + invoices ─────────────────
     @GetMapping("/customers/{customerId}/summary/detailed")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getDetailedCustomerSummary(@PathVariable Long customerId) {
         try {
             log.info("Fetching detailed summary for customer ID: {}", customerId);
             Map<String, Object> detailedSummary = customerSummaryService.getDetailedSummary(customerId);
             return ResponseEntity.ok(detailedSummary);
+        } catch (RuntimeException e) {
+            log.error("Customer not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error fetching detailed summary for customer {}: {}", customerId, e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch detailed summary"));
         }
     }
 
-    // ✅ NEW: Quick stats only
+    // ─── Quick stats only ───────────────────────────────────────────────────
     @GetMapping("/customers/{customerId}/summary/stats")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getCustomerStats(@PathVariable Long customerId) {
         try {
             log.info("Fetching stats for customer ID: {}", customerId);
             Map<String, Object> stats = customerSummaryService.getSummaryStats(customerId);
             return ResponseEntity.ok(stats);
+        } catch (RuntimeException e) {
+            log.error("Customer not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error fetching stats for customer {}: {}", customerId, e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch stats"));
         }
     }
 
-    // ✅ NEW: Manual trigger to update/refresh summary
+    // ─── Manual trigger to update / refresh a single customer summary ──────
     @PostMapping("/customers/{customerId}/summary/update")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateCustomerSummary(@PathVariable Long customerId) {
         try {
             log.info("Manually updating summary for customer ID: {}", customerId);
@@ -569,14 +237,20 @@ public class CustomerSummaryController {
                     "message", "Customer summary updated successfully",
                     "summary", updated
             ));
+        } catch (RuntimeException e) {
+            log.error("Customer not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error updating summary for customer {}: {}", customerId, e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to update summary"));
         }
     }
 
-    // ✅ NEW: Admin endpoint to refresh all customer summaries
+    // ─── Admin: refresh ALL customer summaries ─────────────────────────────
     @PostMapping("/customers/summary/refresh-all")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> refreshAllCustomerSummaries() {
         try {
             log.info("Refreshing all customer summaries");
@@ -584,12 +258,14 @@ public class CustomerSummaryController {
             return ResponseEntity.ok(Map.of("message", "All customer summaries refreshed successfully"));
         } catch (Exception e) {
             log.error("Error refreshing all summaries: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to refresh summaries"));
         }
     }
 
-    // Filter jobs by status (existing functionality)
+    // ─── Filter jobs by status ──────────────────────────────────────────────
     @GetMapping("/customer-summary/{customerId}/jobs")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getCustomerJobsByStatus(
             @PathVariable Long customerId,
             @RequestParam(required = false) String status) {
@@ -597,6 +273,7 @@ public class CustomerSummaryController {
             Map<String, Object> detailedSummary = customerSummaryService.getDetailedSummary(customerId);
 
             if (status != null && !status.isEmpty()) {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> jobHistory = (Map<String, Object>) detailedSummary.get("jobHistory");
                 return ResponseEntity.ok(Map.of(
                         "status", status,
@@ -605,17 +282,25 @@ public class CustomerSummaryController {
             }
 
             return ResponseEntity.ok(detailedSummary.get("jobHistory"));
+        } catch (RuntimeException e) {
+            log.error("Customer not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error fetching jobs for customer {}: {}", customerId, e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch jobs"));
         }
     }
 
-    // Get total spending analytics
+    // ─── Total spending analytics ───────────────────────────────────────────
     @GetMapping("/customer-summary/{customerId}/total-spending")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getCustomerTotalSpending(@PathVariable Long customerId) {
         try {
             Map<String, Object> summary = customerSummaryService.getSummaryStats(customerId);
+
+            @SuppressWarnings("unchecked")
             Map<String, Object> summaryData = (Map<String, Object>) summary.get("summary");
 
             return ResponseEntity.ok(Map.of(
@@ -623,9 +308,14 @@ public class CustomerSummaryController {
                     "totalPaid", summaryData.get("totalPaid"),
                     "outstandingBalance", summaryData.get("outstandingBalance")
             ));
+        } catch (RuntimeException e) {
+            log.error("Customer not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error fetching spending for customer {}: {}", customerId, e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch spending data"));
         }
     }
 }

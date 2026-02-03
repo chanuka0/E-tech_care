@@ -19,6 +19,11 @@
 //   { value: '5 years', label: '5 Years' }
 // ];
 
+// // ✅ Helper function to check if warranty requires a warranty number
+// const warrantyRequiresNumber = (warranty) => {
+//   return warranty && warranty !== '-' && warranty !== 'No Warranty';
+// };
+
 // const CreateInvoiceModal = ({ 
 //   jobCard = null, 
 //   invoiceId = null,
@@ -213,7 +218,7 @@
 //     return { valid: true };
 //   };
 
-//   // ✅ UPDATED: Handle Add Item with Serial Validation
+//   // ✅ UPDATED: Handle Add Item with Serial and Warranty Number Validation
 //   const handleAddItem = () => {
 //     if (!newItem.inventoryItemId || newItem.quantity <= 0) {
 //       setError('Please select item and quantity');
@@ -245,6 +250,14 @@
 //       }
 //     }
 
+//     // ✅ NEW: Validate warranty number
+//     if (warrantyRequiresNumber(newItem.warranty)) {
+//       if (!newItem.warrantyNumber || newItem.warrantyNumber.trim() === '') {
+//         setValidationError(`Warranty number is required when warranty is selected (Warranty: ${newItem.warranty})`);
+//         return;
+//       }
+//     }
+
 //     const item = {
 //       inventoryItem: { id: parseInt(newItem.inventoryItemId) },
 //       itemCode: selectedItem.sku,
@@ -253,7 +266,7 @@
 //       unitPrice: selectedItem.sellingPrice,
 //       total: newItem.quantity * selectedItem.sellingPrice,
 //       warranty: newItem.warranty,
-//       warrantyNumber: newItem.warrantyNumber || '',
+//       warrantyNumber: warrantyRequiresNumber(newItem.warranty) ? newItem.warrantyNumber : '',
 //       serialNumbers: newItem.serialNumbers,
 //       itemType: "PART"
 //     };
@@ -266,7 +279,7 @@
 //     setNewItem({
 //       inventoryItemId: '',
 //       quantity: 1,
-//       warranty: 'No Warranty',
+//       warranty: '-',
 //       warrantyNumber: '',
 //       serialNumbers: []
 //     });
@@ -286,7 +299,12 @@
 //     setInvoiceData(prev => ({
 //       ...prev,
 //       items: prev.items.map((item, i) => 
-//         i === index ? { ...item, warranty } : item
+//         i === index ? { 
+//           ...item, 
+//           warranty,
+//           // ✅ Clear warranty number if switching to "No Warranty" or "-"
+//           warrantyNumber: warrantyRequiresNumber(warranty) ? item.warrantyNumber : ''
+//         } : item
 //       )
 //     }));
 //   };
@@ -350,10 +368,12 @@
 //     }));
 //   };
 
-//   // ✅ UPDATED: Validate all items before submitting
+//   // ✅ UPDATED: Validate all items before submitting (including warranty numbers)
 //   const validateAllItems = () => {
 //     for (const item of invoiceData.items) {
 //       const inventoryItem = inventoryItems.find(i => i.id === item.inventoryItem.id);
+      
+//       // Validate serialized items
 //       if (inventoryItem && inventoryItem.hasSerialization) {
 //         if (!item.serialNumbers || item.serialNumbers.length === 0) {
 //           return {
@@ -366,6 +386,16 @@
 //           return {
 //             valid: false,
 //             message: `Number of serials (${item.serialNumbers.length}) must match quantity (${item.quantity}) for item: ${item.itemName}`
+//           };
+//         }
+//       }
+
+//       // ✅ NEW: Validate warranty number
+//       if (warrantyRequiresNumber(item.warranty)) {
+//         if (!item.warrantyNumber || item.warrantyNumber.trim() === '') {
+//           return {
+//             valid: false,
+//             message: `Warranty number is required for item: ${item.itemName} (Warranty: ${item.warranty})`
 //           };
 //         }
 //       }
@@ -443,7 +473,7 @@
 //       return;
 //     }
 
-//     // ✅ Validate all items have required serial numbers
+//     // ✅ Validate all items have required serial numbers AND warranty numbers
 //     const validation = validateAllItems();
 //     if (!validation.valid) {
 //       setValidationError(validation.message);
@@ -589,7 +619,7 @@
 //             </div>
 //           )}
 
-//           {/* ✅ SERIAL VALIDATION ERROR */}
+//           {/* ✅ SERIAL & WARRANTY VALIDATION ERROR */}
 //           {validationError && (
 //             <div className="p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-lg text-sm">
 //               <div className="flex items-center">
@@ -860,7 +890,15 @@
 //                 />
 //                 <select
 //                   value={newItem.warranty}
-//                   onChange={(e) => setNewItem({ ...newItem, warranty: e.target.value })}
+//                   onChange={(e) => {
+//                     const warranty = e.target.value;
+//                     setNewItem({ 
+//                       ...newItem, 
+//                       warranty,
+//                       // ✅ Clear warranty number if switching to "No Warranty" or "-"
+//                       warrantyNumber: warrantyRequiresNumber(warranty) ? newItem.warrantyNumber : ''
+//                     });
+//                   }}
 //                   className="px-2 py-2 border border-gray-300 rounded-md text-sm"
 //                 >
 //                   {WARRANTY_OPTIONS.map(opt => (
@@ -868,15 +906,28 @@
 //                   ))}
 //                 </select>
                 
-//                 <input
-//                   type="text"
-//                   value={newItem.warrantyNumber}
-//                   onChange={(e) => setNewItem({ ...newItem, warrantyNumber: e.target.value.slice(0, 5) })}
-//                   placeholder="Warr. #"
-//                   maxLength="5"
-//                   className="px-2 py-2 border border-green-300 rounded-md text-sm font-mono text-center focus:outline-none focus:ring-2 focus:ring-green-500"
-//                   title="Manual warranty number (4-5 digits)"
-//                 />
+//                 {/* ✅ UPDATED: Conditional Warranty Number Input */}
+//                 {warrantyRequiresNumber(newItem.warranty) ? (
+//                   <input
+//                     type="text"
+//                     value={newItem.warrantyNumber}
+//                     onChange={(e) => setNewItem({ ...newItem, warrantyNumber: e.target.value.slice(0, 5) })}
+//                     placeholder="Warr. # *"
+//                     maxLength="5"
+//                     className="px-2 py-2 border border-red-300 rounded-md text-sm font-mono text-center focus:outline-none focus:ring-2 focus:ring-red-500"
+//                     title="Warranty number required (4-5 digits)"
+//                     required
+//                   />
+//                 ) : (
+//                   <input
+//                     type="text"
+//                     value=""
+//                     disabled
+//                     placeholder="N/A"
+//                     className="px-2 py-2 border border-gray-200 rounded-md text-sm bg-gray-100 text-center text-gray-400"
+//                     title="No warranty number required"
+//                   />
+//                 )}
                 
 //                 <input
 //                   type="text"
@@ -954,15 +1005,37 @@
 //                 return null;
 //               })()}
 
+//               {/* ✅ NEW: Warranty Number Warning */}
+//               {warrantyRequiresNumber(newItem.warranty) && !newItem.warrantyNumber && (
+//                 <div className="bg-red-50 border border-red-300 p-3 rounded-lg">
+//                   <div className="flex items-center">
+//                     <svg className="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+//                       <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+//                     </svg>
+//                     <span className="text-red-800 font-medium">
+//                       Warranty number is required (Warranty: {newItem.warranty})
+//                     </span>
+//                   </div>
+//                 </div>
+//               )}
+
 //               <button
 //                 type="button"
 //                 onClick={handleAddItem}
 //                 disabled={(() => {
-//                   if (!newItem.inventoryItemId) return !isJobCardInvoice; // ✅ For direct invoice, disabled if no item selected
+//                   if (!newItem.inventoryItemId) return !isJobCardInvoice;
 //                   const selectedItem = inventoryItems.find(i => i.id === parseInt(newItem.inventoryItemId));
+                  
+//                   // Check serialization
 //                   if (selectedItem && selectedItem.hasSerialization) {
-//                     return newItem.serialNumbers.length !== newItem.quantity;
+//                     if (newItem.serialNumbers.length !== newItem.quantity) return true;
 //                   }
+                  
+//                   // ✅ NEW: Check warranty number requirement
+//                   if (warrantyRequiresNumber(newItem.warranty)) {
+//                     if (!newItem.warrantyNumber || newItem.warrantyNumber.trim() === '') return true;
+//                   }
+                  
 //                   return false;
 //                 })()}
 //                 className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium"
@@ -970,7 +1043,6 @@
 //                 {newItem.inventoryItemId ? 'Add Item to Invoice' : isJobCardInvoice ? 'Skip Adding Items' : 'Select Item to Add'}
 //               </button>
               
-//               {/* ✅ UPDATED: Info message about optional/required items */}
 //               <p className="text-xs text-gray-600 text-center">
 //                 {isJobCardInvoice ? 'Items are optional. You can create invoice with only services.' : 'At least one item is required for direct invoice.'}
 //               </p>
@@ -1000,6 +1072,7 @@
 //                     {invoiceData.items.map((item, idx) => {
 //                       const inventoryItem = inventoryItems.find(i => i.id === item.inventoryItem.id);
 //                       const requiresSerials = inventoryItem?.hasSerialization;
+//                       const requiresWarrantyNumber = warrantyRequiresNumber(item.warranty);
                       
 //                       return (
 //                         <tr key={idx} className="border-t">
@@ -1033,15 +1106,23 @@
 //                             </select>
 //                           </td>
                           
+//                           {/* ✅ UPDATED: Conditional Warranty Number Input */}
 //                           <td className="px-2 py-2 text-center">
-//                             <input
-//                               type="text"
-//                               placeholder="e.g., 1234"
-//                               maxLength="5"
-//                               value={item.warrantyNumber || ''}
-//                               onChange={(e) => updateItemWarrantyNumber(idx, e.target.value)}
-//                               className="w-16 px-2 py-1 border border-green-300 rounded text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-green-500"
-//                             />
+//                             {requiresWarrantyNumber ? (
+//                               <input
+//                                 type="text"
+//                                 placeholder="e.g., 1234 *"
+//                                 maxLength="5"
+//                                 value={item.warrantyNumber || ''}
+//                                 onChange={(e) => updateItemWarrantyNumber(idx, e.target.value)}
+//                                 className={`w-16 px-2 py-1 border ${
+//                                   !item.warrantyNumber ? 'border-red-500 bg-red-50' : 'border-green-300'
+//                                 } rounded text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-green-500`}
+//                                 required
+//                               />
+//                             ) : (
+//                               <span className="text-xs text-gray-400">N/A</span>
+//                             )}
 //                           </td>
                           
 //                           <td className="px-2 py-2 text-right font-semibold">Rs.{item.total.toFixed(2)}</td>
@@ -1129,19 +1210,35 @@
 //                 </div>
 //               )}
 
-//               {/* Validation Status */}
+//               {/* ✅ UPDATED: Validation Status (includes warranty number check) */}
 //               {(() => {
 //                 const hasSerializedItems = invoiceData.items.some(item => {
 //                   const invItem = inventoryItems.find(i => i.id === item.inventoryItem.id);
 //                   return invItem?.hasSerialization;
 //                 });
+
+//                 const hasWarrantyItems = invoiceData.items.some(item => 
+//                   warrantyRequiresNumber(item.warranty)
+//                 );
                 
-//                 if (hasSerializedItems) {
+//                 if (hasSerializedItems || hasWarrantyItems) {
 //                   const allValid = invoiceData.items.every(item => {
 //                     const invItem = inventoryItems.find(i => i.id === item.inventoryItem.id);
+                    
+//                     // Check serials
 //                     if (invItem?.hasSerialization) {
-//                       return item.serialNumbers && item.serialNumbers.length === item.quantity;
+//                       if (!item.serialNumbers || item.serialNumbers.length !== item.quantity) {
+//                         return false;
+//                       }
 //                     }
+                    
+//                     // ✅ NEW: Check warranty number
+//                     if (warrantyRequiresNumber(item.warranty)) {
+//                       if (!item.warrantyNumber || item.warrantyNumber.trim() === '') {
+//                         return false;
+//                       }
+//                     }
+                    
 //                     return true;
 //                   });
                   
@@ -1153,14 +1250,14 @@
 //                             <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
 //                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
 //                             </svg>
-//                             <span className="font-semibold text-green-800">All serialized items have valid serial numbers ✓</span>
+//                             <span className="font-semibold text-green-800">All items are valid ✓</span>
 //                           </>
 //                         ) : (
 //                           <>
 //                             <svg className="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
 //                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
 //                             </svg>
-//                             <span className="font-semibold text-red-800">Some serialized items are missing serial numbers ⚠️</span>
+//                             <span className="font-semibold text-red-800">Some items missing required information ⚠️</span>
 //                           </>
 //                         )}
 //                       </div>
@@ -1313,7 +1410,7 @@
 //             </div>
 //           </div>
 
-//           {/* Submit Button - Enabled if has services OR items */}
+//           {/* Submit Button - Enabled if has services OR items AND all validations pass */}
 //           <div className="flex space-x-3 pt-4 border-t sticky bottom-0 bg-white">
 //             <button
 //               type="button"
@@ -1333,6 +1430,13 @@
 //                       return true;
 //                     }
 //                   }
+                  
+//                   // ✅ NEW: Check if any items with warranty are missing warranty number
+//                   if (warrantyRequiresNumber(item.warranty)) {
+//                     if (!item.warrantyNumber || item.warrantyNumber.trim() === '') {
+//                       return true;
+//                     }
+//                   }
 //                 }
 //                 return false;
 //               })()}
@@ -1348,6 +1452,7 @@
 // };
 
 // export default CreateInvoiceModal;
+
 
 
 
@@ -1394,6 +1499,10 @@ const CreateInvoiceModal = ({
   const [dataLoaded, setDataLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
 
+  // ✅ NEW: Regular customer state
+  const [regularCustomers, setRegularCustomers] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+
   // Check if job card is COMPLETED (required for invoice creation)
   if (!isEditing && jobCard && jobCard.status !== 'COMPLETED') {
     return (
@@ -1425,6 +1534,10 @@ const CreateInvoiceModal = ({
   }
 
   const [invoiceData, setInvoiceData] = useState({
+    // ✅ NEW: Regular customer fields
+    isRegularCustomer: false,
+    customerId: '',
+    
     jobCard: jobCard ? { id: jobCard.id } : null,
     customerName: jobCard?.customerName || '',
     customerPhone: jobCard?.customerPhone || '',
@@ -1444,33 +1557,39 @@ const CreateInvoiceModal = ({
     serialNumbers: []
   });
 
-  // Fetch inventory items
+  // Fetch inventory items and regular customers
   useEffect(() => {
     let isMounted = true;
     
-    const fetchInventory = async () => {
+    const fetchData = async () => {
       if (dataLoaded) return;
       
       try {
-        const data = await apiCall('/api/inventory');
+        // ✅ Fetch both inventory and customers
+        const [inventoryData, customersData] = await Promise.all([
+          apiCall('/api/inventory'),
+          apiCall('/api/customers/active')
+        ]);
+        
         if (isMounted) {
-          setInventoryItems(data);
+          setInventoryItems(inventoryData);
+          setRegularCustomers(customersData?.customers || []);
           setDataLoaded(true);
         }
       } catch (err) {
-        console.error('Failed to fetch inventory:', err);
+        console.error('Failed to fetch data:', err);
         if (isMounted) {
-          setError('Failed to load inventory items');
+          setError('Failed to load data');
         }
       }
     };
     
-    fetchInventory();
+    fetchData();
 
     return () => {
       isMounted = false;
     };
-  }, [apiCall, dataLoaded]);
+  }, [dataLoaded]);
 
   // Fetch invoice data if editing
   useEffect(() => {
@@ -1488,6 +1607,8 @@ const CreateInvoiceModal = ({
         
         if (isMounted) {
           setInvoiceData({
+            isRegularCustomer: false,
+            customerId: '',
             jobCard: data.jobCard ? { id: data.jobCard.id } : null,
             customerName: data.customerName || '',
             customerPhone: data.customerPhone || '',
@@ -1516,7 +1637,7 @@ const CreateInvoiceModal = ({
     return () => {
       isMounted = false;
     };
-  }, [isEditing, invoiceId, apiCall]);
+  }, [isEditing, invoiceId]);
 
   // AUTO-POPULATE from jobCard.usedItems with serial numbers
   useEffect(() => {
@@ -1539,6 +1660,67 @@ const CreateInvoiceModal = ({
       }));
     }
   }, [jobCard, isEditing]);
+
+  // ✅ NEW: Handle customer selection from dropdown
+  const handleCustomerSelect = (e) => {
+    const customerId = e.target.value;
+    
+    if (!customerId || customerId === '') {
+      setInvoiceData(prev => ({
+        ...prev,
+        isRegularCustomer: false,
+        customerId: '',
+        customerName: '',
+        customerPhone: '',
+        customerEmail: ''
+      }));
+      setSelectedCustomer(null);
+      return;
+    }
+
+    const customerIdNum = parseInt(customerId, 10);
+    const customer = regularCustomers.find(c => {
+      const cId = c.customerId || c.id;
+      return parseInt(cId, 10) === customerIdNum;
+    });
+
+    if (customer) {
+      setInvoiceData(prev => ({
+        ...prev,
+        isRegularCustomer: true,
+        customerId: customer.customerId || customer.id,
+        customerName: customer.customerName,
+        customerPhone: customer.phoneNumber,
+        customerEmail: customer.email || ''
+      }));
+      setSelectedCustomer(customer);
+      showSuccessMessage(`✅ Customer selected: ${customer.customerName}`);
+    } else {
+      setError('Selected customer not found');
+    }
+    
+    setError('');
+  };
+
+  // ✅ NEW: Handle regular customer toggle
+  const handleRegularCustomerToggle = (e) => {
+    if (e.target.checked) {
+      setInvoiceData(prev => ({
+        ...prev,
+        isRegularCustomer: true
+      }));
+    } else {
+      setInvoiceData(prev => ({
+        ...prev,
+        isRegularCustomer: false,
+        customerId: '',
+        customerName: '',
+        customerPhone: '',
+        customerEmail: ''
+      }));
+      setSelectedCustomer(null);
+    }
+  };
 
   // ✅ Validate serial numbers for serialized items
   const validateSerializedItem = (selectedItem, quantity, serialNumbers) => {
@@ -2012,57 +2194,129 @@ const CreateInvoiceModal = ({
             </div>
           )}
 
-          {/* Customer Details */}
-          {!isJobCardInvoice || isEditing ? (
-            <div className="border-b pb-4">
-              <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="Customer Name *"
-                  value={invoiceData.customerName}
-                  onChange={(e) => setInvoiceData({ ...invoiceData, customerName: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <input
-                  type="tel"
-                  placeholder="Customer Phone *"
-                  value={invoiceData.customerPhone}
-                  onChange={(e) => setInvoiceData({ ...invoiceData, customerPhone: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <input
-                  type="email"
-                  placeholder="Customer Email (Optional)"
-                  value={invoiceData.customerEmail}
-                  onChange={(e) => setInvoiceData({ ...invoiceData, customerEmail: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+          {/* ✅ NEW: Customer Information Section with Regular Customer Toggle */}
+          <div className="mb-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM15 20H9m6 0h6" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
               </div>
+              
+              {/* ✅ Only show toggle for direct invoices (not job card invoices) */}
+              {!isJobCardInvoice && !isEditing && (
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={invoiceData.isRegularCustomer}
+                    onChange={handleRegularCustomerToggle}
+                    className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm font-medium text-gray-700">Regular Customer</span>
+                </label>
+              )}
             </div>
-          ) : (
-            <div className="border-b pb-4">
-              <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-gray-50 p-4 rounded-lg">
+
+            {/* ✅ Show dropdown if regular customer selected (only for direct invoices) */}
+            {!isJobCardInvoice && !isEditing && invoiceData.isRegularCustomer ? (
+              <div className="space-y-4">
                 <div>
-                  <p className="text-xs text-gray-600">Name</p>
-                  <p className="font-semibold text-gray-900">{invoiceData.customerName}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Customer <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={String(invoiceData.customerId)}
+                    onChange={handleCustomerSelect}
+                    className="w-full px-4 py-2 border-2 border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-base"
+                    required
+                  >
+                    <option value="">-- Select a Regular Customer --</option>
+                    {regularCustomers && Array.isArray(regularCustomers) && regularCustomers.map((customer, index) => {
+                      const cId = customer.customerId || customer.id;
+                      return (
+                        <option 
+                          key={`${cId}-${index}`} 
+                          value={String(cId)}
+                        >
+                          {customer.customerName} | {customer.phoneNumber}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-600">Phone</p>
-                  <p className="font-semibold text-gray-900">{invoiceData.customerPhone}</p>
-                </div>
-                {invoiceData.customerEmail && (
-                  <div className="md:col-span-3">
-                    <p className="text-xs text-gray-600">Email</p>
-                    <p className="font-semibold text-gray-900">{invoiceData.customerEmail}</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg border border-gray-200">
+                  <div>
+                    <label className="block text-xs text-gray-600 font-semibold mb-1">Name</label>
+                    <div className="px-3 py-2 bg-gray-100 rounded border border-gray-300">
+                      <p className="font-semibold text-gray-900">{invoiceData.customerName || '—'}</p>
+                    </div>
                   </div>
-                )}
+                  
+                  <div>
+                    <label className="block text-xs text-gray-600 font-semibold mb-1">Phone</label>
+                    <div className="px-3 py-2 bg-gray-100 rounded border border-gray-300">
+                      <p className="font-semibold text-gray-900">{invoiceData.customerPhone || '—'}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs text-gray-600 font-semibold mb-1">Email</label>
+                    <div className="px-3 py-2 bg-gray-100 rounded border border-gray-300">
+                      <p className="text-sm text-gray-700">{invoiceData.customerEmail || 'Not available'}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            ) : (
+              /* ✅ Show regular input fields for job card invoices or when regular customer not selected */
+              !isJobCardInvoice || isEditing ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Customer Name *"
+                    value={invoiceData.customerName}
+                    onChange={(e) => setInvoiceData({ ...invoiceData, customerName: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Customer Phone *"
+                    value={invoiceData.customerPhone}
+                    onChange={(e) => setInvoiceData({ ...invoiceData, customerPhone: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input
+                    type="email"
+                    placeholder="Customer Email (Optional)"
+                    value={invoiceData.customerEmail}
+                    onChange={(e) => setInvoiceData({ ...invoiceData, customerEmail: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-white p-4 rounded-lg">
+                  <div>
+                    <p className="text-xs text-gray-600">Name</p>
+                    <p className="font-semibold text-gray-900">{invoiceData.customerName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Phone</p>
+                    <p className="font-semibold text-gray-900">{invoiceData.customerPhone}</p>
+                  </div>
+                  {invoiceData.customerEmail && (
+                    <div className="md:col-span-3">
+                      <p className="text-xs text-gray-600">Email</p>
+                      <p className="font-semibold text-gray-900">{invoiceData.customerEmail}</p>
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+          </div>
 
           {/* ✅ ONLY SHOW SERVICES FOR JOB CARD INVOICES */}
           {isJobCardInvoice && (
