@@ -114,4 +114,26 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
             "AND FUNCTION('DATE', i.fullyPaidDate) = :date " +
             "ORDER BY i.fullyPaidDate DESC")
     List<Invoice> findPaidInvoicesByDate(@Param("date") LocalDate date);
+
+    // NEW: Find invoices by job card IDs
+    @Query("SELECT i FROM Invoice i WHERE i.jobCard.id IN :jobCardIds")
+    List<Invoice> findByJobCardIdIn(@Param("jobCardIds") List<Long> jobCardIds);
+
+    @Query("SELECT i FROM Invoice i WHERE i.createdAt BETWEEN :startDate AND :endDate")
+    List<Invoice> findByDateRange(@Param("startDate") LocalDateTime startDate,
+                                  @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT COALESCE(SUM(i.total), 0) FROM Invoice i WHERE i.createdAt BETWEEN :startDate AND :endDate")
+    Double getTotalRevenueByDateRange(@Param("startDate") LocalDateTime startDate,
+                                      @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT COALESCE(SUM(i.paidAmount), 0) FROM Invoice i WHERE i.paymentStatus = 'PAID'")
+    Double getTotalPaidAmount();
+
+    @Query("SELECT COALESCE(SUM(i.balance), 0) FROM Invoice i WHERE i.paymentStatus IN ('UNPAID', 'PARTIALLY_PAID')")
+    Double getTotalOutstandingBalance();
+
+    Long countByPaymentStatus(PaymentStatus paymentStatus);
+
+
 }
