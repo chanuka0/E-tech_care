@@ -4542,11 +4542,7 @@ const JobCardCreate = ({ onSuccess, onCancel }) => {
         </form>
       </div>
       
-      {isScanning && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse">
-          📷 Scanning Barcode...
-        </div>
-      )}
+      
     </div>
   );
 };
