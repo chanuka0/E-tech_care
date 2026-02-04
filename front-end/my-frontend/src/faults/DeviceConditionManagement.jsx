@@ -305,11 +305,11 @@ const DeviceConditionManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Inactive Conditions</p>
-              <p className="text-3xl font-bold text-red-600">{conditions.filter(c => !c.isActive).length}</p>
+              <p className="text-3xl font-bold text-orange-600">{conditions.filter(c => !c.isActive).length}</p>
             </div>
-            <div className="bg-red-100 p-3 rounded-full">
-              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m2-2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div className="bg-orange-100 p-3 rounded-full">
+              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
               </svg>
             </div>
           </div>
