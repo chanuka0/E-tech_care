@@ -1,6 +1,3 @@
-
-
-
 import { useState, useEffect } from 'react';
 
 const EditBrandModal = ({ brand, onUpdate, onClose, existingBrands = [] }) => {

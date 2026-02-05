@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL, API_ENDPOINTS } from '../services/api';
 
@@ -204,65 +203,7 @@ const NotificationBell = () => {
             }
           }
       };
-      // ws.onmessage = (event) => {
-      //   const message = event.data;
-        
-      //   if (message.startsWith('CONNECTED')) {
-      //     console.log('✅ STOMP Connected');
-          
-      //     const subscribeFrame = 'SUBSCRIBE\nid:sub-0\ndestination:/topic/notifications\n\n\x00';
-      //     ws.send(subscribeFrame);
-          
-      //     const subscribeReadFrame = 'SUBSCRIBE\nid:sub-1\ndestination:/topic/notifications/read\n\n\x00';
-      //     ws.send(subscribeReadFrame);
-          
-      //     const subscribeReadAllFrame = 'SUBSCRIBE\nid:sub-2\ndestination:/topic/notifications/read-all\n\n\x00';
-      //     ws.send(subscribeReadAllFrame);
-      //   }
-        
-      //   if (message.startsWith('MESSAGE')) {
-      //     const lines = message.split('\n');
-      //     const destination = lines.find(l => l.startsWith('destination:'))?.split(':')[1];
-      //     const bodyStart = message.indexOf('\n\n') + 2;
-      //     const bodyEnd = message.lastIndexOf('\x00');
-      //     const body = message.substring(bodyStart, bodyEnd);
-          
-      //     try {
-      //       if (destination === '/topic/notifications') {
-      //         const notification = JSON.parse(body);
-      //         console.log('🔔 New notification:', notification);
-              
-      //         setNotifications(prev => {
-      //           const exists = prev.some(n => n.id === notification.id);
-      //           if (exists) {
-      //             console.log('⚠️ Duplicate notification received, skipping:', notification.id);
-      //             return prev;
-      //           }
-      //           return [notification, ...prev];
-      //         });
-              
-      //         setUnreadCount(prev => prev + 1);
-              
-      //         if (Notification.permission === 'granted') {
-      //           new Notification('New Notification', {
-      //             body: notification.message,
-      //             icon: '/notification-icon.png',
-      //           });
-      //         }
-      //       } else if (destination === '/topic/notifications/read') {
-      //         const notificationId = JSON.parse(body);
-      //         setNotifications(prev =>
-      //           prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
-      //         );
-      //       } else if (destination === '/topic/notifications/read-all') {
-      //         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      //         setUnreadCount(0);
-      //       }
-      //     } catch (err) {
-      //       console.error('Error parsing notification:', err);
-      //     }
-      //   }
-      // };
+      
 
       ws.onerror = (error) => {
         console.error('❌ WebSocket error:', error);

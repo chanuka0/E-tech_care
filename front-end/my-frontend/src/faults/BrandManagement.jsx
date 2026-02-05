@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';

@@ -1,4 +1,3 @@
-// src/main/resources/static/js/components/UsedItemsSection.js
 import { useState, useEffect } from 'react';
 import { apiCall, API_ENDPOINTS } from '../services/api';
 
