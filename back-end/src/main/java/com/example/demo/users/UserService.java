@@ -1,5 +1,3 @@
-
-
 package com.example.demo.users;
 
 import com.example.demo.entity.NotificationType;
