@@ -15,7 +15,7 @@ import java.util.function.Function;
 @Component
 public class JwtService {
 
-    private final String SECRET_KEY = "mysecretkeymysecretkeymysecretkey12";
+    private final String SECRET_KEY = "IE1QKlNo3Qrw+QClBb1xwleDW/YFsitKCSSvw2V6E6g=";
 
     private Key getSigningKey() {
         byte[] keyBytes = SECRET_KEY.getBytes(StandardCharsets.UTF_8);

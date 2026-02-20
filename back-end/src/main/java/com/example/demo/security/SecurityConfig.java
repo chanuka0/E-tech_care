@@ -5,6 +5,7 @@ import com.example.demo.users.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -67,8 +68,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                .authenticationProvider(authenticationProvider())
 
                 .authorizeHttpRequests(authz -> authz
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // ✅ Add this first
                         // Public endpoints - Authentication only
                         .requestMatchers(
                                 "/api/users/register",
@@ -152,8 +155,8 @@ public class SecurityConfig {
         // ✅ GOOD: Specific origins instead of wildcard
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173",        // Local development
-                "http://16.16.203.25",          // EC2 Production (Frontend)
-                "https://16.16.203.25"          // Add HTTPS when deployed
+                "https://etechcare.online",       // Your new domain
+                "https://www.etechcare.online"    // Your domain with www          // Add HTTPS when deployed
         ));
 
         configuration.setAllowedMethods(Arrays.asList(
@@ -164,7 +167,8 @@ public class SecurityConfig {
                 "Authorization",
                 "Content-Type",
                 "Accept",
-                "X-Requested-With"
+                "X-Requested-With",
+                "Origin"
         ));
 
         configuration.setAllowCredentials(true);

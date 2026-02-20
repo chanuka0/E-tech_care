@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @Log4j2
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:5173")
+//@CrossOrigin(origins = "http://localhost:5173")
 public class UserController {
 
     @Autowired
