@@ -130,28 +130,28 @@ public class CustomerSummaryService {
         return updated;
     }
 
-    @Transactional
-    public Map<String, Object> getDetailedSummary(Long customerId) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
-
-        CustomerSummary summary = updateSummary(customerId);
-
-        List<JobCard> jobCards = jobCardRepository.findByCustomerId(customerId);
-        List<Long> jobCardIds = jobCards.stream().map(JobCard::getId).collect(Collectors.toList());
-        List<Invoice> invoices = jobCardIds.isEmpty() ?
-                List.of() :
-                invoiceRepository.findByJobCardIdIn(jobCardIds);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("customer", buildCustomerInfo(customer));
-        response.put("summary", buildSummaryStats(summary));
-        response.put("jobHistory", buildJobHistory(jobCards));
-        response.put("paymentHistory", buildPaymentHistory(invoices));
-        response.put("recentActivity", buildRecentActivity(jobCards, invoices));
-
-        return response;
-    }
+//    @Transactional
+//    public Map<String, Object> getDetailedSummary(Long customerId) {
+//        Customer customer = customerRepository.findById(customerId)
+//                .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
+//
+//        CustomerSummary summary = updateSummary(customerId);
+//
+//        List<JobCard> jobCards = jobCardRepository.findByCustomerId(customerId);
+//        List<Long> jobCardIds = jobCards.stream().map(JobCard::getId).collect(Collectors.toList());
+//        List<Invoice> invoices = jobCardIds.isEmpty() ?
+//                List.of() :
+//                invoiceRepository.findByJobCardIdIn(jobCardIds);
+//
+//        Map<String, Object> response = new HashMap<>();
+//        response.put("customer", buildCustomerInfo(customer));
+//        response.put("summary", buildSummaryStats(summary));
+//        response.put("jobHistory", buildJobHistory(jobCards));
+//        response.put("paymentHistory", buildPaymentHistory(invoices));
+//        response.put("recentActivity", buildRecentActivity(jobCards, invoices));
+//
+//        return response;
+//    }
 
     @Transactional
     public Map<String, Object> getSummaryStats(Long customerId) {
@@ -271,6 +271,59 @@ public class CustomerSummaryService {
         return paymentHistory;
     }
 
+//    private Map<String, Object> buildInvoiceSummary(Invoice invoice) {
+//        Map<String, Object> invInfo = new HashMap<>();
+//        invInfo.put("invoiceNumber", invoice.getInvoiceNumber());
+//        invInfo.put("total", invoice.getTotal());
+//        invInfo.put("paidAmount", invoice.getPaidAmount());
+//        invInfo.put("balance", invoice.getBalance());
+//        invInfo.put("subtotal", invoice.getSubtotal());
+//        invInfo.put("discount", invoice.getDiscount());
+//        invInfo.put("tax", invoice.getTax());
+//        invInfo.put("paymentStatus", invoice.getPaymentStatus());
+//        invInfo.put("paymentMethod", invoice.getPaymentMethod());
+//        invInfo.put("createdAt", invoice.getCreatedAt());
+//
+//        if (invoice.getJobCard() != null) {
+//            invInfo.put("jobNumber", invoice.getJobCard().getJobNumber());
+//        }
+//
+//        return invInfo;
+//    }
+
+    @Transactional
+    public Map<String, Object> getDetailedSummary(Long customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
+
+        CustomerSummary summary = updateSummary(customerId);
+
+        List<JobCard> jobCards = jobCardRepository.findByCustomerId(customerId);
+        List<Long> jobCardIds = jobCards.stream().map(JobCard::getId).collect(Collectors.toList());
+
+        // ✅ FIX: Get invoices via job cards AND direct invoices via customerId
+        List<Invoice> jobCardInvoices = jobCardIds.isEmpty()
+                ? List.of()
+                : invoiceRepository.findByJobCardIdIn(jobCardIds);
+
+        List<Invoice> directInvoices = invoiceRepository.findByCustomerIdAndIsDeletedFalse(customerId);
+
+        // Merge, deduplicate by invoice ID
+        Map<Long, Invoice> invoiceMap = new java.util.LinkedHashMap<>();
+        for (Invoice inv : jobCardInvoices) invoiceMap.put(inv.getId(), inv);
+        for (Invoice inv : directInvoices) invoiceMap.put(inv.getId(), inv);
+        List<Invoice> allInvoices = new java.util.ArrayList<>(invoiceMap.values());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("customer", buildCustomerInfo(customer));
+        response.put("summary", buildSummaryStats(summary));
+        response.put("jobHistory", buildJobHistory(jobCards));
+        response.put("paymentHistory", buildPaymentHistory(allInvoices));
+        response.put("recentActivity", buildRecentActivity(jobCards, allInvoices));
+
+        return response;
+    }
+
     private Map<String, Object> buildInvoiceSummary(Invoice invoice) {
         Map<String, Object> invInfo = new HashMap<>();
         invInfo.put("invoiceNumber", invoice.getInvoiceNumber());
@@ -283,11 +336,11 @@ public class CustomerSummaryService {
         invInfo.put("paymentStatus", invoice.getPaymentStatus());
         invInfo.put("paymentMethod", invoice.getPaymentMethod());
         invInfo.put("createdAt", invoice.getCreatedAt());
-
+        // ✅ Mark direct invoices so frontend can distinguish them
+        invInfo.put("isDirect", invoice.getJobCard() == null);
         if (invoice.getJobCard() != null) {
             invInfo.put("jobNumber", invoice.getJobCard().getJobNumber());
         }
-
         return invInfo;
     }
 
