@@ -1739,7 +1739,14 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
             <div className="border border-gray-200 rounded p-2 bg-white flex-1 flex flex-col overflow-hidden">
               <div className={ttl}>Used Items / Parts</div>
               <div className="flex-1 overflow-y-auto">
-                <UsedItemsSection items={inventoryItems} usedItems={formData.usedItems} onAdd={addUsedItem} onRemove={removeUsedItem}/>
+                <UsedItemsSection 
+                  items={inventoryItems} 
+                  usedItems={formData.usedItems} 
+                  onAdd={addUsedItem} 
+                  onRemove={removeUsedItem}
+                  isRegularCustomer={originalData?.isRegularCustomer || false}
+                />
+                {/* <UsedItemsSection items={inventoryItems} usedItems={formData.usedItems} onAdd={addUsedItem} onRemove={removeUsedItem}/> */}
               </div>
             </div>
             <div className="border border-gray-200 rounded p-2 bg-white">
@@ -1794,7 +1801,7 @@ const JobCardEdit = ({ jobCardId, onSuccess, onCancel }) => {
   );
 };
 
-const UsedItemsSection = ({ items, usedItems, onAdd, onRemove }) => {
+const UsedItemsSection = ({ items, usedItems, onAdd, onRemove, isRegularCustomer }) => {
   const { apiCall } = useApi();
   const [selectedItem, setSelectedItem] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -1803,71 +1810,112 @@ const UsedItemsSection = ({ items, usedItems, onAdd, onRemove }) => {
   const [loadingSerials, setLoadingSerials] = useState(false);
   const [serialSearch, setSerialSearch] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
-  const selectedItemData = items.find(i=>i.id===parseInt(selectedItem));
-  const filteredSerials = availableSerials.filter(s=>s.serialNumber.toLowerCase().includes(serialSearch.toLowerCase()));
+  const selectedItemData = items.find(i => i.id === parseInt(selectedItem));
+  const filteredSerials = availableSerials.filter(s => s.serialNumber.toLowerCase().includes(serialSearch.toLowerCase()));
 
-  useEffect(()=>{
-    const h=(e)=>{if(e.key==='Enter'&&e.target.type!=='submit'){e.preventDefault();e.stopPropagation();if(e.target.name==='barcodeInput'&&barcodeInput.trim())handleBarcodeScan(barcodeInput.trim());return false;}};
-    document.addEventListener('keydown',h,true);return()=>document.removeEventListener('keydown',h,true);
-  },[barcodeInput]);
+  // Compute effective price for selected item
+  const effectivePrice = selectedItemData
+    ? (isRegularCustomer && selectedItemData.specialPrice)
+      ? selectedItemData.specialPrice
+      : selectedItemData.sellingPrice
+    : null;
+  const isSpecialPriceActive = isRegularCustomer && selectedItemData?.specialPrice;
 
-  useEffect(()=>{
-    const fetchSerials=async()=>{
-      if(selectedItemData?.hasSerialization){
+  useEffect(() => {
+    const h = (e) => {
+      if (e.key === 'Enter' && e.target.type !== 'submit') {
+        e.preventDefault(); e.stopPropagation();
+        if (e.target.name === 'barcodeInput' && barcodeInput.trim()) handleBarcodeScan(barcodeInput.trim());
+        return false;
+      }
+    };
+    document.addEventListener('keydown', h, true);
+    return () => document.removeEventListener('keydown', h, true);
+  }, [barcodeInput]);
+
+  useEffect(() => {
+    const fetchSerials = async () => {
+      if (selectedItemData?.hasSerialization) {
         setLoadingSerials(true);
-        try{const s=await apiCall(`/api/inventory/${selectedItemData.id}/serials/available`);setAvailableSerials(s||[]);}
-        catch(e){console.error(e);setAvailableSerials([]);}
-        finally{setLoadingSerials(false);}
-      }else{setAvailableSerials([]);}
-      setSelectedSerials([]);setSerialSearch('');setBarcodeInput('');
+        try { const s = await apiCall(`/api/inventory/${selectedItemData.id}/serials/available`); setAvailableSerials(s || []); }
+        catch (e) { console.error(e); setAvailableSerials([]); }
+        finally { setLoadingSerials(false); }
+      } else { setAvailableSerials([]); }
+      setSelectedSerials([]); setSerialSearch(''); setBarcodeInput('');
     };
     fetchSerials();
-  },[selectedItemData]);
+  }, [selectedItemData]);
 
-  const handleBarcodeScan=(barcode)=>{
-    if(!selectedItemData?.hasSerialization)return;
-    const s=availableSerials.find(x=>x.serialNumber===barcode.trim());
-    if(s&&!selectedSerials.includes(s.serialNumber)&&(selectedSerials.length<parseInt(quantity)||!quantity)){
-      setSelectedSerials(p=>[...p,s.serialNumber]);
-      const m=document.createElement('div');m.className='fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';m.textContent=`📷 ${s.serialNumber}`;document.body.appendChild(m);setTimeout(()=>m.remove(),2000);
+  const handleBarcodeScan = (barcode) => {
+    if (!selectedItemData?.hasSerialization) return;
+    const s = availableSerials.find(x => x.serialNumber === barcode.trim());
+    if (s && !selectedSerials.includes(s.serialNumber) && (selectedSerials.length < parseInt(quantity) || !quantity)) {
+      setSelectedSerials(p => [...p, s.serialNumber]);
+      const m = document.createElement('div');
+      m.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
+      m.textContent = `📷 ${s.serialNumber}`;
+      document.body.appendChild(m); setTimeout(() => m.remove(), 2000);
     }
-    setTimeout(()=>setBarcodeInput(''),100);
+    setTimeout(() => setBarcodeInput(''), 100);
   };
 
-  const handleAdd=()=>{
-    if(!selectedItem||!quantity){alert('Select item and quantity');return;}
-    if(selectedItemData?.hasSerialization&&selectedSerials.length!==parseInt(quantity)){alert(`Select exactly ${quantity} serial(s)`);return;}
-    onAdd(selectedItem,quantity,selectedSerials);
-    setSelectedItem('');setQuantity('');setSelectedSerials([]);setAvailableSerials([]);setSerialSearch('');setBarcodeInput('');
+  const handleAdd = () => {
+    if (!selectedItem || !quantity) { alert('Select item and quantity'); return; }
+    if (selectedItemData?.hasSerialization && selectedSerials.length !== parseInt(quantity)) { alert(`Select exactly ${quantity} serial(s)`); return; }
+    onAdd(selectedItem, quantity, selectedSerials);
+    setSelectedItem(''); setQuantity(''); setSelectedSerials([]); setAvailableSerials([]); setSerialSearch(''); setBarcodeInput('');
   };
 
-  const inp="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500";
+  const inp = "w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-  return(
+  return (
     <div className="space-y-2">
       <div className="border border-dashed border-gray-300 rounded p-2 bg-gray-50">
         <div className="text-xs font-medium text-gray-600 mb-1">Add Item</div>
         <div className="flex gap-1 mb-1">
-          <select value={selectedItem} onChange={(e)=>setSelectedItem(e.target.value)} className="flex-1 px-1 py-1 border border-gray-300 rounded text-xs focus:outline-none" onKeyDown={(e)=>{if(e.key==='Enter')e.preventDefault();}}>
+          <select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)} className="flex-1 px-1 py-1 border border-gray-300 rounded text-xs focus:outline-none" onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}>
             <option value="">Select Item</option>
-            {items.map(i=><option key={i.id} value={i.id}>{i.name}{i.hasSerialization?' 🔢':''} (Qty:{i.quantity})</option>)}
+            {items.map(i => {
+              const price = (isRegularCustomer && i.specialPrice) ? i.specialPrice : i.sellingPrice;
+              const hasSpecial = isRegularCustomer && i.specialPrice;
+              return (
+                <option key={i.id} value={i.id}>
+                  {i.name}{i.hasSerialization ? ' 🔢' : ''} (Qty:{i.quantity}) {hasSpecial ? `⭐Rs.${i.specialPrice?.toFixed(2)}` : `Rs.${i.sellingPrice?.toFixed(2)}`}
+                </option>
+              );
+            })}
           </select>
-          <input type="number" value={quantity} onChange={(e)=>setQuantity(e.target.value)} min="1" placeholder="Qty" className="w-14 px-1 py-1 border border-gray-300 rounded text-xs focus:outline-none" onKeyDown={(e)=>{if(e.key==='Enter')e.preventDefault();}}/>
+          <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} min="1" placeholder="Qty" className="w-14 px-1 py-1 border border-gray-300 rounded text-xs focus:outline-none" onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
           <button type="button" onClick={handleAdd} className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded font-medium">Add</button>
         </div>
-        {selectedItemData&&(<div className="text-xs text-blue-700 bg-blue-50 rounded px-1.5 py-1">Rs.{selectedItemData.sellingPrice?.toFixed(2)||'0.00'} | Avail:{selectedItemData.quantity}{selectedItemData.hasSerialization&&<span className="ml-1 font-medium">🔢</span>}</div>)}
-        {selectedItemData?.hasSerialization&&availableSerials.length>0&&(
+
+        {/* Price info box */}
+        {selectedItemData && (
+          <div className={`text-xs rounded px-1.5 py-1 ${isSpecialPriceActive ? 'bg-amber-50 border border-amber-300 text-amber-800' : 'bg-blue-50 text-blue-700'}`}>
+            {isSpecialPriceActive ? (
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-amber-700">⭐ Special: Rs.{selectedItemData.specialPrice?.toFixed(2)}</span>
+                <span className="text-gray-400 line-through text-xs">Rs.{selectedItemData.sellingPrice?.toFixed(2)}</span>
+                <span className="ml-auto text-amber-600">Avail:{selectedItemData.quantity}{selectedItemData.hasSerialization && <span className="ml-1 font-medium">🔢</span>}</span>
+              </div>
+            ) : (
+              <span>Rs.{selectedItemData.sellingPrice?.toFixed(2)} | Avail:{selectedItemData.quantity}{selectedItemData.hasSerialization && <span className="ml-1 font-medium">🔢</span>}</span>
+            )}
+          </div>
+        )}
+
+        {selectedItemData?.hasSerialization && availableSerials.length > 0 && (
           <div className="mt-1.5 border border-yellow-200 rounded p-1.5 bg-yellow-50">
             <div className="flex gap-1 mb-1">
-              <input value={serialSearch} onChange={(e)=>setSerialSearch(e.target.value)} placeholder="Search serial..." className="flex-1 px-1.5 py-1 border border-yellow-300 rounded text-xs focus:outline-none" onKeyDown={(e)=>{if(e.key==='Enter')e.preventDefault();}}/>
-              <input name="barcodeInput" value={barcodeInput} onChange={(e)=>setBarcodeInput(e.target.value)} placeholder="Scan..." className="flex-1 px-1.5 py-1 border border-yellow-300 rounded text-xs focus:outline-none" autoComplete="off"
-                onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();if(barcodeInput.trim())handleBarcodeScan(barcodeInput.trim());}}}/>
+              <input value={serialSearch} onChange={(e) => setSerialSearch(e.target.value)} placeholder="Search serial..." className="flex-1 px-1.5 py-1 border border-yellow-300 rounded text-xs focus:outline-none" onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
+              <input name="barcodeInput" value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="Scan..." className="flex-1 px-1.5 py-1 border border-yellow-300 rounded text-xs focus:outline-none" autoComplete="off"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (barcodeInput.trim()) handleBarcodeScan(barcodeInput.trim()); } }} />
             </div>
-            <div className="text-xs text-yellow-700 mb-1">{selectedSerials.length}/{quantity||0} selected</div>
+            <div className="text-xs text-yellow-700 mb-1">{selectedSerials.length}/{quantity || 0} selected</div>
             <div className="max-h-20 overflow-y-auto space-y-0.5">
-              {loadingSerials?<div className="text-xs text-center text-yellow-600">Loading...</div>:filteredSerials.map(s=>(
-                <label key={s.id} className={`flex items-center gap-1.5 p-1 rounded cursor-pointer text-xs ${selectedSerials.includes(s.serialNumber)?'bg-yellow-100 border border-yellow-300':''}`}>
-                  <input type="checkbox" checked={selectedSerials.includes(s.serialNumber)} onChange={(e)=>{ if(e.target.checked)setSelectedSerials(p=>[...p,s.serialNumber]);else setSelectedSerials(p=>p.filter(x=>x!==s.serialNumber)); }} className="w-3 h-3" disabled={selectedSerials.length>=parseInt(quantity)&&!selectedSerials.includes(s.serialNumber)}/>
+              {loadingSerials ? <div className="text-xs text-center text-yellow-600">Loading...</div> : filteredSerials.map(s => (
+                <label key={s.id} className={`flex items-center gap-1.5 p-1 rounded cursor-pointer text-xs ${selectedSerials.includes(s.serialNumber) ? 'bg-yellow-100 border border-yellow-300' : ''}`}>
+                  <input type="checkbox" checked={selectedSerials.includes(s.serialNumber)} onChange={(e) => { if (e.target.checked) setSelectedSerials(p => [...p, s.serialNumber]); else setSelectedSerials(p => p.filter(x => x !== s.serialNumber)); }} className="w-3 h-3" disabled={selectedSerials.length >= parseInt(quantity) && !selectedSerials.includes(s.serialNumber)} />
                   <span className="font-mono">{s.serialNumber}</span>
                 </label>
               ))}
@@ -1875,22 +1923,161 @@ const UsedItemsSection = ({ items, usedItems, onAdd, onRemove }) => {
           </div>
         )}
       </div>
-      {usedItems.length>0&&(
+
+      {/* Used items list */}
+      {usedItems.length > 0 && (
         <div className="space-y-1">
-          {usedItems.map((item,i)=>(
-            <div key={i} className="bg-white border border-gray-200 rounded p-1.5">
+          {usedItems.map((item, i) => (
+            <div key={i} className={`border rounded p-1.5 ${item.isSpecialPrice ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}>
               <div className="flex items-center justify-between">
-                <div><p className="text-xs font-medium text-gray-900">{item.inventoryItem.name}{item.inventoryItem.hasSerialization?' 🔢':''}</p><p className="text-xs text-gray-500">Qty:{item.quantityUsed}×Rs.{item.unitPrice?.toFixed(2)}=Rs.{(item.quantityUsed*(item.unitPrice||0)).toFixed(2)}</p></div>
-                <button type="button" onClick={()=>onRemove(i)} className="text-red-500 hover:text-red-700"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
+                <div>
+                  <p className="text-xs font-medium text-gray-900">
+                    {item.isSpecialPrice && <span className="text-amber-500 mr-1">⭐</span>}
+                    {item.inventoryItem.name}{item.inventoryItem.hasSerialization ? ' 🔢' : ''}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Qty:{item.quantityUsed}×Rs.{item.unitPrice?.toFixed(2)}=Rs.{(item.quantityUsed * (item.unitPrice || 0)).toFixed(2)}
+                    {item.isSpecialPrice && <span className="ml-1 text-amber-600 font-medium">(Special)</span>}
+                  </p>
+                </div>
+                <button type="button" onClick={() => onRemove(i)} className="text-red-500 hover:text-red-700">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
-              {item.usedSerialNumbers?.length>0&&(<div className="flex flex-wrap gap-0.5 mt-1">{item.usedSerialNumbers.map((sn,si)=><span key={si} className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs font-mono">{sn}</span>)}</div>)}
+              {item.usedSerialNumbers?.length > 0 && (
+                <div className="flex flex-wrap gap-0.5 mt-1">
+                  {item.usedSerialNumbers.map((sn, si) => <span key={si} className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs font-mono">{sn}</span>)}
+                </div>
+              )}
             </div>
           ))}
-          <div className="bg-blue-50 border border-blue-200 rounded px-2 py-1 text-xs font-medium text-blue-900">Parts Total: Rs.{usedItems.reduce((s,i)=>s+(i.quantityUsed*(i.unitPrice||0)),0).toFixed(2)}</div>
+          <div className="bg-blue-50 border border-blue-200 rounded px-2 py-1 text-xs font-medium text-blue-900">
+            Parts Total: Rs.{usedItems.reduce((s, i) => s + (i.quantityUsed * (i.unitPrice || 0)), 0).toFixed(2)}
+          </div>
         </div>
       )}
     </div>
   );
 };
+// const UsedItemsSection = ({ items, usedItems, onAdd, onRemove }) => {
+//   const { apiCall } = useApi();
+//   const [selectedItem, setSelectedItem] = useState('');
+//   const [quantity, setQuantity] = useState('');
+//   const [availableSerials, setAvailableSerials] = useState([]);
+//   const [selectedSerials, setSelectedSerials] = useState([]);
+//   const [loadingSerials, setLoadingSerials] = useState(false);
+//   const [serialSearch, setSerialSearch] = useState('');
+//   const [barcodeInput, setBarcodeInput] = useState('');
+//   const selectedItemData = items.find(i=>i.id===parseInt(selectedItem));
+//   const filteredSerials = availableSerials.filter(s=>s.serialNumber.toLowerCase().includes(serialSearch.toLowerCase()));
+
+//   useEffect(()=>{
+//     const h=(e)=>{if(e.key==='Enter'&&e.target.type!=='submit'){e.preventDefault();e.stopPropagation();if(e.target.name==='barcodeInput'&&barcodeInput.trim())handleBarcodeScan(barcodeInput.trim());return false;}};
+//     document.addEventListener('keydown',h,true);return()=>document.removeEventListener('keydown',h,true);
+//   },[barcodeInput]);
+
+//   useEffect(()=>{
+//     const fetchSerials=async()=>{
+//       if(selectedItemData?.hasSerialization){
+//         setLoadingSerials(true);
+//         try{const s=await apiCall(`/api/inventory/${selectedItemData.id}/serials/available`);setAvailableSerials(s||[]);}
+//         catch(e){console.error(e);setAvailableSerials([]);}
+//         finally{setLoadingSerials(false);}
+//       }else{setAvailableSerials([]);}
+//       setSelectedSerials([]);setSerialSearch('');setBarcodeInput('');
+//     };
+//     fetchSerials();
+//   },[selectedItemData]);
+
+//   const handleBarcodeScan=(barcode)=>{
+//     if(!selectedItemData?.hasSerialization)return;
+//     const s=availableSerials.find(x=>x.serialNumber===barcode.trim());
+//     if(s&&!selectedSerials.includes(s.serialNumber)&&(selectedSerials.length<parseInt(quantity)||!quantity)){
+//       setSelectedSerials(p=>[...p,s.serialNumber]);
+//       const m=document.createElement('div');m.className='fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';m.textContent=`📷 ${s.serialNumber}`;document.body.appendChild(m);setTimeout(()=>m.remove(),2000);
+//     }
+//     setTimeout(()=>setBarcodeInput(''),100);
+//   };
+
+//   const handleAdd=()=>{
+//     if(!selectedItem||!quantity){alert('Select item and quantity');return;}
+//     if(selectedItemData?.hasSerialization&&selectedSerials.length!==parseInt(quantity)){alert(`Select exactly ${quantity} serial(s)`);return;}
+//     onAdd(selectedItem,quantity,selectedSerials);
+//     setSelectedItem('');setQuantity('');setSelectedSerials([]);setAvailableSerials([]);setSerialSearch('');setBarcodeInput('');
+//   };
+
+//   const inp="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500";
+
+//   const addUsedItem = (itemId, qty, serials = []) => {
+//   if (!itemId || !qty) { setError('Select item and quantity'); return; }
+//   const item = inventoryItems.find(i => i.id === parseInt(itemId));
+//   if (!item) return;
+//   if (item.hasSerialization && serials.length !== parseInt(qty)) { setError(`Select exactly ${qty} serial(s)`); return; }
+//   if (!item.hasSerialization && parseInt(qty) > item.quantity) { setError(`Only ${item.quantity} available`); return; }
+//   const isRegularCustomer = originalData?.isRegularCustomer || false;
+//   const unitPrice = (isRegularCustomer && item.specialPrice) ? item.specialPrice : item.sellingPrice;
+//   setFormData(p => ({
+//     ...p,
+//     usedItems: [...p.usedItems, {
+//       inventoryItemId: parseInt(itemId),
+//       inventoryItem: item,
+//       quantityUsed: parseInt(qty),
+//       unitPrice: unitPrice,
+//       usedSerialNumbers: serials,
+//       isSpecialPrice: isRegularCustomer && !!item.specialPrice
+//     }]
+//   }));
+//   setError('');
+// };
+
+//   return(
+//     <div className="space-y-2">
+//       <div className="border border-dashed border-gray-300 rounded p-2 bg-gray-50">
+//         <div className="text-xs font-medium text-gray-600 mb-1">Add Item</div>
+//         <div className="flex gap-1 mb-1">
+//           <select value={selectedItem} onChange={(e)=>setSelectedItem(e.target.value)} className="flex-1 px-1 py-1 border border-gray-300 rounded text-xs focus:outline-none" onKeyDown={(e)=>{if(e.key==='Enter')e.preventDefault();}}>
+//             <option value="">Select Item</option>
+//             {items.map(i=><option key={i.id} value={i.id}>{i.name}{i.hasSerialization?' 🔢':''} (Qty:{i.quantity})</option>)}
+//           </select>
+//           <input type="number" value={quantity} onChange={(e)=>setQuantity(e.target.value)} min="1" placeholder="Qty" className="w-14 px-1 py-1 border border-gray-300 rounded text-xs focus:outline-none" onKeyDown={(e)=>{if(e.key==='Enter')e.preventDefault();}}/>
+//           <button type="button" onClick={handleAdd} className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded font-medium">Add</button>
+//         </div>
+//         {selectedItemData&&(<div className="text-xs text-blue-700 bg-blue-50 rounded px-1.5 py-1">Rs.{selectedItemData.sellingPrice?.toFixed(2)||'0.00'} | Avail:{selectedItemData.quantity}{selectedItemData.hasSerialization&&<span className="ml-1 font-medium">🔢</span>}</div>)}
+//         {selectedItemData?.hasSerialization&&availableSerials.length>0&&(
+//           <div className="mt-1.5 border border-yellow-200 rounded p-1.5 bg-yellow-50">
+//             <div className="flex gap-1 mb-1">
+//               <input value={serialSearch} onChange={(e)=>setSerialSearch(e.target.value)} placeholder="Search serial..." className="flex-1 px-1.5 py-1 border border-yellow-300 rounded text-xs focus:outline-none" onKeyDown={(e)=>{if(e.key==='Enter')e.preventDefault();}}/>
+//               <input name="barcodeInput" value={barcodeInput} onChange={(e)=>setBarcodeInput(e.target.value)} placeholder="Scan..." className="flex-1 px-1.5 py-1 border border-yellow-300 rounded text-xs focus:outline-none" autoComplete="off"
+//                 onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();if(barcodeInput.trim())handleBarcodeScan(barcodeInput.trim());}}}/>
+//             </div>
+//             <div className="text-xs text-yellow-700 mb-1">{selectedSerials.length}/{quantity||0} selected</div>
+//             <div className="max-h-20 overflow-y-auto space-y-0.5">
+//               {loadingSerials?<div className="text-xs text-center text-yellow-600">Loading...</div>:filteredSerials.map(s=>(
+//                 <label key={s.id} className={`flex items-center gap-1.5 p-1 rounded cursor-pointer text-xs ${selectedSerials.includes(s.serialNumber)?'bg-yellow-100 border border-yellow-300':''}`}>
+//                   <input type="checkbox" checked={selectedSerials.includes(s.serialNumber)} onChange={(e)=>{ if(e.target.checked)setSelectedSerials(p=>[...p,s.serialNumber]);else setSelectedSerials(p=>p.filter(x=>x!==s.serialNumber)); }} className="w-3 h-3" disabled={selectedSerials.length>=parseInt(quantity)&&!selectedSerials.includes(s.serialNumber)}/>
+//                   <span className="font-mono">{s.serialNumber}</span>
+//                 </label>
+//               ))}
+//             </div>
+//           </div>
+//         )}
+//       </div>
+//       {usedItems.length>0&&(
+//         <div className="space-y-1">
+//           {usedItems.map((item,i)=>(
+//             <div key={i} className="bg-white border border-gray-200 rounded p-1.5">
+//               <div className="flex items-center justify-between">
+//                 <div><p className="text-xs font-medium text-gray-900">{item.inventoryItem.name}{item.inventoryItem.hasSerialization?' 🔢':''}</p><p className="text-xs text-gray-500">Qty:{item.quantityUsed}×Rs.{item.unitPrice?.toFixed(2)}=Rs.{(item.quantityUsed*(item.unitPrice||0)).toFixed(2)}</p></div>
+//                 <button type="button" onClick={()=>onRemove(i)} className="text-red-500 hover:text-red-700"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
+//               </div>
+//               {item.usedSerialNumbers?.length>0&&(<div className="flex flex-wrap gap-0.5 mt-1">{item.usedSerialNumbers.map((sn,si)=><span key={si} className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs font-mono">{sn}</span>)}</div>)}
+//             </div>
+//           ))}
+//           <div className="bg-blue-50 border border-blue-200 rounded px-2 py-1 text-xs font-medium text-blue-900">Parts Total: Rs.{usedItems.reduce((s,i)=>s+(i.quantityUsed*(i.unitPrice||0)),0).toFixed(2)}</div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
 
 export default JobCardEdit;

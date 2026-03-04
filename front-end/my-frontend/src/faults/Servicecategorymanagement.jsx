@@ -249,6 +249,8 @@ const ServiceCategoryManagement = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Regular Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special Price</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -259,16 +261,25 @@ const ServiceCategoryManagement = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-bold text-gray-900">{category.name}</span>
-                      </td>
-                      <td className="px-6 py-4">
+                      </td>                      <td className="px-6 py-4">
                         <p className="text-sm text-gray-600 italic">
                           {category.description || 'No description'}
                         </p>
                       </td>
+                      ....
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-semibold text-gray-900">
                           Rs.{(category.servicePrice || 0).toFixed(2)}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {category.specialServicePrice != null && category.specialServicePrice > 0 ? (
+                          <span className="text-sm font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">
+                            Rs.{category.specialServicePrice.toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
