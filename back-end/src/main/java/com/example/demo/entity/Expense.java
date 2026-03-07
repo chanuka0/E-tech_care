@@ -31,7 +31,6 @@ public class Expense {
     private String description;
 
     @NotNull(message = "Amount cannot be null")
-    @DecimalMin(value = "0.01", inclusive = true, message = "Amount must be greater than 0")
     @Column(name = "amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 

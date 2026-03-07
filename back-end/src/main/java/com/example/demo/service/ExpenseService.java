@@ -77,7 +77,7 @@ public class ExpenseService {
                 return null;
             }
 
-            if (quantity == null || quantity <= 0) {
+            if (quantity == null || quantity == 0) {
                 System.out.println("⚠️ Cannot create expense - invalid quantity for item: " + itemName);
                 return null;
             }
@@ -85,7 +85,11 @@ public class ExpenseService {
             Double totalAmount = unitPrice * quantity;
 
             Expense expense = new Expense();
-            expense.setCategory("Inventory Purchase");
+
+            // ── Category: use "Inventory Correction" for credit/reversal, else "Inventory Purchase" ──
+            boolean isCorrection = reason != null &&
+                    reason.toLowerCase().contains("correction");
+            expense.setCategory(isCorrection ? "Inventory Correction" : "Inventory Purchase");
 
             String description = String.format(
                     "Item: %s (SKU: %s) | Qty: %d | Unit Price: Rs.%.2f | Reason: %s",
@@ -94,17 +98,17 @@ public class ExpenseService {
             expense.setDescription(description);
             expense.setAmount(BigDecimal.valueOf(totalAmount));
             expense.setAutoCreated(true);
-            expense.setSourceType("INVENTORY_PURCHASE");
+            expense.setSourceType(isCorrection ? "INVENTORY_CORRECTION" : "INVENTORY_PURCHASE");
 
             Expense saved = expenseRepository.save(expense);
 
             System.out.println("✅ [EXPENSE AUTO-CREATED]");
             System.out.println("   Expense ID: #" + saved.getId());
+            System.out.println("   Category: " + saved.getCategory());
             System.out.println("   Item: " + itemName + " (SKU: " + sku + ")");
             System.out.println("   Quantity: " + quantity);
             System.out.println("   Unit Price: Rs." + unitPrice);
             System.out.println("   Total Amount: Rs." + totalAmount);
-            System.out.println("   Category: Inventory Purchase");
             System.out.println("   Created At: " + saved.getCreatedAt());
 
             return saved;
