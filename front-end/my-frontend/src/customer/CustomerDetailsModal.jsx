@@ -707,7 +707,12 @@ const CustomerDetailsModal = ({ customer, onClose, onRefresh, apiCall }) => {
   const invYears = useMemo(() => getYearsFrom(allInvoices, 'createdAt'),       [allInvoices]);
 
   const filteredJobs     = useMemo(() => filterByDate(allJobs,     'createdAt', jobYear, jobMonth), [allJobs, jobYear, jobMonth]);
-  const filteredInvoices = useMemo(() => filterByDate(allInvoices, 'createdAt', invYear, invMonth), [allInvoices, invYear, invMonth]);
+
+  // ✅ CHANGED: sort invoices newest first (descending by createdAt)
+  const filteredInvoices = useMemo(() => {
+    const filtered = filterByDate(allInvoices, 'createdAt', invYear, invMonth);
+    return [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [allInvoices, invYear, invMonth]);
 
   const jobStats = useMemo(() => {
     const total     = filteredJobs.length;
@@ -719,7 +724,6 @@ const CustomerDetailsModal = ({ customer, onClose, onRefresh, apiCall }) => {
     return { total, completed, pending, cancelled, byStatus };
   }, [filteredJobs]);
 
-  // ✅ UPDATED: exclude returned invoices from blue/green/red, add orange returned box
   const invoiceStats = useMemo(() => {
     const activeInvoices   = filteredInvoices.filter(i => !i.isReturned);
     const returnedInvoices = filteredInvoices.filter(i => i.isReturned);
@@ -892,7 +896,6 @@ const CustomerDetailsModal = ({ customer, onClose, onRefresh, apiCall }) => {
           onMonthChange={(m) => { setInvMonth(m); setExpandedInvoiceId(null); }}
         />
 
-        {/* ✅ UPDATED: 4 stat boxes — returned invoices excluded from blue/green/red */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Total Invoiced"  value={formatRs(invoiceStats.totalInvoiced)}    colorClass="bg-blue-50 border-blue-300 text-blue-700" />
           <StatCard label="Total Paid"      value={formatRs(invoiceStats.totalPaid)}        colorClass="bg-green-50 border-green-300 text-green-700" />
@@ -913,7 +916,6 @@ const CustomerDetailsModal = ({ customer, onClose, onRefresh, apiCall }) => {
             <div className="space-y-2">
               {filteredInvoices.map((inv, idx) => {
                 const isOpen      = expandedInvoiceId === idx;
-                // ✅ RETURNED badge takes priority over payment status
                 const statusStyle = inv.isReturned
                   ? 'bg-orange-100 text-orange-800'
                   : (PAYMENT_STATUS_STYLES[inv.paymentStatus] || 'bg-gray-100 text-gray-700');
@@ -979,7 +981,6 @@ const CustomerDetailsModal = ({ customer, onClose, onRefresh, apiCall }) => {
                           </div>
                         </div>
 
-                        {/* ✅ Show return info if returned */}
                         {inv.isReturned && (
                           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-1">
                             <p className="text-xs font-semibold text-orange-700 uppercase">Return Details</p>
