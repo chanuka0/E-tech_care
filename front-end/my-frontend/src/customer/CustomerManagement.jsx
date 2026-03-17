@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
@@ -11,13 +12,13 @@ const CustomerManagement = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  
+
   // Filter state
   const [showInactive, setShowInactive] = useState(false);
 
@@ -38,7 +39,7 @@ const CustomerManagement = () => {
 
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-      
+
       if (response.status === 401 || response.status === 403) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -62,15 +63,13 @@ const CustomerManagement = () => {
         throw new Error(errorMessage);
       }
 
-      if (response.status === 204) {
-        return null;
-      }
+      if (response.status === 204) return null;
 
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         return await response.json();
       }
-      
+
       return null;
     } catch (error) {
       console.error('API call error:', error);
@@ -79,11 +78,14 @@ const CustomerManagement = () => {
   };
 
   // Fetch customers
+  // Admin: always fetch ALL (active + inactive) so deactivated customers stay
+  // in local state and are shown/hidden by the toggle without extra API calls.
+  // Non-admin: only fetch active customers.
   const fetchCustomers = async () => {
     setLoading(true);
     setError('');
     try {
-      const endpoint = showInactive && isAdmin() ? '/api/customers/all' : '/api/customers/active';
+      const endpoint = isAdmin() ? '/api/customers/all' : '/api/customers/active';
       const data = await apiCall(endpoint);
       setCustomers(data.customers || []);
     } catch (err) {
@@ -93,19 +95,19 @@ const CustomerManagement = () => {
     setLoading(false);
   };
 
+  // Only depends on token — showInactive just controls local filtering now
   useEffect(() => {
     fetchCustomers();
-  }, [token, showInactive]);
+  }, [token]);
 
   // Handle add customer
   const handleAddCustomer = async (newCustomer) => {
     try {
       const response = await apiCall('/api/customers/create', {
         method: 'POST',
-        body: JSON.stringify(newCustomer)
+        body: JSON.stringify(newCustomer),
       });
-      
-      setCustomers([...customers, response.customer]);
+      setCustomers(prev => [...prev, response.customer]);
       setShowAddModal(false);
       showSuccessMessage('Customer added successfully!');
     } catch (err) {
@@ -121,10 +123,13 @@ const CustomerManagement = () => {
     try {
       const response = await apiCall(`/api/customers/${selectedCustomer.customerId}`, {
         method: 'PUT',
-        body: JSON.stringify(updatedCustomer)
+        body: JSON.stringify(updatedCustomer),
       });
-      
-      setCustomers(customers.map(c => c.customerId === selectedCustomer.customerId ? response.customer : c));
+      setCustomers(prev =>
+        prev.map(c =>
+          c.customerId === selectedCustomer.customerId ? response.customer : c
+        )
+      );
       setShowEditModal(false);
       setSelectedCustomer(null);
       showSuccessMessage('Customer updated successfully!');
@@ -136,19 +141,48 @@ const CustomerManagement = () => {
     }
   };
 
-  // Handle delete customer
-  const handleDeleteCustomer = async (customerId) => {
+  // Handle deactivate customer — admin only
+  // Calls existing DELETE endpoint which soft-deletes (sets isActive = false) on backend.
+  // Keeps customer in local state with isActive = false so admin can see and re-activate.
+  const handleDeactivateCustomer = async (customerId) => {
     const customer = customers.find(c => c.customerId === customerId);
-    if (window.confirm(`Are you sure you want to delete customer "${customer.customerName}"?`)) {
+    if (window.confirm(`Are you sure you want to deactivate "${customer.customerName}"?\n\nThey will be hidden from active lists but can be re-activated anytime.`)) {
       setError('');
       try {
-        await apiCall(`/api/customers/${customerId}`, {
-          method: 'DELETE'
-        });
-        setCustomers(customers.filter(c => c.customerId !== customerId));
-        showSuccessMessage('Customer deleted successfully!');
+        await apiCall(`/api/customers/${customerId}`, { method: 'DELETE' });
+
+        // Update local state — mark as inactive, keep in array
+        setCustomers(prev =>
+          prev.map(c =>
+            c.customerId === customerId ? { ...c, isActive: false } : c
+          )
+        );
+
+        showSuccessMessage(`"${customer.customerName}" deactivated. Enable "Show inactive customers" to see them.`);
       } catch (err) {
-        const errorMsg = err.message || 'Failed to delete customer';
+        const errorMsg = err.message || 'Failed to deactivate customer';
+        setError(errorMsg);
+        showErrorMessage(errorMsg);
+      }
+    }
+  };
+
+  // Handle activate customer — admin only
+  // Calls existing restore endpoint which sets isActive = true on backend.
+  const handleActivateCustomer = async (customerId) => {
+    const customer = customers.find(c => c.customerId === customerId);
+    if (window.confirm(`Are you sure you want to activate "${customer.customerName}"?`)) {
+      setError('');
+      try {
+        const response = await apiCall(`/api/customers/${customerId}/restore`, { method: 'POST' });
+        setCustomers(prev =>
+          prev.map(c =>
+            c.customerId === customerId ? response.customer : c
+          )
+        );
+        showSuccessMessage(`"${customer.customerName}" has been activated successfully!`);
+      } catch (err) {
+        const errorMsg = err.message || 'Failed to activate customer';
         setError(errorMsg);
         showErrorMessage(errorMsg);
       }
@@ -162,7 +196,6 @@ const CustomerManagement = () => {
       fetchCustomers();
       return;
     }
-
     setLoading(true);
     setError('');
     try {
@@ -176,9 +209,9 @@ const CustomerManagement = () => {
 
   const showSuccessMessage = (message) => {
     const msg = document.createElement('div');
-    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
+    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2 max-w-md';
     msg.innerHTML = `
-      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+      <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
       </svg>
       <span>${message}</span>
@@ -200,7 +233,7 @@ const CustomerManagement = () => {
     setTimeout(() => msg.remove(), 5000);
   };
 
-  // Filter customers based on active/inactive
+  // Local filter — showInactive toggle controls visibility, no extra API call needed
   const filteredCustomers = customers.filter(customer => {
     if (!showInactive && !customer.isActive) return false;
     return true;
@@ -215,6 +248,7 @@ const CustomerManagement = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -241,15 +275,12 @@ const CustomerManagement = () => {
             </svg>
             <span>{error}</span>
           </div>
-          <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">
-            ✕
-          </button>
+          <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">✕</button>
         </div>
       )}
 
       {/* Filters and Search */}
       <div className="bg-white rounded-lg shadow p-4 space-y-4">
-        {/* Search Bar */}
         <div className="relative">
           <svg className="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -263,7 +294,6 @@ const CustomerManagement = () => {
           />
         </div>
 
-        {/* Filters */}
         <div className="flex items-center space-x-4">
           {isAdmin() && (
             <label className="flex items-center space-x-2 cursor-pointer">
@@ -273,7 +303,14 @@ const CustomerManagement = () => {
                 onChange={(e) => setShowInactive(e.target.checked)}
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-700">Show inactive customers</span>
+              <span className="text-sm text-gray-700">
+                Show inactive customers
+                {stats.inactive > 0 && (
+                  <span className="ml-1 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    {stats.inactive}
+                  </span>
+                )}
+              </span>
             </label>
           )}
           <span className="text-sm text-gray-600">
@@ -343,6 +380,26 @@ const CustomerManagement = () => {
         )}
       </div>
 
+      {/* Inactive customers hint banner — shown when there are inactive customers but toggle is off */}
+      {isAdmin() && stats.inactive > 0 && !showInactive && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <svg className="w-5 h-5 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm text-orange-700">
+              <span className="font-semibold">{stats.inactive}</span> inactive {stats.inactive === 1 ? 'customer is' : 'customers are'} hidden.
+            </span>
+          </div>
+          <button
+            onClick={() => setShowInactive(true)}
+            className="text-sm text-orange-700 font-semibold underline hover:text-orange-900 transition-colors"
+          >
+            Show inactive
+          </button>
+        </div>
+      )}
+
       {/* Customers Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
@@ -377,13 +434,25 @@ const CustomerManagement = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredCustomers.map(customer => (
-                  <tr key={customer.customerId} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={customer.customerId}
+                    className={`hover:bg-gray-50 transition-colors ${!customer.isActive ? 'opacity-60 bg-gray-50' : ''}`}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                          customer.isActive
+                            ? 'bg-blue-100 text-blue-600'
+                            : 'bg-gray-200 text-gray-500'
+                        }`}>
                           {customer.customerName.charAt(0).toUpperCase()}
                         </div>
-                        <span className="ml-3 text-sm font-medium text-gray-900">{customer.customerName}</span>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">{customer.customerName}</p>
+                          {!customer.isActive && (
+                            <p className="text-xs text-orange-500 font-medium">Inactive</p>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -414,6 +483,8 @@ const CustomerManagement = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+
+                      {/* View — always visible */}
                       <button
                         onClick={() => {
                           setSelectedCustomer(customer);
@@ -424,6 +495,8 @@ const CustomerManagement = () => {
                       >
                         View
                       </button>
+
+                      {/* Edit — visible to everyone for both active and inactive */}
                       <button
                         onClick={() => {
                           setSelectedCustomer(customer);
@@ -434,13 +507,29 @@ const CustomerManagement = () => {
                       >
                         Edit
                       </button>
-                      <button
-                        onClick={() => handleDeleteCustomer(customer.customerId)}
-                        className="text-red-600 hover:text-red-900 font-medium transition-colors"
-                        title="Delete customer"
-                      >
-                        Delete
-                      </button>
+
+                      {/* Deactivate — active customers, admin only */}
+                      {customer.isActive && isAdmin() && (
+                        <button
+                          onClick={() => handleDeactivateCustomer(customer.customerId)}
+                          className="text-orange-600 hover:text-orange-900 font-medium transition-colors"
+                          title="Deactivate customer"
+                        >
+                          Deactivate
+                        </button>
+                      )}
+
+                      {/* Activate — inactive customers, admin only */}
+                      {!customer.isActive && isAdmin() && (
+                        <button
+                          onClick={() => handleActivateCustomer(customer.customerId)}
+                          className="text-green-600 hover:text-green-900 font-medium transition-colors"
+                          title="Activate customer"
+                        >
+                          Activate
+                        </button>
+                      )}
+
                     </td>
                   </tr>
                 ))}
