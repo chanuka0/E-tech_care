@@ -1,3 +1,83 @@
+//
+//package com.example.demo.entity;
+//
+//import com.fasterxml.jackson.annotation.JsonManagedReference;
+//import jakarta.persistence.*;
+//import lombok.AllArgsConstructor;
+//import lombok.Data;
+//import lombok.NoArgsConstructor;
+//import java.time.LocalDateTime;
+//import java.util.List;
+//
+//@Entity
+//@Table(name = "inventory_items")
+//@Data
+//@NoArgsConstructor
+//@AllArgsConstructor
+//public class InventoryItem {
+//    @Id
+//    @GeneratedValue(strategy = GenerationType.IDENTITY)
+//    private Long id;
+//
+//    @Column(unique = true, length = 100, nullable = false)
+//    private String sku;
+//
+//    @Column(nullable = false, length = 255)
+//    private String name;
+//
+//    @Column(columnDefinition = "TEXT")
+//    private String description;
+//
+//    @Column(length = 100)
+//    private String category;
+//
+//    @Column(nullable = false)
+//    private Integer quantity;
+//
+//    @Column(name = "min_threshold")
+//    private Integer minThreshold;
+//
+//    @Column(name = "purchase_price")
+//    private Double purchasePrice;
+//
+//    @Column(name = "selling_price")
+//    private Double sellingPrice;
+//
+//    @Column(name = "special_price")
+//    private Double specialPrice;
+//
+//    @Column(name = "has_serialization")
+//    private Boolean hasSerialization = false;
+//
+//    // Maps the existing reserved_quantity DB column — kept as 0, not used in business logic
+//    @Column(name = "reserved_quantity", nullable = false)
+//    private Integer reservedQuantity = 0;
+//
+//    @OneToMany(mappedBy = "inventoryItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+//    @JsonManagedReference
+//    private List<InventorySerial> serials;
+//
+//    @Column(name = "created_at", nullable = false)
+//    private LocalDateTime createdAt;
+//
+//    @Column(name = "updated_at")
+//    private LocalDateTime updatedAt;
+//
+//    @PrePersist
+//    protected void onCreate() {
+//        createdAt = LocalDateTime.now();
+//        updatedAt = LocalDateTime.now();
+//        if (hasSerialization == null) hasSerialization = false;
+//        if (reservedQuantity == null) reservedQuantity = 0;
+//    }
+//
+//    @PreUpdate
+//    protected void onUpdate() {
+//        updatedAt = LocalDateTime.now();
+//        if (reservedQuantity == null) reservedQuantity = 0;
+//    }
+//}
+
 
 package com.example.demo.entity;
 
@@ -49,9 +129,12 @@ public class InventoryItem {
     @Column(name = "has_serialization")
     private Boolean hasSerialization = false;
 
-    // Maps the existing reserved_quantity DB column — kept as 0, not used in business logic
     @Column(name = "reserved_quantity", nullable = false)
     private Integer reservedQuantity = 0;
+
+    // ✅ NEW: Visibility toggle — hidden items excluded from active workflows
+    @Column(name = "is_hidden", nullable = false)
+    private Boolean isHidden = false;
 
     @OneToMany(mappedBy = "inventoryItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
@@ -69,11 +152,13 @@ public class InventoryItem {
         updatedAt = LocalDateTime.now();
         if (hasSerialization == null) hasSerialization = false;
         if (reservedQuantity == null) reservedQuantity = 0;
+        if (isHidden == null) isHidden = false;
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
         if (reservedQuantity == null) reservedQuantity = 0;
+        if (isHidden == null) isHidden = false;
     }
 }

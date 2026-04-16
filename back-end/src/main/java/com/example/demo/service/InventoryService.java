@@ -1,3 +1,1246 @@
+//
+//package com.example.demo.service;
+//
+//import com.example.demo.entity.*;
+//import com.example.demo.repositories.InventoryItemRepository;
+//import com.example.demo.repositories.InventorySerialRepository;
+//import com.example.demo.repositories.StockMovementRepository;
+//import lombok.RequiredArgsConstructor;
+//import org.springframework.security.core.context.SecurityContextHolder;
+//import org.springframework.stereotype.Service;
+//import org.springframework.transaction.annotation.Transactional;
+//
+//import java.time.LocalDateTime;
+//import java.util.ArrayList;
+//import java.util.HashMap;
+//import java.util.List;
+//import java.util.Map;
+//import java.util.Optional;
+//
+//@Service
+//@RequiredArgsConstructor
+//public class InventoryService {
+//    private final InventoryItemRepository inventoryItemRepository;
+//    private final InventorySerialRepository inventorySerialRepository;
+//    private final StockMovementRepository stockMovementRepository;
+//    private final NotificationService notificationService;
+//    private final ExpenseService expenseService;
+//
+//    // ========== HELPER METHOD TO CREATE PAYLOAD ==========
+//
+//    /**
+//     * Create simple payload without lazy-loaded collections to avoid LazyInitializationException
+//     */
+//    private Map<String, Object> createItemPayload(InventoryItem item) {
+//        Map<String, Object> payload = new HashMap<>();
+//        payload.put("id", item.getId());
+//        payload.put("sku", item.getSku());
+//        payload.put("name", item.getName());
+//        payload.put("description", item.getDescription());
+//        payload.put("category", item.getCategory());
+//        payload.put("quantity", item.getQuantity());
+//        payload.put("minThreshold", item.getMinThreshold());
+//        payload.put("purchasePrice", item.getPurchasePrice());
+//        payload.put("sellingPrice", item.getSellingPrice());
+//        payload.put("specialPrice", item.getSpecialPrice());
+//        payload.put("hasSerialization", item.getHasSerialization());
+//        return payload;
+//    }
+//
+//    /**
+//     * Create simple payload for serial
+//     */
+//    private Map<String, Object> createSerialPayload(InventorySerial serial) {
+//        Map<String, Object> payload = new HashMap<>();
+//        payload.put("id", serial.getId());
+//        payload.put("serialNumber", serial.getSerialNumber());
+//        payload.put("status", serial.getStatus());
+//        payload.put("itemId", serial.getInventoryItem().getId());
+//        payload.put("itemName", serial.getInventoryItem().getName());
+//        payload.put("itemSku", serial.getInventoryItem().getSku());
+//        return payload;
+//    }
+//
+//    // ========== INVENTORY ITEM MANAGEMENT ==========
+//
+//    @Transactional
+//    public InventoryItem createItem(InventoryItem item) {
+//        if (item.getSku() == null) {
+//            item.setSku(generateSku());
+//        }
+//
+//        // Set defaults
+//        if (item.getHasSerialization() == null) {
+//            item.setHasSerialization(false);
+//        }
+//        if (item.getQuantity() == null) {
+//            item.setQuantity(0);
+//        }
+//        if (item.getMinThreshold() == null) {
+//            item.setMinThreshold(0);
+//        }
+//
+//        InventoryItem saved = inventoryItemRepository.save(item);
+//
+//        // ✅ FIXED NOTIFICATION - Use simple payload
+//        notificationService.sendNotification(
+//                NotificationType.STOCK_UPDATE,
+//                "Inventory item created: " + item.getName() + " (SKU: " + item.getSku() + ") | Initial Qty: " + item.getQuantity(),
+//                createItemPayload(saved),
+//                NotificationSeverity.SUCCESS
+//        );
+//
+//        // Record initial stock if quantity > 0
+//        if (saved.getQuantity() > 0) {
+//            recordStockMovement(saved, MovementType.IN, saved.getQuantity(),
+//                    "MANUAL", null, null, "Initial stock", null, 0, saved.getQuantity());
+//
+//            // ✅ AUTO-CREATE EXPENSE FOR INITIAL STOCK
+//            System.out.println("📦 Creating item: " + saved.getName() + " | Qty: " + saved.getQuantity());
+//            if (saved.getPurchasePrice() != null && saved.getPurchasePrice() > 0) {
+//                Expense createdExpense = expenseService.createExpenseFromInventory(
+//                        saved.getName(),
+//                        saved.getSku(),
+//                        saved.getQuantity(),
+//                        saved.getPurchasePrice(),
+//                        "Initial stock"
+//                );
+//                if (createdExpense != null) {
+//                    System.out.println("✅ Expense created for initial stock: #" + createdExpense.getId());
+//                }
+//            } else {
+//                System.out.println("⚠️ No purchase price set - expense not created");
+//            }
+//        }
+//
+//        checkLowStock(saved);
+//        return saved;
+//    }
+//
+//    @Transactional
+//    public InventoryItem updateItem(Long id, InventoryItem updates) {
+//        InventoryItem existing = inventoryItemRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        int oldQuantity = existing.getQuantity();
+//
+//        // Update fields
+//        if (updates.getName() != null) {
+//            existing.setName(updates.getName());
+//        }
+//        if (updates.getDescription() != null) {
+//            existing.setDescription(updates.getDescription());
+//        }
+//        if (updates.getCategory() != null) {
+//            existing.setCategory(updates.getCategory());
+//        }
+//        if (updates.getQuantity() != null) {
+//            existing.setQuantity(updates.getQuantity());
+//        }
+//        if (updates.getMinThreshold() != null) {
+//            existing.setMinThreshold(updates.getMinThreshold());
+//        }
+//        if (updates.getPurchasePrice() != null) {
+//            existing.setPurchasePrice(updates.getPurchasePrice());
+//        }
+//        if (updates.getSellingPrice() != null) {
+//            existing.setSellingPrice(updates.getSellingPrice());
+//        }
+//        if (updates.getSpecialPrice() != null) {
+//            existing.setSpecialPrice(updates.getSpecialPrice());
+//        }
+//        if (updates.getHasSerialization() != null) {
+//            existing.setHasSerialization(updates.getHasSerialization());
+//        }
+//
+//        InventoryItem saved = inventoryItemRepository.save(existing);
+//
+//        // ✅ FIXED NOTIFICATION - Use simple payload
+//        notificationService.sendNotification(
+//                NotificationType.JOB_UPDATED,
+//                "Inventory item updated: " + existing.getName() + " (SKU: " + existing.getSku() + ")",
+//                createItemPayload(saved),
+//                NotificationSeverity.INFO
+//        );
+//
+//        // Record stock change if quantity changed
+//        if (oldQuantity != saved.getQuantity()) {
+//            int diff = saved.getQuantity() - oldQuantity;
+//            MovementType type = diff > 0 ? MovementType.IN : MovementType.OUT;
+//            recordStockMovement(saved, type, Math.abs(diff),
+//                    "MANUAL", null, null, "Stock updated", null, oldQuantity, saved.getQuantity());
+//        }
+//
+//        checkLowStock(saved);
+//        return saved;
+//    }
+//
+//    @Transactional
+//    public void deleteItem(Long id) {
+//        InventoryItem item = inventoryItemRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        // Create payload before deleting
+//        Map<String, Object> payload = createItemPayload(item);
+//
+//        // Delete associated serials first
+//        if (item.getSerials() != null && !item.getSerials().isEmpty()) {
+//            inventorySerialRepository.deleteAll(item.getSerials());
+//        }
+//
+//        inventoryItemRepository.delete(item);
+//
+//        // ✅ FIXED NOTIFICATION - Use simple payload
+//        notificationService.sendNotification(
+//                NotificationType.ITEM_REMOVED,
+//                "Item deleted: " + item.getName() + " (SKU: " + item.getSku() + ")",
+//                payload,
+//                NotificationSeverity.WARNING
+//        );
+//    }
+//
+//    // ========== STOCK MANAGEMENT ==========
+//
+//    @Transactional
+//    public void addStock(Long itemId, Integer quantity, String reason, String notes) {
+//        InventoryItem item = inventoryItemRepository.findById(itemId)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        if (quantity <= 0) {
+//            throw new RuntimeException("Quantity must be greater than 0");
+//        }
+//
+//        int oldQty = item.getQuantity();
+//        item.setQuantity(oldQty + quantity);
+//        inventoryItemRepository.save(item);
+//
+//        recordStockMovement(item, MovementType.IN, quantity, "MANUAL", null, null,
+//                reason, notes, oldQty, item.getQuantity());
+//
+//        // ✅ AUTO-CREATE EXPENSE FOR ADDED STOCK
+//        System.out.println("📦 Adding stock to: " + item.getName() + " | Qty: " + quantity);
+//        if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
+//            Expense createdExpense = expenseService.createExpenseFromInventory(
+//                    item.getName(),
+//                    item.getSku(),
+//                    quantity,
+//                    item.getPurchasePrice(),
+//                    reason != null ? reason : "Stock addition"
+//            );
+//            if (createdExpense != null) {
+//                System.out.println("✅ Expense created for added stock: #" + createdExpense.getId());
+//            }
+//        } else {
+//            System.out.println("⚠️ No purchase price set - expense not created");
+//        }
+//
+//        // ✅ FIXED NOTIFICATION - Use simple payload
+//        notificationService.sendNotification(
+//                NotificationType.STOCK_UPDATE,
+//                "Stock added: " + item.getName() + " | Qty: +" + quantity + " | New Stock: " + item.getQuantity(),
+//                createItemPayload(item),
+//                NotificationSeverity.SUCCESS
+//        );
+//
+//        checkLowStock(item);
+//    }
+//
+//    @Transactional
+//    public void adjustStock(Long itemId, Integer newQuantity, String reason) {
+//        InventoryItem item = inventoryItemRepository.findById(itemId)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        int oldQty = item.getQuantity();
+//        int diff = newQuantity - oldQty;
+//
+//        item.setQuantity(newQuantity);
+//        inventoryItemRepository.save(item);
+//
+//        MovementType movementType = diff > 0 ? MovementType.IN : MovementType.OUT;
+//        recordStockMovement(item, movementType, Math.abs(diff),
+//                "ADJUSTMENT", null, null, reason, null, oldQty, newQuantity);
+//
+//        // ✅ FIXED NOTIFICATION - Use simple payload
+//        notificationService.sendNotification(
+//                NotificationType.JOB_UPDATED,
+//                "Stock adjusted: " + item.getName() + " | From: " + oldQty + " → To: " + newQuantity + " | Reason: " + reason,
+//                createItemPayload(item),
+//                NotificationSeverity.INFO
+//        );
+//
+//        checkLowStock(item);
+//    }
+//
+//    @Transactional
+//    public void deductStock(Long itemId, Integer quantity, List<String> serialNumbers,
+//                            String reason, String notes) {
+//        InventoryItem item = inventoryItemRepository.findById(itemId)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        int oldQty = item.getQuantity();
+//
+//        if (item.getHasSerialization()) {
+//            if (serialNumbers == null || serialNumbers.isEmpty()) {
+//                throw new RuntimeException("Serial numbers required for serialized item");
+//            }
+//
+//            for (String serial : serialNumbers) {
+//                InventorySerial invSerial = inventorySerialRepository.findBySerialNumber(serial)
+//                        .orElseThrow(() -> new RuntimeException("Serial not found: " + serial));
+//
+//                if (invSerial.getStatus() != SerialStatus.AVAILABLE) {
+//                    throw new RuntimeException("Serial not available: " + serial + ". Status: " + invSerial.getStatus());
+//                }
+//
+//                // Mark as USED for direct use - BUT DON'T DEDUCT QUANTITY OR RECORD MOVEMENT
+//                invSerial.setStatus(SerialStatus.USED);
+//                invSerial.setUsedAt(LocalDateTime.now());
+//                invSerial.setUsedBy(getCurrentUsername());
+//                invSerial.setUsedInReferenceType("DIRECT_USE");
+//                invSerial.setNotes(notes);
+//                inventorySerialRepository.save(invSerial);
+//
+//                System.out.println("ℹ️ Serial marked as USED (no stock movement recorded): " + serial);
+//            }
+//        } else {
+//            // For non-serialized items, deduct quantity immediately
+//            if (item.getQuantity() < quantity) {
+//                throw new RuntimeException("Not enough stock for item: " + item.getName());
+//            }
+//
+//            item.setQuantity(item.getQuantity() - quantity);
+//
+//            recordStockMovement(item, MovementType.OUT, quantity, "DIRECT_USE", null, null,
+//                    reason, notes, oldQty, item.getQuantity());
+//        }
+//
+//        inventoryItemRepository.save(item);
+//
+//        // ✅ FIXED NOTIFICATION - Use simple payload
+//        notificationService.sendNotification(
+//                NotificationType.STOCK_UPDATE,
+//                "Stock deducted for item: " + item.getName() + " | Qty: -" + quantity + " | Remaining: " + item.getQuantity(),
+//                createItemPayload(item),
+//                NotificationSeverity.WARNING
+//        );
+//
+//        checkLowStock(item);
+//    }
+//
+//    @Transactional
+//    public void deductStockForJobCard(Long itemId, Integer quantity, List<String> serialNumbers,
+//                                      Long jobCardId, String jobCardNumber, String notes) {
+//        InventoryItem item = inventoryItemRepository.findById(itemId)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        if (item.getHasSerialization()) {
+//            if (serialNumbers == null || serialNumbers.isEmpty()) {
+//                throw new RuntimeException("Serial numbers required for serialized item");
+//            }
+//
+//            for (String serial : serialNumbers) {
+//                InventorySerial invSerial = inventorySerialRepository.findBySerialNumber(serial)
+//                        .orElseThrow(() -> new RuntimeException("Serial not found: " + serial));
+//
+//                if (invSerial.getStatus() != SerialStatus.AVAILABLE) {
+//                    throw new RuntimeException("Serial not available: " + serial + ". Status: " + invSerial.getStatus());
+//                }
+//
+//                // Mark as USED for job card - NO STOCK MOVEMENT RECORDED
+//                invSerial.setStatus(SerialStatus.USED);
+//                invSerial.setUsedAt(LocalDateTime.now());
+//                invSerial.setUsedBy(getCurrentUsername());
+//                invSerial.setUsedInReferenceType("JOB_CARD");
+//                invSerial.setUsedInReferenceId(jobCardId);
+//                invSerial.setUsedInReferenceNumber(jobCardNumber);
+//                invSerial.setNotes(notes);
+//                inventorySerialRepository.save(invSerial);
+//
+//                System.out.println("✅ Serial marked as USED for job card (no stock movement): " + serial);
+//            }
+//        } else {
+//            // For non-serialized items, deduct quantity immediately
+//            if (item.getQuantity() < quantity) {
+//                throw new RuntimeException("Not enough stock");
+//            }
+//
+//            item.setQuantity(item.getQuantity() - quantity);
+//
+//            // FIXED: Don't record stock movement for JOB_CARD non-serialized items either
+//            System.out.println("ℹ️ Non-serialized item used in job card (no stock movement): " + item.getName());
+//        }
+//
+//        inventoryItemRepository.save(item);
+//        checkLowStock(item);
+//    }
+//
+//    @Transactional
+//    public void deductStockForInvoice(Long itemId, Integer quantity, List<String> serialNumbers,
+//                                      Long invoiceId, String invoiceNumber, String notes) {
+//        InventoryItem item = inventoryItemRepository.findById(itemId)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        int oldQty = item.getQuantity();
+//
+//        if (item.getHasSerialization()) {
+//            if (serialNumbers == null || serialNumbers.isEmpty()) {
+//                throw new RuntimeException("Serial numbers required for serialized item");
+//            }
+//
+//            for (String serial : serialNumbers) {
+//                InventorySerial invSerial = inventorySerialRepository.findBySerialNumber(serial)
+//                        .orElseThrow(() -> new RuntimeException("Serial not found: " + serial));
+//
+//                if (invSerial.getStatus() != SerialStatus.AVAILABLE && invSerial.getStatus() != SerialStatus.USED) {
+//                    throw new RuntimeException("Serial not available: " + serial + ". Status: " + invSerial.getStatus());
+//                }
+//
+//                // Mark serial as SOLD with invoice reference - THIS IS WHERE WE DEDUCT QUANTITY
+//                invSerial.setStatus(SerialStatus.SOLD);
+//                invSerial.setUsedAt(LocalDateTime.now());
+//                invSerial.setUsedBy(getCurrentUsername());
+//                invSerial.setUsedInReferenceType("INVOICE");
+//                invSerial.setUsedInReferenceId(invoiceId);
+//                invSerial.setUsedInReferenceNumber(invoiceNumber);
+//                invSerial.setNotes(notes);
+//                inventorySerialRepository.save(invSerial);
+//
+//                // DEDUCT QUANTITY ONLY WHEN MARKED AS SOLD (not when USED)
+//                updateQuantityForSerialSale(item, 1);
+//
+//                // RECORD STOCK MOVEMENT ONLY FOR INVOICE
+//                recordStockMovementForSerial(invSerial, MovementType.OUT, 1, "INVOICE", invoiceId, invoiceNumber,
+//                        "Sold via invoice", serial);
+//                oldQty--;
+//            }
+//        } else {
+//            // For non-serialized items, deduct quantity
+//            if (item.getQuantity() < quantity) {
+//                throw new RuntimeException("Not enough stock for item: " + item.getName());
+//            }
+//
+//            item.setQuantity(item.getQuantity() - quantity);
+//
+//            // RECORD STOCK MOVEMENT FOR NON-SERIALIZED INVOICE ITEMS
+//            recordStockMovement(item, MovementType.OUT, quantity, "INVOICE", invoiceId, invoiceNumber,
+//                    "Sold via invoice", notes, oldQty, item.getQuantity());
+//        }
+//
+//        inventoryItemRepository.save(item);
+//
+//        // ✅ FIXED NOTIFICATION - Use simple payload
+//        notificationService.sendNotification(
+//                NotificationType.STOCK_UPDATE,
+//                "Stock deducted for invoice: " + item.getName() + " | Qty: -" + quantity + " | Remaining: " + item.getQuantity(),
+//                createItemPayload(item),
+//                NotificationSeverity.WARNING
+//        );
+//
+//        checkLowStock(item);
+//    }
+//
+//    // ========== STOCK CORRECTION METHOD ==========
+//
+//    @Transactional
+//    public void correctStock(Long itemId, Integer quantity, List<String> serialNumbers, String notes) {
+//        InventoryItem item = inventoryItemRepository.findById(itemId)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        int oldQty = item.getQuantity();
+//
+//        if (item.getHasSerialization()) {
+//            // ── Serialized item: verify and permanently delete each serial ──
+//            if (serialNumbers == null || serialNumbers.isEmpty()) {
+//                throw new RuntimeException("Serial numbers required for serialized item correction");
+//            }
+//
+//            for (String serialNumber : serialNumbers) {
+//                InventorySerial serial = inventorySerialRepository.findBySerialNumber(serialNumber)
+//                        .orElseThrow(() -> new RuntimeException("Serial not found: " + serialNumber));
+//
+//                if (serial.getStatus() != SerialStatus.AVAILABLE) {
+//                    throw new RuntimeException(
+//                            "Serial '" + serialNumber + "' is not AVAILABLE (status: " + serial.getStatus() + "). " +
+//                                    "Only AVAILABLE serials can be removed via stock correction.");
+//                }
+//
+//                if (!serial.getInventoryItem().getId().equals(itemId)) {
+//                    throw new RuntimeException("Serial '" + serialNumber + "' does not belong to this item.");
+//                }
+//
+//                // Permanently delete the serial record
+//                inventorySerialRepository.delete(serial);
+//                System.out.println("🗑️ Serial permanently deleted (correction): " + serialNumber);
+//            }
+//
+//            // Reduce quantity by number of serials removed
+//            int newQty = oldQty - serialNumbers.size();
+//            if (newQty < 0) {
+//                throw new RuntimeException("Correction would result in negative stock.");
+//            }
+//            item.setQuantity(newQty);
+//            inventoryItemRepository.save(item);
+//
+//            // Record stock movement
+//            recordStockMovement(item, MovementType.OUT, serialNumbers.size(),
+//                    "CORRECTION", null, null,
+//                    "Stock correction (serial removal): " + notes,
+//                    String.join(", ", serialNumbers),
+//                    oldQty, item.getQuantity());
+//
+//            // Auto-create negative expense (credit) if purchase price exists
+//            if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
+//                Expense creditExpense = expenseService.createExpenseFromInventory(
+//                        item.getName(),
+//                        item.getSku(),
+//                        -serialNumbers.size(),          // negative quantity = credit
+//                        item.getPurchasePrice(),
+//                        "Stock correction credit (serials removed): " + notes
+//                );
+//                if (creditExpense != null) {
+//                    System.out.println("✅ Negative expense (credit) created for serial correction: #" + creditExpense.getId());
+//                }
+//            }
+//
+//            // Notification
+//            notificationService.sendNotification(
+//                    NotificationType.STOCK_UPDATE,
+//                    "Stock correction (serials): " + item.getName() +
+//                            " | Removed: " + serialNumbers.size() + " serials" +
+//                            " | New Stock: " + item.getQuantity(),
+//                    createItemPayload(item),
+//                    NotificationSeverity.WARNING
+//            );
+//
+//        } else {
+//            // ── Non-serialized item: just reduce quantity ──
+//            if (quantity == null || quantity <= 0) {
+//                throw new RuntimeException("Quantity must be greater than 0 for correction");
+//            }
+//            if (quantity > item.getQuantity()) {
+//                throw new RuntimeException("Cannot remove more than available stock (" + item.getQuantity() + ")");
+//            }
+//
+//            int newQty = oldQty - quantity;
+//            item.setQuantity(newQty);
+//            inventoryItemRepository.save(item);
+//
+//            // Record stock movement
+//            recordStockMovement(item, MovementType.OUT, quantity,
+//                    "CORRECTION", null, null,
+//                    "Stock correction: " + notes,
+//                    null,
+//                    oldQty, item.getQuantity());
+//
+//            // Auto-create negative expense (credit) if purchase price exists
+//            if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
+//                Expense creditExpense = expenseService.createExpenseFromInventory(
+//                        item.getName(),
+//                        item.getSku(),
+//                        -quantity,                       // negative quantity = credit
+//                        item.getPurchasePrice(),
+//                        "Stock correction credit: " + notes
+//                );
+//                if (creditExpense != null) {
+//                    System.out.println("✅ Negative expense (credit) created for stock correction: #" + creditExpense.getId());
+//                }
+//            }
+//
+//            // Notification
+//            notificationService.sendNotification(
+//                    NotificationType.STOCK_UPDATE,
+//                    "Stock correction: " + item.getName() +
+//                            " | Removed: " + quantity + " units" +
+//                            " | New Stock: " + item.getQuantity(),
+//                    createItemPayload(item),
+//                    NotificationSeverity.WARNING
+//            );
+//        }
+//
+//        checkLowStock(item);
+//    }
+//
+//    // ========== SERIAL NUMBER MANAGEMENT ==========
+//
+//    @Transactional
+//    public InventorySerial addSerial(Long itemId, String serialNumber) {
+//        InventoryItem item = inventoryItemRepository.findById(itemId)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        if (inventorySerialRepository.existsBySerialNumber(serialNumber)) {
+//            throw new RuntimeException("Serial number already exists");
+//        }
+//
+//        InventorySerial serial = new InventorySerial();
+//        serial.setInventoryItem(item);
+//        serial.setSerialNumber(serialNumber);
+//        serial.setStatus(SerialStatus.AVAILABLE);
+//
+//        InventorySerial saved = inventorySerialRepository.save(serial);
+//
+//        // Update quantity and record movement
+//        int oldQty = item.getQuantity();
+//        item.setQuantity(oldQty + 1);
+//        inventoryItemRepository.save(item);
+//
+//        recordStockMovement(item, MovementType.IN, 1, "MANUAL", null, null,
+//                "Serial added", serialNumber, oldQty, item.getQuantity());
+//
+//        // ✅ AUTO-CREATE EXPENSE FOR SERIAL ADDED
+//        System.out.println("📦 Adding serial: " + serialNumber + " to: " + item.getName());
+//        if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
+//            Expense createdExpense = expenseService.createExpenseFromInventory(
+//                    item.getName(),
+//                    item.getSku(),
+//                    1,
+//                    item.getPurchasePrice(),
+//                    "Serial added: " + serialNumber
+//            );
+//            if (createdExpense != null) {
+//                System.out.println("✅ Expense created for serial: #" + createdExpense.getId());
+//            }
+//        } else {
+//            System.out.println("⚠️ No purchase price set - expense not created");
+//        }
+//
+//        // ✅ FIXED NOTIFICATION - Use simple payload
+//        notificationService.sendNotification(
+//                NotificationType.STOCK_UPDATE,
+//                "Serial number added: " + serialNumber + " to item " + item.getName(),
+//                createSerialPayload(saved),
+//                NotificationSeverity.SUCCESS
+//        );
+//
+//        return saved;
+//    }
+//
+//    @Transactional
+//    public void addBulkSerials(Long itemId, List<String> serialNumbers) {
+//        InventoryItem item = inventoryItemRepository.findById(itemId)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        int addedCount = 0;
+//        StringBuilder notes = new StringBuilder("Bulk serials added: ");
+//
+//        for (String serialNumber : serialNumbers) {
+//            if (!inventorySerialRepository.existsBySerialNumber(serialNumber.trim())) {
+//                InventorySerial serial = new InventorySerial();
+//                serial.setInventoryItem(item);
+//                serial.setSerialNumber(serialNumber.trim());
+//                serial.setStatus(SerialStatus.AVAILABLE);
+//                inventorySerialRepository.save(serial);
+//                addedCount++;
+//                notes.append(serialNumber).append(", ");
+//            }
+//        }
+//
+//        if (addedCount > 0) {
+//            int oldQty = item.getQuantity();
+//            item.setQuantity(oldQty + addedCount);
+//            inventoryItemRepository.save(item);
+//
+//            recordStockMovement(item, MovementType.IN, addedCount, "MANUAL", null, null,
+//                    notes.toString(), null, oldQty, item.getQuantity());
+//
+//            // ✅ AUTO-CREATE EXPENSE FOR BULK SERIALS
+//            System.out.println("📦 Adding bulk serials: " + addedCount + " units to: " + item.getName());
+//            if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
+//                Expense createdExpense = expenseService.createExpenseFromInventory(
+//                        item.getName(),
+//                        item.getSku(),
+//                        addedCount,
+//                        item.getPurchasePrice(),
+//                        "Bulk serials added (" + addedCount + " units)"
+//                );
+//                if (createdExpense != null) {
+//                    System.out.println("✅ Expense created for bulk serials: #" + createdExpense.getId());
+//                }
+//            } else {
+//                System.out.println("⚠️ No purchase price set - expense not created");
+//            }
+//
+//            // ✅ FIXED NOTIFICATION - Use simple payload
+//            notificationService.sendNotification(
+//                    NotificationType.STOCK_UPDATE,
+//                    "Bulk serials added: " + addedCount + " units to " + item.getName(),
+//                    createItemPayload(item),
+//                    NotificationSeverity.SUCCESS
+//            );
+//        }
+//    }
+//
+//    /**
+//     * Mark serial as USED when added to job card - FIXED: NO STOCK MOVEMENT
+//     */
+//    @Transactional
+//    public void markSerialAsUsed(String serialNumber, Long jobCardId, String jobCardNumber) {
+//        InventorySerial serial = inventorySerialRepository.findBySerialNumber(serialNumber)
+//                .orElseThrow(() -> new RuntimeException("Serial not found: " + serialNumber));
+//
+//        if (serial.getStatus() != SerialStatus.AVAILABLE) {
+//            throw new RuntimeException("Serial not available: " + serialNumber + ". Current status: " + serial.getStatus());
+//        }
+//
+//        serial.setStatus(SerialStatus.USED);
+//        serial.setUsedAt(LocalDateTime.now());
+//        serial.setUsedBy(getCurrentUsername());
+//        serial.setUsedInReferenceType("JOB_CARD");
+//        serial.setUsedInReferenceId(jobCardId);
+//        serial.setUsedInReferenceNumber(jobCardNumber);
+//
+//        inventorySerialRepository.save(serial);
+//
+//        // FIXED: NO STOCK MOVEMENT RECORDED for job card usage
+//        System.out.println("✅ Serial marked as USED for job card (no stock movement): " + serialNumber);
+//    }
+//
+//    /**
+//     * Release serial back to AVAILABLE when removed from job card or job card cancelled
+//     */
+//    @Transactional
+//    public void releaseSerial(String serialNumber) {
+//        InventorySerial serial = inventorySerialRepository.findBySerialNumber(serialNumber)
+//                .orElseThrow(() -> new RuntimeException("Serial not found: " + serialNumber));
+//
+//        if (serial.getStatus() != SerialStatus.USED) {
+//            throw new RuntimeException("Serial cannot be released. Current status: " + serial.getStatus());
+//        }
+//
+//        serial.setStatus(SerialStatus.AVAILABLE);
+//        serial.setUsedAt(null);
+//        serial.setUsedBy(null);
+//        serial.setUsedInReferenceType(null);
+//        serial.setUsedInReferenceId(null);
+//        serial.setUsedInReferenceNumber(null);
+//        serial.setNotes((serial.getNotes() != null ? serial.getNotes() + " " : "") +
+//                "[Released from job card at " + LocalDateTime.now() + "]");
+//
+//        inventorySerialRepository.save(serial);
+//
+//        // FIXED: NO STOCK MOVEMENT for releasing from job card
+//        System.out.println("✅ Serial released to AVAILABLE (no stock movement): " + serialNumber);
+//    }
+//
+//    /**
+//     * Mark serial as SOLD when invoice is paid - FIXED: ONLY RECORD STOCK MOVEMENT HERE
+//     */
+//    @Transactional
+//    public void markSerialAsSold(String serialNumber, Long invoiceId, String invoiceNumber) {
+//        InventorySerial serial = inventorySerialRepository.findBySerialNumber(serialNumber)
+//                .orElseThrow(() -> new RuntimeException("Serial not found: " + serialNumber));
+//
+//        // FIXED: Allow both AVAILABLE and USED serials to be marked as SOLD
+//        if (serial.getStatus() != SerialStatus.AVAILABLE && serial.getStatus() != SerialStatus.USED) {
+//            throw new RuntimeException("Serial cannot be marked as SOLD. Current status: " + serial.getStatus());
+//        }
+//
+//        // Store the old status for logging
+//        SerialStatus oldStatus = serial.getStatus();
+//
+//        serial.setStatus(SerialStatus.SOLD);
+//        serial.setUsedAt(LocalDateTime.now());
+//        serial.setUsedBy(getCurrentUsername());
+//        serial.setUsedInReferenceType("INVOICE");
+//        serial.setUsedInReferenceId(invoiceId);
+//        serial.setUsedInReferenceNumber(invoiceNumber);
+//        serial.setNotes("Sold via invoice: " + invoiceNumber);
+//
+//        inventorySerialRepository.save(serial);
+//
+//        // FIXED: DEDUCT QUANTITY ONLY WHEN MARKED AS SOLD (not when USED)
+//        updateQuantityForSerialSale(serial.getInventoryItem(), 1);
+//
+//        // FIXED: RECORD STOCK MOVEMENT ONLY FOR INVOICE SALES
+//        recordStockMovementForSerial(serial, MovementType.OUT, 1, "INVOICE", invoiceId,
+//                invoiceNumber, "Sold via invoice", serialNumber);
+//
+//        System.out.println("✅ Serial marked as SOLD: " + serialNumber +
+//                " (was: " + oldStatus + ") for invoice: " + invoiceNumber +
+//                " | Quantity deducted: 1 | Stock movement recorded");
+//    }
+//
+//    /**
+//     * Mark multiple serials as SOLD when invoice is paid
+//     */
+//    @Transactional
+//    public void markMultipleSerialsAsSold(List<String> serialNumbers, Long invoiceId, String invoiceNumber) {
+//        for (String serialNumber : serialNumbers) {
+//            try {
+//                markSerialAsSold(serialNumber, invoiceId, invoiceNumber);
+//                System.out.println("✅ Serial marked as SOLD: " + serialNumber + " for invoice: " + invoiceNumber);
+//            } catch (Exception e) {
+//                System.err.println("❌ Error marking serial as SOLD: " + serialNumber + " - " + e.getMessage());
+//                throw new RuntimeException("Failed to mark serial as SOLD: " + serialNumber, e);
+//            }
+//        }
+//    }
+//
+//    /**
+//     * Update inventory quantity when serial is sold - ONLY CALLED FROM SOLD OPERATIONS
+//     */
+//    private void updateQuantityForSerialSale(InventoryItem item, int quantity) {
+//        try {
+//            int previousQuantity = item.getQuantity();
+//            int newQuantity = previousQuantity - quantity;
+//
+//            if (newQuantity < 0) {
+//                throw new RuntimeException("Cannot reduce quantity below 0 for item: " + item.getName());
+//            }
+//
+//            item.setQuantity(newQuantity);
+//            inventoryItemRepository.save(item);
+//
+//            System.out.println("📦 DEDUCTED quantity for " + item.getName() +
+//                    ": " + previousQuantity + " → " + newQuantity + " (serial SOLD)");
+//
+//        } catch (Exception e) {
+//            System.err.println("❌ Failed to update inventory quantity for serial sale: " + e.getMessage());
+//            throw new RuntimeException("Failed to update inventory quantity", e);
+//        }
+//    }
+//
+//    /**
+//     * Check if serial is available for use (only AVAILABLE status)
+//     */
+//    public boolean isSerialAvailable(String serialNumber) {
+//        return inventorySerialRepository.findBySerialNumber(serialNumber)
+//                .map(serial -> serial.getStatus() == SerialStatus.AVAILABLE)
+//                .orElse(false);
+//    }
+//
+//    /**
+//     * Check if serial is available for use in a specific job card
+//     * Allows serials that are already USED in the same job card
+//     */
+//    public boolean isSerialAvailableForJobCard(String serialNumber, Long jobCardId) {
+//        return inventorySerialRepository.findBySerialNumber(serialNumber)
+//                .map(serial -> {
+//                    if (serial.getStatus() == SerialStatus.AVAILABLE) {
+//                        return true;
+//                    }
+//                    // Allow serials that are already USED in the same job card
+//                    if (serial.getStatus() == SerialStatus.USED &&
+//                            "JOB_CARD".equals(serial.getUsedInReferenceType()) &&
+//                            jobCardId.equals(serial.getUsedInReferenceId())) {
+//                        return true;
+//                    }
+//                    return false;
+//                })
+//                .orElse(false);
+//    }
+//
+//    /**
+//     * Get USED serials by job card that can be marked as SOLD
+//     */
+//    public List<InventorySerial> getUsedSerialsByJobCard(Long jobCardId) {
+//        return inventorySerialRepository.findByUsedInReferenceTypeAndUsedInReferenceIdAndStatus(
+//                "JOB_CARD", jobCardId, SerialStatus.USED);
+//    }
+//
+//    /**
+//     * Get available serials (only AVAILABLE status, exclude USED and SOLD)
+//     */
+//    public List<InventorySerial> getAvailableSerials(Long itemId) {
+//        return inventorySerialRepository.findByInventoryItemIdAndStatus(itemId, SerialStatus.AVAILABLE);
+//    }
+//
+//    /**
+//     * Get serial by number with status check
+//     */
+//    public InventorySerial getSerialByNumber(String serialNumber) {
+//        return inventorySerialRepository.findBySerialNumber(serialNumber)
+//                .orElse(null);
+//    }
+//
+//    /**
+//     * Get all serials for an item
+//     */
+//    public List<InventorySerial> getSerialsByItem(Long itemId) {
+//        return inventorySerialRepository.findByInventoryItemId(itemId);
+//    }
+//
+//    /**
+//     * Get serials by status
+//     */
+//    public List<InventorySerial> getSerialsByStatus(SerialStatus status) {
+//        return inventorySerialRepository.findByStatus(status);
+//    }
+//
+//    /**
+//     * Get serials by reference (job card or invoice)
+//     */
+//    public List<InventorySerial> getSerialsByReference(String referenceType, Long referenceId) {
+//        return inventorySerialRepository.findByUsedInReferenceTypeAndUsedInReferenceId(referenceType, referenceId);
+//    }
+//
+//    // ========== STOCK MOVEMENT MANAGEMENT ==========
+//
+//    /**
+//     * Helper method to record stock movement for serials - ONLY FOR INVOICE
+//     */
+//    private void recordStockMovementForSerial(InventorySerial serial, MovementType type,
+//                                              Integer quantity, String referenceType,
+//                                              Long referenceId, String referenceNumber,
+//                                              String reason, String serialNumber) {
+//
+//        // FIXED: Only record stock movements for INVOICE references
+//        if (!"INVOICE".equals(referenceType)) {
+//            System.out.println("ℹ️ Skipping stock movement record for reference type: " + referenceType);
+//            return;
+//        }
+//
+//        StockMovement movement = new StockMovement();
+//        movement.setInventoryItem(serial.getInventoryItem());
+//        movement.setMovementType(type);
+//        movement.setQuantity(quantity);
+//        movement.setReferenceType(referenceType);
+//        movement.setReferenceId(referenceId);
+//        movement.setReferenceNumber(referenceNumber);
+//        movement.setReason(reason);
+//        movement.setNotes(serialNumber);
+//        movement.setPerformedBy(getCurrentUsername());
+//        movement.setSerialNumber(serial.getSerialNumber());
+//
+//        // Track quantity changes for INVOICE
+//        int previousQuantity = serial.getInventoryItem().getQuantity() + quantity;
+//        int newQuantity = serial.getInventoryItem().getQuantity();
+//
+//        movement.setPreviousQuantity(previousQuantity);
+//        movement.setNewQuantity(newQuantity);
+//
+//        stockMovementRepository.save(movement);
+//
+//        System.out.println("📝 Recorded stock movement for INVOICE: " + serial.getSerialNumber());
+//    }
+//
+//    /**
+//     * Record stock movement - SKIP JOB_CARD MOVEMENTS
+//     */
+//    private void recordStockMovement(InventoryItem item, MovementType type, Integer quantity,
+//                                     String referenceType, Long referenceId, String referenceNumber,
+//                                     String reason, String notes, Integer prevQty, Integer newQty) {
+//
+//        // FIXED: Skip recording stock movements for JOB_CARD
+//        if ("JOB_CARD".equals(referenceType)) {
+//            System.out.println("ℹ️ Skipping JOB_CARD stock movement record for item: " + item.getName());
+//            return;
+//        }
+//
+//        StockMovement movement = new StockMovement();
+//        movement.setInventoryItem(item);
+//        movement.setMovementType(type);
+//        movement.setQuantity(quantity);
+//        movement.setReferenceType(referenceType);
+//        movement.setReferenceId(referenceId);
+//        movement.setReferenceNumber(referenceNumber);
+//        movement.setReason(reason);
+//        movement.setNotes(notes);
+//        movement.setPerformedBy(getCurrentUsername());
+//        movement.setPreviousQuantity(prevQty);
+//        movement.setNewQuantity(newQty);
+//
+//        stockMovementRepository.save(movement);
+//    }
+//
+//    public List<StockMovement> getAllMovements() {
+//        return stockMovementRepository.findAll();
+//    }
+//
+//    public List<StockMovement> getMovementsByDateRange(LocalDateTime start, LocalDateTime end) {
+//        return stockMovementRepository.findByDateRange(start, end);
+//    }
+//
+//    public List<StockMovement> getMovementsByItem(Long itemId) {
+//        return stockMovementRepository.findByInventoryItemId(itemId);
+//    }
+//
+//    // ========== QUERY METHODS ==========
+//
+//    // ========== REPLACE getAllItems() ==========
+//
+//    public List<InventoryItem> getAllItems() {
+//        // ✅ Only return visible items — hidden items excluded from all active workflows
+//        return inventoryItemRepository.findByIsHiddenFalse();
+//    }
+//
+//// ========== ADD THESE NEW METHODS (place after deleteItem) ==========
+//
+//    /**
+//     * Hide an item — removes it from active workflows without deleting from DB
+//     */
+//    @Transactional
+//    public InventoryItem hideItem(Long id) {
+//        InventoryItem item = inventoryItemRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        item.setIsHidden(true);
+//        InventoryItem saved = inventoryItemRepository.save(item);
+//
+//        notificationService.sendNotification(
+//                NotificationType.JOB_UPDATED,
+//                "Inventory item hidden: " + item.getName() + " (SKU: " + item.getSku() + ")",
+//                createItemPayload(saved),
+//                NotificationSeverity.WARNING
+//        );
+//
+//        return saved;
+//    }
+//
+//    /**
+//     * Unhide an item — restores it to all active workflows
+//     */
+//    @Transactional
+//    public InventoryItem unhideItem(Long id) {
+//        InventoryItem item = inventoryItemRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        item.setIsHidden(false);
+//        InventoryItem saved = inventoryItemRepository.save(item);
+//
+//        notificationService.sendNotification(
+//                NotificationType.STOCK_UPDATE,
+//                "Inventory item restored: " + item.getName() + " (SKU: " + item.getSku() + ")",
+//                createItemPayload(saved),
+//                NotificationSeverity.SUCCESS
+//        );
+//
+//        return saved;
+//    }
+//
+//    /**
+//     * Get all hidden items — for the Hidden Archive view
+//     */
+//    public List<InventoryItem> getHiddenItems() {
+//        return inventoryItemRepository.findByIsHiddenTrue();
+//    }
+//
+//    public InventoryItem getItemById(Long id) {
+//        return inventoryItemRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//    }
+//
+//    public Optional<InventoryItem> getItemBySku(String sku) {
+//        return inventoryItemRepository.findBySku(sku);
+//    }
+//
+//    public List<InventoryItem> getItemsByCategory(String category) {
+//        return inventoryItemRepository.findByCategory(category);
+//    }
+//
+//    public List<InventoryItem> getLowStockItems() {
+//        return inventoryItemRepository.findLowStockItems();
+//    }
+//
+//    public List<InventoryItem> getOutOfStockItems() {
+//        return inventoryItemRepository.findOutOfStockItems();
+//    }
+//
+//    public List<InventoryItem> searchItems(String search) {
+//        return inventoryItemRepository.searchItems(search);
+//    }
+//
+//    public List<String> getAllCategories() {
+//        return inventoryItemRepository.findAllCategories();
+//    }
+//
+//    public boolean itemExistsBySku(String sku) {
+//        return inventoryItemRepository.existsBySku(sku);
+//    }
+//
+//    // ========== HELPER METHODS ==========
+//
+//    private void checkLowStock(InventoryItem item) {
+//        if (item.getQuantity() <= item.getMinThreshold()) {
+//            notificationService.sendNotification(
+//                    NotificationType.LOW_STOCK,
+//                    "⚠️ LOW STOCK ALERT: " + item.getName() +
+//                            " | Current: " + item.getQuantity() +
+//                            " | Shortage: " + (item.getMinThreshold() - item.getQuantity()),
+//                    createItemPayload(item),
+//                    NotificationSeverity.DANGER
+//            );
+//        }
+//    }
+//
+//    private String generateSku() {
+//        Long count = inventoryItemRepository.count();
+//        String sequencePart = String.format("%05d", (count + 1));
+//        return "SKU-" + sequencePart;
+//    }
+//
+//    private String getCurrentUsername() {
+//        try {
+//            return SecurityContextHolder.getContext().getAuthentication().getName();
+//        } catch (Exception e) {
+//            return "SYSTEM";
+//        }
+//    }
+//
+//    // ========== INVENTORY STATISTICS ==========
+//
+//    public InventoryStatistics getInventoryStatistics() {
+//        Long totalItems = inventoryItemRepository.count();
+//        Long lowStockItems = (long) inventoryItemRepository.findLowStockItems().size();
+//        Long outOfStockItems = (long) inventoryItemRepository.findOutOfStockItems().size();
+//        Long serializedItems = inventoryItemRepository.countByHasSerialization(true);
+//
+//        Double totalValue = inventoryItemRepository.findAll().stream()
+//                .mapToDouble(item -> (item.getQuantity() != null ? item.getQuantity() : 0) *
+//                        (item.getPurchasePrice() != null ? item.getPurchasePrice() : 0))
+//                .sum();
+//
+//        return new InventoryStatistics(totalItems, lowStockItems, outOfStockItems,
+//                serializedItems, totalValue);
+//    }
+//
+//    public static class InventoryStatistics {
+//        public final Long totalItems;
+//        public final Long lowStockItems;
+//        public final Long outOfStockItems;
+//        public final Long serializedItems;
+//        public final Double totalValue;
+//
+//        public InventoryStatistics(Long totalItems, Long lowStockItems, Long outOfStockItems,
+//                                   Long serializedItems, Double totalValue) {
+//            this.totalItems = totalItems;
+//            this.lowStockItems = lowStockItems;
+//            this.outOfStockItems = outOfStockItems;
+//            this.serializedItems = serializedItems;
+//            this.totalValue = totalValue;
+//        }
+//    }
+//
+//    // ========== BULK OPERATIONS ==========
+//
+//    @Transactional
+//    public void bulkUpdateQuantities(List<Long> itemIds, List<Integer> quantities) {
+//        if (itemIds.size() != quantities.size()) {
+//            throw new RuntimeException("Item IDs and quantities lists must have the same size");
+//        }
+//
+//        for (int i = 0; i < itemIds.size(); i++) {
+//            Long itemId = itemIds.get(i);
+//            Integer newQuantity = quantities.get(i);
+//
+//            InventoryItem item = inventoryItemRepository.findById(itemId)
+//                    .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
+//
+//            int oldQuantity = item.getQuantity();
+//            item.setQuantity(newQuantity);
+//            inventoryItemRepository.save(item);
+//
+//            if (oldQuantity != newQuantity) {
+//                int diff = newQuantity - oldQuantity;
+//                MovementType type = diff > 0 ? MovementType.IN : MovementType.OUT;
+//                recordStockMovement(item, type, Math.abs(diff), "BULK_UPDATE", null, null,
+//                        "Bulk quantity update", null, oldQuantity, newQuantity);
+//            }
+//
+//            checkLowStock(item);
+//        }
+//    }
+//
+//    @Transactional
+//    public void bulkUpdatePrices(List<Long> itemIds, List<Double> sellingPrices, List<Double> purchasePrices) {
+//        if (itemIds.size() != sellingPrices.size() || itemIds.size() != purchasePrices.size()) {
+//            throw new RuntimeException("All lists must have the same size");
+//        }
+//
+//        for (int i = 0; i < itemIds.size(); i++) {
+//            Long itemId = itemIds.get(i);
+//            Double sellingPrice = sellingPrices.get(i);
+//            Double purchasePrice = purchasePrices.get(i);
+//
+//            InventoryItem item = inventoryItemRepository.findById(itemId)
+//                    .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
+//
+//            if (sellingPrice != null) {
+//                item.setSellingPrice(sellingPrice);
+//            }
+//            if (purchasePrice != null) {
+//                item.setPurchasePrice(purchasePrice);
+//            }
+//
+//            inventoryItemRepository.save(item);
+//        }
+//    }
+//
+//    // ========== SERIAL NUMBER VALIDATION ==========
+//
+//    public SerialValidationResult validateSerialsForItem(Long itemId, List<String> serialNumbers) {
+//        InventoryItem item = inventoryItemRepository.findById(itemId)
+//                .orElseThrow(() -> new RuntimeException("Item not found"));
+//
+//        SerialValidationResult result = new SerialValidationResult();
+//        result.setItem(item);
+//
+//        if (!item.getHasSerialization()) {
+//            result.setValid(false);
+//            result.setMessage("Item does not support serialization");
+//            return result;
+//        }
+//
+//        if (serialNumbers == null || serialNumbers.isEmpty()) {
+//            result.setValid(false);
+//            result.setMessage("Serial numbers are required for this item");
+//            return result;
+//        }
+//
+//        for (String serialNumber : serialNumbers) {
+//            Optional<InventorySerial> serialOpt = inventorySerialRepository.findBySerialNumber(serialNumber);
+//
+//            if (serialOpt.isEmpty()) {
+//                result.getInvalidSerials().add(serialNumber);
+//                result.getReasons().put(serialNumber, "Serial number not found");
+//            } else {
+//                InventorySerial serial = serialOpt.get();
+//                if (!serial.getInventoryItem().getId().equals(itemId)) {
+//                    result.getInvalidSerials().add(serialNumber);
+//                    result.getReasons().put(serialNumber, "Serial does not belong to this item");
+//                } else if (serial.getStatus() != SerialStatus.AVAILABLE) {
+//                    result.getInvalidSerials().add(serialNumber);
+//                    result.getReasons().put(serialNumber, "Serial is not available. Status: " + serial.getStatus());
+//                } else {
+//                    result.getValidSerials().add(serialNumber);
+//                }
+//            }
+//        }
+//
+//        result.setValid(result.getInvalidSerials().isEmpty());
+//        if (!result.isValid()) {
+//            result.setMessage("Some serial numbers are invalid: " + String.join(", ", result.getInvalidSerials()));
+//        }
+//
+//        return result;
+//    }
+//
+//    public static class SerialValidationResult {
+//        private InventoryItem item;
+//        private boolean valid;
+//        private String message;
+//        private List<String> validSerials = new ArrayList<>();
+//        private List<String> invalidSerials = new ArrayList<>();
+//        private Map<String, String> reasons = new HashMap<>();
+//
+//        public InventoryItem getItem() { return item; }
+//        public void setItem(InventoryItem item) { this.item = item; }
+//        public boolean isValid() { return valid; }
+//        public void setValid(boolean valid) { this.valid = valid; }
+//        public String getMessage() { return message; }
+//        public void setMessage(String message) { this.message = message; }
+//        public List<String> getValidSerials() { return validSerials; }
+//        public void setValidSerials(List<String> validSerials) { this.validSerials = validSerials; }
+//        public List<String> getInvalidSerials() { return invalidSerials; }
+//        public void setInvalidSerials(List<String> invalidSerials) { this.invalidSerials = invalidSerials; }
+//        public Map<String, String> getReasons() { return reasons; }
+//        public void setReasons(Map<String, String> reasons) { this.reasons = reasons; }
+//    }
+//}
+
+
+
+
+
 
 package com.example.demo.service;
 
@@ -28,9 +1271,6 @@ public class InventoryService {
 
     // ========== HELPER METHOD TO CREATE PAYLOAD ==========
 
-    /**
-     * Create simple payload without lazy-loaded collections to avoid LazyInitializationException
-     */
     private Map<String, Object> createItemPayload(InventoryItem item) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("id", item.getId());
@@ -44,12 +1284,10 @@ public class InventoryService {
         payload.put("sellingPrice", item.getSellingPrice());
         payload.put("specialPrice", item.getSpecialPrice());
         payload.put("hasSerialization", item.getHasSerialization());
+        payload.put("isHidden", item.getIsHidden());
         return payload;
     }
 
-    /**
-     * Create simple payload for serial
-     */
     private Map<String, Object> createSerialPayload(InventorySerial serial) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("id", serial.getId());
@@ -69,7 +1307,6 @@ public class InventoryService {
             item.setSku(generateSku());
         }
 
-        // Set defaults
         if (item.getHasSerialization() == null) {
             item.setHasSerialization(false);
         }
@@ -79,10 +1316,11 @@ public class InventoryService {
         if (item.getMinThreshold() == null) {
             item.setMinThreshold(0);
         }
+        // ✅ Always start visible
+        item.setIsHidden(false);
 
         InventoryItem saved = inventoryItemRepository.save(item);
 
-        // ✅ FIXED NOTIFICATION - Use simple payload
         notificationService.sendNotification(
                 NotificationType.STOCK_UPDATE,
                 "Inventory item created: " + item.getName() + " (SKU: " + item.getSku() + ") | Initial Qty: " + item.getQuantity(),
@@ -90,12 +1328,10 @@ public class InventoryService {
                 NotificationSeverity.SUCCESS
         );
 
-        // Record initial stock if quantity > 0
         if (saved.getQuantity() > 0) {
             recordStockMovement(saved, MovementType.IN, saved.getQuantity(),
                     "MANUAL", null, null, "Initial stock", null, 0, saved.getQuantity());
 
-            // ✅ AUTO-CREATE EXPENSE FOR INITIAL STOCK
             System.out.println("📦 Creating item: " + saved.getName() + " | Qty: " + saved.getQuantity());
             if (saved.getPurchasePrice() != null && saved.getPurchasePrice() > 0) {
                 Expense createdExpense = expenseService.createExpenseFromInventory(
@@ -124,38 +1360,19 @@ public class InventoryService {
 
         int oldQuantity = existing.getQuantity();
 
-        // Update fields
-        if (updates.getName() != null) {
-            existing.setName(updates.getName());
-        }
-        if (updates.getDescription() != null) {
-            existing.setDescription(updates.getDescription());
-        }
-        if (updates.getCategory() != null) {
-            existing.setCategory(updates.getCategory());
-        }
-        if (updates.getQuantity() != null) {
-            existing.setQuantity(updates.getQuantity());
-        }
-        if (updates.getMinThreshold() != null) {
-            existing.setMinThreshold(updates.getMinThreshold());
-        }
-        if (updates.getPurchasePrice() != null) {
-            existing.setPurchasePrice(updates.getPurchasePrice());
-        }
-        if (updates.getSellingPrice() != null) {
-            existing.setSellingPrice(updates.getSellingPrice());
-        }
-        if (updates.getSpecialPrice() != null) {
-            existing.setSpecialPrice(updates.getSpecialPrice());
-        }
-        if (updates.getHasSerialization() != null) {
-            existing.setHasSerialization(updates.getHasSerialization());
-        }
+        if (updates.getName() != null) existing.setName(updates.getName());
+        if (updates.getDescription() != null) existing.setDescription(updates.getDescription());
+        if (updates.getCategory() != null) existing.setCategory(updates.getCategory());
+        if (updates.getQuantity() != null) existing.setQuantity(updates.getQuantity());
+        if (updates.getMinThreshold() != null) existing.setMinThreshold(updates.getMinThreshold());
+        if (updates.getPurchasePrice() != null) existing.setPurchasePrice(updates.getPurchasePrice());
+        if (updates.getSellingPrice() != null) existing.setSellingPrice(updates.getSellingPrice());
+        if (updates.getSpecialPrice() != null) existing.setSpecialPrice(updates.getSpecialPrice());
+        if (updates.getHasSerialization() != null) existing.setHasSerialization(updates.getHasSerialization());
+        // ✅ NOTE: isHidden is intentionally NOT updated here — use hideItem/unhideItem instead
 
         InventoryItem saved = inventoryItemRepository.save(existing);
 
-        // ✅ FIXED NOTIFICATION - Use simple payload
         notificationService.sendNotification(
                 NotificationType.JOB_UPDATED,
                 "Inventory item updated: " + existing.getName() + " (SKU: " + existing.getSku() + ")",
@@ -163,7 +1380,6 @@ public class InventoryService {
                 NotificationSeverity.INFO
         );
 
-        // Record stock change if quantity changed
         if (oldQuantity != saved.getQuantity()) {
             int diff = saved.getQuantity() - oldQuantity;
             MovementType type = diff > 0 ? MovementType.IN : MovementType.OUT;
@@ -180,23 +1396,96 @@ public class InventoryService {
         InventoryItem item = inventoryItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Item not found"));
 
-        // Create payload before deleting
         Map<String, Object> payload = createItemPayload(item);
 
-        // Delete associated serials first
         if (item.getSerials() != null && !item.getSerials().isEmpty()) {
             inventorySerialRepository.deleteAll(item.getSerials());
         }
 
         inventoryItemRepository.delete(item);
 
-        // ✅ FIXED NOTIFICATION - Use simple payload
         notificationService.sendNotification(
                 NotificationType.ITEM_REMOVED,
                 "Item deleted: " + item.getName() + " (SKU: " + item.getSku() + ")",
                 payload,
                 NotificationSeverity.WARNING
         );
+    }
+
+    // ========== HIDE / UNHIDE ==========
+
+    /**
+     * Hide an item — removes it from all active workflow dropdowns.
+     * The item stays in the database for historical records.
+     */
+    @Transactional
+    public InventoryItem hideItem(Long id) {
+        InventoryItem item = inventoryItemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Item not found: " + id));
+
+        if (Boolean.TRUE.equals(item.getIsHidden())) {
+            throw new RuntimeException("Item is already hidden: " + item.getName());
+        }
+
+        item.setIsHidden(true);
+        InventoryItem saved = inventoryItemRepository.save(item);
+
+        notificationService.sendNotification(
+                NotificationType.JOB_UPDATED,
+                "Item hidden from active workflows: " + item.getName() + " (SKU: " + item.getSku() + ")",
+                createItemPayload(saved),
+                NotificationSeverity.INFO
+        );
+
+        System.out.println("🙈 Item hidden: " + item.getName() + " (ID: " + id + ")");
+        return saved;
+    }
+
+    /**
+     * Unhide an item — restores visibility across all active workflow dropdowns.
+     */
+    @Transactional
+    public InventoryItem unhideItem(Long id) {
+        InventoryItem item = inventoryItemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Item not found: " + id));
+
+        if (!Boolean.TRUE.equals(item.getIsHidden())) {
+            throw new RuntimeException("Item is already visible: " + item.getName());
+        }
+
+        item.setIsHidden(false);
+        InventoryItem saved = inventoryItemRepository.save(item);
+
+        notificationService.sendNotification(
+                NotificationType.JOB_UPDATED,
+                "Item restored to active workflows: " + item.getName() + " (SKU: " + item.getSku() + ")",
+                createItemPayload(saved),
+                NotificationSeverity.SUCCESS
+        );
+
+        System.out.println("👁️ Item unhidden: " + item.getName() + " (ID: " + id + ")");
+        return saved;
+    }
+
+    /**
+     * Get all visible (non-hidden) items — used by active workflows (job cards, invoices).
+     */
+    public List<InventoryItem> getAllItems() {
+        return inventoryItemRepository.findAllVisible();
+    }
+
+    /**
+     * Get all hidden items — used by the Hidden Archive view in Inventory Management.
+     */
+    public List<InventoryItem> getHiddenItems() {
+        return inventoryItemRepository.findAllHidden();
+    }
+
+    /**
+     * Get ALL items (both hidden and visible) — for admin stats only.
+     */
+    public List<InventoryItem> getAllItemsIncludingHidden() {
+        return inventoryItemRepository.findAll();
     }
 
     // ========== STOCK MANAGEMENT ==========
@@ -217,7 +1506,6 @@ public class InventoryService {
         recordStockMovement(item, MovementType.IN, quantity, "MANUAL", null, null,
                 reason, notes, oldQty, item.getQuantity());
 
-        // ✅ AUTO-CREATE EXPENSE FOR ADDED STOCK
         System.out.println("📦 Adding stock to: " + item.getName() + " | Qty: " + quantity);
         if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
             Expense createdExpense = expenseService.createExpenseFromInventory(
@@ -234,7 +1522,6 @@ public class InventoryService {
             System.out.println("⚠️ No purchase price set - expense not created");
         }
 
-        // ✅ FIXED NOTIFICATION - Use simple payload
         notificationService.sendNotification(
                 NotificationType.STOCK_UPDATE,
                 "Stock added: " + item.getName() + " | Qty: +" + quantity + " | New Stock: " + item.getQuantity(),
@@ -260,7 +1547,6 @@ public class InventoryService {
         recordStockMovement(item, movementType, Math.abs(diff),
                 "ADJUSTMENT", null, null, reason, null, oldQty, newQuantity);
 
-        // ✅ FIXED NOTIFICATION - Use simple payload
         notificationService.sendNotification(
                 NotificationType.JOB_UPDATED,
                 "Stock adjusted: " + item.getName() + " | From: " + oldQty + " → To: " + newQuantity + " | Reason: " + reason,
@@ -292,7 +1578,6 @@ public class InventoryService {
                     throw new RuntimeException("Serial not available: " + serial + ". Status: " + invSerial.getStatus());
                 }
 
-                // Mark as USED for direct use - BUT DON'T DEDUCT QUANTITY OR RECORD MOVEMENT
                 invSerial.setStatus(SerialStatus.USED);
                 invSerial.setUsedAt(LocalDateTime.now());
                 invSerial.setUsedBy(getCurrentUsername());
@@ -303,7 +1588,6 @@ public class InventoryService {
                 System.out.println("ℹ️ Serial marked as USED (no stock movement recorded): " + serial);
             }
         } else {
-            // For non-serialized items, deduct quantity immediately
             if (item.getQuantity() < quantity) {
                 throw new RuntimeException("Not enough stock for item: " + item.getName());
             }
@@ -316,7 +1600,6 @@ public class InventoryService {
 
         inventoryItemRepository.save(item);
 
-        // ✅ FIXED NOTIFICATION - Use simple payload
         notificationService.sendNotification(
                 NotificationType.STOCK_UPDATE,
                 "Stock deducted for item: " + item.getName() + " | Qty: -" + quantity + " | Remaining: " + item.getQuantity(),
@@ -346,7 +1629,6 @@ public class InventoryService {
                     throw new RuntimeException("Serial not available: " + serial + ". Status: " + invSerial.getStatus());
                 }
 
-                // Mark as USED for job card - NO STOCK MOVEMENT RECORDED
                 invSerial.setStatus(SerialStatus.USED);
                 invSerial.setUsedAt(LocalDateTime.now());
                 invSerial.setUsedBy(getCurrentUsername());
@@ -359,14 +1641,11 @@ public class InventoryService {
                 System.out.println("✅ Serial marked as USED for job card (no stock movement): " + serial);
             }
         } else {
-            // For non-serialized items, deduct quantity immediately
             if (item.getQuantity() < quantity) {
                 throw new RuntimeException("Not enough stock");
             }
 
             item.setQuantity(item.getQuantity() - quantity);
-
-            // FIXED: Don't record stock movement for JOB_CARD non-serialized items either
             System.out.println("ℹ️ Non-serialized item used in job card (no stock movement): " + item.getName());
         }
 
@@ -395,7 +1674,6 @@ public class InventoryService {
                     throw new RuntimeException("Serial not available: " + serial + ". Status: " + invSerial.getStatus());
                 }
 
-                // Mark serial as SOLD with invoice reference - THIS IS WHERE WE DEDUCT QUANTITY
                 invSerial.setStatus(SerialStatus.SOLD);
                 invSerial.setUsedAt(LocalDateTime.now());
                 invSerial.setUsedBy(getCurrentUsername());
@@ -405,30 +1683,24 @@ public class InventoryService {
                 invSerial.setNotes(notes);
                 inventorySerialRepository.save(invSerial);
 
-                // DEDUCT QUANTITY ONLY WHEN MARKED AS SOLD (not when USED)
                 updateQuantityForSerialSale(item, 1);
-
-                // RECORD STOCK MOVEMENT ONLY FOR INVOICE
                 recordStockMovementForSerial(invSerial, MovementType.OUT, 1, "INVOICE", invoiceId, invoiceNumber,
                         "Sold via invoice", serial);
                 oldQty--;
             }
         } else {
-            // For non-serialized items, deduct quantity
             if (item.getQuantity() < quantity) {
                 throw new RuntimeException("Not enough stock for item: " + item.getName());
             }
 
             item.setQuantity(item.getQuantity() - quantity);
 
-            // RECORD STOCK MOVEMENT FOR NON-SERIALIZED INVOICE ITEMS
             recordStockMovement(item, MovementType.OUT, quantity, "INVOICE", invoiceId, invoiceNumber,
                     "Sold via invoice", notes, oldQty, item.getQuantity());
         }
 
         inventoryItemRepository.save(item);
 
-        // ✅ FIXED NOTIFICATION - Use simple payload
         notificationService.sendNotification(
                 NotificationType.STOCK_UPDATE,
                 "Stock deducted for invoice: " + item.getName() + " | Qty: -" + quantity + " | Remaining: " + item.getQuantity(),
@@ -449,7 +1721,6 @@ public class InventoryService {
         int oldQty = item.getQuantity();
 
         if (item.getHasSerialization()) {
-            // ── Serialized item: verify and permanently delete each serial ──
             if (serialNumbers == null || serialNumbers.isEmpty()) {
                 throw new RuntimeException("Serial numbers required for serialized item correction");
             }
@@ -468,12 +1739,10 @@ public class InventoryService {
                     throw new RuntimeException("Serial '" + serialNumber + "' does not belong to this item.");
                 }
 
-                // Permanently delete the serial record
                 inventorySerialRepository.delete(serial);
                 System.out.println("🗑️ Serial permanently deleted (correction): " + serialNumber);
             }
 
-            // Reduce quantity by number of serials removed
             int newQty = oldQty - serialNumbers.size();
             if (newQty < 0) {
                 throw new RuntimeException("Correction would result in negative stock.");
@@ -481,39 +1750,28 @@ public class InventoryService {
             item.setQuantity(newQty);
             inventoryItemRepository.save(item);
 
-            // Record stock movement
             recordStockMovement(item, MovementType.OUT, serialNumbers.size(),
                     "CORRECTION", null, null,
                     "Stock correction (serial removal): " + notes,
                     String.join(", ", serialNumbers),
                     oldQty, item.getQuantity());
 
-            // Auto-create negative expense (credit) if purchase price exists
             if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
                 Expense creditExpense = expenseService.createExpenseFromInventory(
-                        item.getName(),
-                        item.getSku(),
-                        -serialNumbers.size(),          // negative quantity = credit
-                        item.getPurchasePrice(),
-                        "Stock correction credit (serials removed): " + notes
-                );
+                        item.getName(), item.getSku(), -serialNumbers.size(),
+                        item.getPurchasePrice(), "Stock correction credit (serials removed): " + notes);
                 if (creditExpense != null) {
                     System.out.println("✅ Negative expense (credit) created for serial correction: #" + creditExpense.getId());
                 }
             }
 
-            // Notification
             notificationService.sendNotification(
                     NotificationType.STOCK_UPDATE,
                     "Stock correction (serials): " + item.getName() +
-                            " | Removed: " + serialNumbers.size() + " serials" +
-                            " | New Stock: " + item.getQuantity(),
-                    createItemPayload(item),
-                    NotificationSeverity.WARNING
-            );
+                            " | Removed: " + serialNumbers.size() + " serials | New Stock: " + item.getQuantity(),
+                    createItemPayload(item), NotificationSeverity.WARNING);
 
         } else {
-            // ── Non-serialized item: just reduce quantity ──
             if (quantity == null || quantity <= 0) {
                 throw new RuntimeException("Quantity must be greater than 0 for correction");
             }
@@ -525,36 +1783,24 @@ public class InventoryService {
             item.setQuantity(newQty);
             inventoryItemRepository.save(item);
 
-            // Record stock movement
             recordStockMovement(item, MovementType.OUT, quantity,
                     "CORRECTION", null, null,
-                    "Stock correction: " + notes,
-                    null,
-                    oldQty, item.getQuantity());
+                    "Stock correction: " + notes, null, oldQty, item.getQuantity());
 
-            // Auto-create negative expense (credit) if purchase price exists
             if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
                 Expense creditExpense = expenseService.createExpenseFromInventory(
-                        item.getName(),
-                        item.getSku(),
-                        -quantity,                       // negative quantity = credit
-                        item.getPurchasePrice(),
-                        "Stock correction credit: " + notes
-                );
+                        item.getName(), item.getSku(), -quantity,
+                        item.getPurchasePrice(), "Stock correction credit: " + notes);
                 if (creditExpense != null) {
                     System.out.println("✅ Negative expense (credit) created for stock correction: #" + creditExpense.getId());
                 }
             }
 
-            // Notification
             notificationService.sendNotification(
                     NotificationType.STOCK_UPDATE,
                     "Stock correction: " + item.getName() +
-                            " | Removed: " + quantity + " units" +
-                            " | New Stock: " + item.getQuantity(),
-                    createItemPayload(item),
-                    NotificationSeverity.WARNING
-            );
+                            " | Removed: " + quantity + " units | New Stock: " + item.getQuantity(),
+                    createItemPayload(item), NotificationSeverity.WARNING);
         }
 
         checkLowStock(item);
@@ -578,7 +1824,6 @@ public class InventoryService {
 
         InventorySerial saved = inventorySerialRepository.save(serial);
 
-        // Update quantity and record movement
         int oldQty = item.getQuantity();
         item.setQuantity(oldQty + 1);
         inventoryItemRepository.save(item);
@@ -586,16 +1831,10 @@ public class InventoryService {
         recordStockMovement(item, MovementType.IN, 1, "MANUAL", null, null,
                 "Serial added", serialNumber, oldQty, item.getQuantity());
 
-        // ✅ AUTO-CREATE EXPENSE FOR SERIAL ADDED
         System.out.println("📦 Adding serial: " + serialNumber + " to: " + item.getName());
         if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
             Expense createdExpense = expenseService.createExpenseFromInventory(
-                    item.getName(),
-                    item.getSku(),
-                    1,
-                    item.getPurchasePrice(),
-                    "Serial added: " + serialNumber
-            );
+                    item.getName(), item.getSku(), 1, item.getPurchasePrice(), "Serial added: " + serialNumber);
             if (createdExpense != null) {
                 System.out.println("✅ Expense created for serial: #" + createdExpense.getId());
             }
@@ -603,13 +1842,10 @@ public class InventoryService {
             System.out.println("⚠️ No purchase price set - expense not created");
         }
 
-        // ✅ FIXED NOTIFICATION - Use simple payload
         notificationService.sendNotification(
                 NotificationType.STOCK_UPDATE,
                 "Serial number added: " + serialNumber + " to item " + item.getName(),
-                createSerialPayload(saved),
-                NotificationSeverity.SUCCESS
-        );
+                createSerialPayload(saved), NotificationSeverity.SUCCESS);
 
         return saved;
     }
@@ -642,16 +1878,11 @@ public class InventoryService {
             recordStockMovement(item, MovementType.IN, addedCount, "MANUAL", null, null,
                     notes.toString(), null, oldQty, item.getQuantity());
 
-            // ✅ AUTO-CREATE EXPENSE FOR BULK SERIALS
             System.out.println("📦 Adding bulk serials: " + addedCount + " units to: " + item.getName());
             if (item.getPurchasePrice() != null && item.getPurchasePrice() > 0) {
                 Expense createdExpense = expenseService.createExpenseFromInventory(
-                        item.getName(),
-                        item.getSku(),
-                        addedCount,
-                        item.getPurchasePrice(),
-                        "Bulk serials added (" + addedCount + " units)"
-                );
+                        item.getName(), item.getSku(), addedCount, item.getPurchasePrice(),
+                        "Bulk serials added (" + addedCount + " units)");
                 if (createdExpense != null) {
                     System.out.println("✅ Expense created for bulk serials: #" + createdExpense.getId());
                 }
@@ -659,19 +1890,13 @@ public class InventoryService {
                 System.out.println("⚠️ No purchase price set - expense not created");
             }
 
-            // ✅ FIXED NOTIFICATION - Use simple payload
             notificationService.sendNotification(
                     NotificationType.STOCK_UPDATE,
                     "Bulk serials added: " + addedCount + " units to " + item.getName(),
-                    createItemPayload(item),
-                    NotificationSeverity.SUCCESS
-            );
+                    createItemPayload(item), NotificationSeverity.SUCCESS);
         }
     }
 
-    /**
-     * Mark serial as USED when added to job card - FIXED: NO STOCK MOVEMENT
-     */
     @Transactional
     public void markSerialAsUsed(String serialNumber, Long jobCardId, String jobCardNumber) {
         InventorySerial serial = inventorySerialRepository.findBySerialNumber(serialNumber)
@@ -689,14 +1914,9 @@ public class InventoryService {
         serial.setUsedInReferenceNumber(jobCardNumber);
 
         inventorySerialRepository.save(serial);
-
-        // FIXED: NO STOCK MOVEMENT RECORDED for job card usage
         System.out.println("✅ Serial marked as USED for job card (no stock movement): " + serialNumber);
     }
 
-    /**
-     * Release serial back to AVAILABLE when removed from job card or job card cancelled
-     */
     @Transactional
     public void releaseSerial(String serialNumber) {
         InventorySerial serial = inventorySerialRepository.findBySerialNumber(serialNumber)
@@ -716,25 +1936,18 @@ public class InventoryService {
                 "[Released from job card at " + LocalDateTime.now() + "]");
 
         inventorySerialRepository.save(serial);
-
-        // FIXED: NO STOCK MOVEMENT for releasing from job card
         System.out.println("✅ Serial released to AVAILABLE (no stock movement): " + serialNumber);
     }
 
-    /**
-     * Mark serial as SOLD when invoice is paid - FIXED: ONLY RECORD STOCK MOVEMENT HERE
-     */
     @Transactional
     public void markSerialAsSold(String serialNumber, Long invoiceId, String invoiceNumber) {
         InventorySerial serial = inventorySerialRepository.findBySerialNumber(serialNumber)
                 .orElseThrow(() -> new RuntimeException("Serial not found: " + serialNumber));
 
-        // FIXED: Allow both AVAILABLE and USED serials to be marked as SOLD
         if (serial.getStatus() != SerialStatus.AVAILABLE && serial.getStatus() != SerialStatus.USED) {
             throw new RuntimeException("Serial cannot be marked as SOLD. Current status: " + serial.getStatus());
         }
 
-        // Store the old status for logging
         SerialStatus oldStatus = serial.getStatus();
 
         serial.setStatus(SerialStatus.SOLD);
@@ -747,10 +1960,7 @@ public class InventoryService {
 
         inventorySerialRepository.save(serial);
 
-        // FIXED: DEDUCT QUANTITY ONLY WHEN MARKED AS SOLD (not when USED)
         updateQuantityForSerialSale(serial.getInventoryItem(), 1);
-
-        // FIXED: RECORD STOCK MOVEMENT ONLY FOR INVOICE SALES
         recordStockMovementForSerial(serial, MovementType.OUT, 1, "INVOICE", invoiceId,
                 invoiceNumber, "Sold via invoice", serialNumber);
 
@@ -759,9 +1969,6 @@ public class InventoryService {
                 " | Quantity deducted: 1 | Stock movement recorded");
     }
 
-    /**
-     * Mark multiple serials as SOLD when invoice is paid
-     */
     @Transactional
     public void markMultipleSerialsAsSold(List<String> serialNumbers, Long invoiceId, String invoiceNumber) {
         for (String serialNumber : serialNumbers) {
@@ -775,9 +1982,6 @@ public class InventoryService {
         }
     }
 
-    /**
-     * Update inventory quantity when serial is sold - ONLY CALLED FROM SOLD OPERATIONS
-     */
     private void updateQuantityForSerialSale(InventoryItem item, int quantity) {
         try {
             int previousQuantity = item.getQuantity();
@@ -792,98 +1996,61 @@ public class InventoryService {
 
             System.out.println("📦 DEDUCTED quantity for " + item.getName() +
                     ": " + previousQuantity + " → " + newQuantity + " (serial SOLD)");
-
         } catch (Exception e) {
             System.err.println("❌ Failed to update inventory quantity for serial sale: " + e.getMessage());
             throw new RuntimeException("Failed to update inventory quantity", e);
         }
     }
 
-    /**
-     * Check if serial is available for use (only AVAILABLE status)
-     */
     public boolean isSerialAvailable(String serialNumber) {
         return inventorySerialRepository.findBySerialNumber(serialNumber)
                 .map(serial -> serial.getStatus() == SerialStatus.AVAILABLE)
                 .orElse(false);
     }
 
-    /**
-     * Check if serial is available for use in a specific job card
-     * Allows serials that are already USED in the same job card
-     */
     public boolean isSerialAvailableForJobCard(String serialNumber, Long jobCardId) {
         return inventorySerialRepository.findBySerialNumber(serialNumber)
                 .map(serial -> {
-                    if (serial.getStatus() == SerialStatus.AVAILABLE) {
-                        return true;
-                    }
-                    // Allow serials that are already USED in the same job card
+                    if (serial.getStatus() == SerialStatus.AVAILABLE) return true;
                     if (serial.getStatus() == SerialStatus.USED &&
                             "JOB_CARD".equals(serial.getUsedInReferenceType()) &&
-                            jobCardId.equals(serial.getUsedInReferenceId())) {
-                        return true;
-                    }
+                            jobCardId.equals(serial.getUsedInReferenceId())) return true;
                     return false;
                 })
                 .orElse(false);
     }
 
-    /**
-     * Get USED serials by job card that can be marked as SOLD
-     */
     public List<InventorySerial> getUsedSerialsByJobCard(Long jobCardId) {
         return inventorySerialRepository.findByUsedInReferenceTypeAndUsedInReferenceIdAndStatus(
                 "JOB_CARD", jobCardId, SerialStatus.USED);
     }
 
-    /**
-     * Get available serials (only AVAILABLE status, exclude USED and SOLD)
-     */
     public List<InventorySerial> getAvailableSerials(Long itemId) {
         return inventorySerialRepository.findByInventoryItemIdAndStatus(itemId, SerialStatus.AVAILABLE);
     }
 
-    /**
-     * Get serial by number with status check
-     */
     public InventorySerial getSerialByNumber(String serialNumber) {
-        return inventorySerialRepository.findBySerialNumber(serialNumber)
-                .orElse(null);
+        return inventorySerialRepository.findBySerialNumber(serialNumber).orElse(null);
     }
 
-    /**
-     * Get all serials for an item
-     */
     public List<InventorySerial> getSerialsByItem(Long itemId) {
         return inventorySerialRepository.findByInventoryItemId(itemId);
     }
 
-    /**
-     * Get serials by status
-     */
     public List<InventorySerial> getSerialsByStatus(SerialStatus status) {
         return inventorySerialRepository.findByStatus(status);
     }
 
-    /**
-     * Get serials by reference (job card or invoice)
-     */
     public List<InventorySerial> getSerialsByReference(String referenceType, Long referenceId) {
         return inventorySerialRepository.findByUsedInReferenceTypeAndUsedInReferenceId(referenceType, referenceId);
     }
 
     // ========== STOCK MOVEMENT MANAGEMENT ==========
 
-    /**
-     * Helper method to record stock movement for serials - ONLY FOR INVOICE
-     */
     private void recordStockMovementForSerial(InventorySerial serial, MovementType type,
                                               Integer quantity, String referenceType,
                                               Long referenceId, String referenceNumber,
                                               String reason, String serialNumber) {
-
-        // FIXED: Only record stock movements for INVOICE references
         if (!"INVOICE".equals(referenceType)) {
             System.out.println("ℹ️ Skipping stock movement record for reference type: " + referenceType);
             return;
@@ -901,7 +2068,6 @@ public class InventoryService {
         movement.setPerformedBy(getCurrentUsername());
         movement.setSerialNumber(serial.getSerialNumber());
 
-        // Track quantity changes for INVOICE
         int previousQuantity = serial.getInventoryItem().getQuantity() + quantity;
         int newQuantity = serial.getInventoryItem().getQuantity();
 
@@ -909,18 +2075,12 @@ public class InventoryService {
         movement.setNewQuantity(newQuantity);
 
         stockMovementRepository.save(movement);
-
         System.out.println("📝 Recorded stock movement for INVOICE: " + serial.getSerialNumber());
     }
 
-    /**
-     * Record stock movement - SKIP JOB_CARD MOVEMENTS
-     */
     private void recordStockMovement(InventoryItem item, MovementType type, Integer quantity,
                                      String referenceType, Long referenceId, String referenceNumber,
                                      String reason, String notes, Integer prevQty, Integer newQty) {
-
-        // FIXED: Skip recording stock movements for JOB_CARD
         if ("JOB_CARD".equals(referenceType)) {
             System.out.println("ℹ️ Skipping JOB_CARD stock movement record for item: " + item.getName());
             return;
@@ -955,10 +2115,6 @@ public class InventoryService {
     }
 
     // ========== QUERY METHODS ==========
-
-    public List<InventoryItem> getAllItems() {
-        return inventoryItemRepository.findAll();
-    }
 
     public InventoryItem getItemById(Long id) {
         return inventoryItemRepository.findById(id)
@@ -1025,18 +2181,19 @@ public class InventoryService {
     // ========== INVENTORY STATISTICS ==========
 
     public InventoryStatistics getInventoryStatistics() {
-        Long totalItems = inventoryItemRepository.count();
+        Long totalItems = inventoryItemRepository.countVisible();
         Long lowStockItems = (long) inventoryItemRepository.findLowStockItems().size();
         Long outOfStockItems = (long) inventoryItemRepository.findOutOfStockItems().size();
         Long serializedItems = inventoryItemRepository.countByHasSerialization(true);
+        Long hiddenItems = inventoryItemRepository.countHidden();
 
-        Double totalValue = inventoryItemRepository.findAll().stream()
+        Double totalValue = inventoryItemRepository.findAllVisible().stream()
                 .mapToDouble(item -> (item.getQuantity() != null ? item.getQuantity() : 0) *
                         (item.getPurchasePrice() != null ? item.getPurchasePrice() : 0))
                 .sum();
 
         return new InventoryStatistics(totalItems, lowStockItems, outOfStockItems,
-                serializedItems, totalValue);
+                serializedItems, totalValue, hiddenItems);
     }
 
     public static class InventoryStatistics {
@@ -1045,14 +2202,16 @@ public class InventoryService {
         public final Long outOfStockItems;
         public final Long serializedItems;
         public final Double totalValue;
+        public final Long hiddenItems;
 
         public InventoryStatistics(Long totalItems, Long lowStockItems, Long outOfStockItems,
-                                   Long serializedItems, Double totalValue) {
+                                   Long serializedItems, Double totalValue, Long hiddenItems) {
             this.totalItems = totalItems;
             this.lowStockItems = lowStockItems;
             this.outOfStockItems = outOfStockItems;
             this.serializedItems = serializedItems;
             this.totalValue = totalValue;
+            this.hiddenItems = hiddenItems;
         }
     }
 
@@ -1100,12 +2259,8 @@ public class InventoryService {
             InventoryItem item = inventoryItemRepository.findById(itemId)
                     .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
 
-            if (sellingPrice != null) {
-                item.setSellingPrice(sellingPrice);
-            }
-            if (purchasePrice != null) {
-                item.setPurchasePrice(purchasePrice);
-            }
+            if (sellingPrice != null) item.setSellingPrice(sellingPrice);
+            if (purchasePrice != null) item.setPurchasePrice(purchasePrice);
 
             inventoryItemRepository.save(item);
         }

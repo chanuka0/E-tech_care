@@ -1,4 +1,700 @@
 
+// import { useState, useEffect } from 'react';
+// import { apiCall, API_ENDPOINTS } from '../services/api';
+// import { useAuth } from '../auth/AuthProvider';
+// import AddInventoryModal from './AddInventoryModal';
+// import EditInventoryModal from './EditInventoryModal';
+// import ViewInventoryModal from './ViewInventoryModal';
+// import DeductStockModal from './DeductStockModal';
+// import BulkSerialImportModal from './BulkSerialImportModal';
+// import AddStockModal from './AddStockModal';
+// import StockCorrectionModal from './StockCorrectionModal';
+
+// const InventoryManagement = () => {
+//   const { isAdmin, isAuthenticated, user } = useAuth();
+//   const [items, setItems] = useState([]);
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState('');
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const [filterStatus, setFilterStatus] = useState('ALL');
+//   const [displayCount, setDisplayCount] = useState(10);
+  
+//   // Modal states
+//   const [showAddModal, setShowAddModal] = useState(false);
+//   const [showEditModal, setShowEditModal] = useState(false);
+//   const [showViewModal, setShowViewModal] = useState(false);
+//   const [showDeductModal, setShowDeductModal] = useState(false);
+//   const [showBulkSerialModal, setShowBulkSerialModal] = useState(false);
+//   const [showAddStockModal, setShowAddStockModal] = useState(false);
+//   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+//   const [selectedItem, setSelectedItem] = useState(null);
+
+//   const fetchItems = async () => {
+//     if (!isAuthenticated) {
+//       setError('Please login to access inventory');
+//       return;
+//     }
+
+//     setLoading(true);
+//     setError('');
+//     try {
+//       console.log('Fetching inventory items...');
+//       const data = await apiCall('/api/inventory');
+//       const sortedData = data.sort((a, b) => new Date(b.createdAt || b.id) - new Date(a.createdAt || a.id));
+//       setItems(sortedData);
+//       console.log('Inventory items fetched successfully:', data.length);
+//     } catch (err) {
+//       console.error('Error fetching inventory:', err);
+//       setError(err.message || 'Failed to fetch inventory items');
+//     }
+//     setLoading(false);
+//   };
+
+//   useEffect(() => {
+//     fetchItems();
+//   }, [isAuthenticated]);
+
+//   // ✅ Check if item can be deleted (quantity = 0 and created within 24 hours)
+//   const canDeleteItem = (item) => {
+//     if (item.quantity !== 0) return false;
+    
+//     const createdTime = new Date(item.createdAt).getTime();
+//     const currentTime = new Date().getTime();
+//     const hoursSinceCreation = (currentTime - createdTime) / (1000 * 60 * 60);
+    
+//     return hoursSinceCreation < 24;
+//   };
+
+//   // ✅ Enhanced validation before adding item
+//   const handleAddItem = async (newItem) => {
+//     try {
+//       // ✅ Check for duplicate item name (case-insensitive)
+//       const duplicateName = items.find(
+//         item => item.name.toLowerCase().trim() === newItem.name.toLowerCase().trim()
+//       );
+      
+//       if (duplicateName) {
+//         setError(`Item "${newItem.name}" already exists! Please use a different name.`);
+//         return;
+//       }
+
+//       console.log('Adding new item:', newItem);
+//       const response = await apiCall('/api/inventory', {
+//         method: 'POST',
+//         body: JSON.stringify(newItem)
+//       });
+//       setItems([response, ...items]);
+//       setShowAddModal(false);
+//       showSuccessMessage('Item added successfully!');
+//       await fetchItems(); // Refresh the list
+//     } catch (err) {
+//       console.error('Error adding item:', err);
+//       setError(err.message || 'Failed to add item');
+//     }
+//   };
+
+//   const handleUpdateItem = async (updatedItem) => {
+//     try {
+//       console.log('Updating item:', selectedItem.id, updatedItem);
+//       const response = await apiCall(`/api/inventory/${selectedItem.id}`, {
+//         method: 'PUT',
+//         body: JSON.stringify(updatedItem)
+//       });
+//       setItems(items.map(item => item.id === selectedItem.id ? response : item));
+//       setShowEditModal(false);
+//       setSelectedItem(null);
+//       showSuccessMessage('Item updated successfully!');
+//       await fetchItems(); // Refresh to get updated quantities
+//     } catch (err) {
+//       console.error('Error updating item:', err);
+//       setError(err.message || 'Failed to update item');
+//     }
+//   };
+
+//   // ✅ Enhanced delete with time and quantity validation
+//   const handleDeleteItem = async (item) => {
+//     // ✅ Validate deletion criteria
+//     if (!canDeleteItem(item)) {
+//       const createdTime = new Date(item.createdAt).getTime();
+//       const currentTime = new Date().getTime();
+//       const hoursSinceCreation = Math.floor((currentTime - createdTime) / (1000 * 60 * 60));
+      
+//       if (item.quantity > 0) {
+//         alert(`Cannot delete "${item.name}"!\n\n` +
+//               `Reason: Item has stock (${item.quantity} units).\n\n` +
+//               `You can only delete items with 0 stock within 24 hours of creation.`);
+//       } else {
+//         alert(`Cannot delete "${item.name}"!\n\n` +
+//               `Reason: Item was created ${hoursSinceCreation} hours ago.\n\n` +
+//               `You can only delete items within 24 hours of creation when stock is 0.`);
+//       }
+//       return;
+//     }
+
+//     if (window.confirm(`⚠️ PERMANENTLY DELETE "${item.name}"?\n\n` +
+//                        `This action cannot be undone.\n` +
+//                        `All associated data will be removed.`)) {
+//       try {
+//         console.log('Deleting item:', item.id);
+//         await apiCall(`/api/inventory/${item.id}`, {
+//           method: 'DELETE'
+//         });
+//         setItems(items.filter(i => i.id !== item.id));
+//         showSuccessMessage('Item deleted successfully!');
+//       } catch (err) {
+//         console.error('Error deleting item:', err);
+//         setError(err.message || 'Failed to delete item');
+//       }
+//     }
+//   };
+
+//   const handleAddStock = async (stockData) => {
+//     try {
+//       console.log('Adding stock:', selectedItem.id, stockData);
+//       await apiCall(`/api/inventory/${selectedItem.id}/add-stock`, {
+//         method: 'POST',
+//         body: JSON.stringify(stockData)
+//       });
+//       await fetchItems();
+//       setShowAddStockModal(false);
+//       setSelectedItem(null);
+//       showSuccessMessage('Stock added successfully!');
+//     } catch (err) {
+//       console.error('Error adding stock:', err);
+//       setError(err.message || 'Failed to add stock');
+//     }
+//   };
+
+//   const handleStockCorrection = async (correctionData) => {
+//     try {
+//       console.log('Stock correction:', selectedItem.id, correctionData);
+//       await apiCall(`/api/inventory/${selectedItem.id}/correct-stock`, {
+//         method: 'POST',
+//         body: JSON.stringify(correctionData)
+//       });
+//       await fetchItems();
+//       setShowCorrectionModal(false);
+//       setSelectedItem(null);
+//       showSuccessMessage('Stock correction applied successfully!');
+//     } catch (err) {
+//       console.error('Error applying stock correction:', err);
+//       setError(err.message || 'Failed to apply stock correction');
+//     }
+//   };
+
+//   const handleDeductStock = async (deductData) => {
+//     try {
+//       console.log('Deducting stock:', selectedItem.id, deductData);
+//       await apiCall(`/api/inventory/${selectedItem.id}/deduct-stock`, {
+//         method: 'POST',
+//         body: JSON.stringify(deductData)
+//       });
+//       await fetchItems();
+//       setShowDeductModal(false);
+//       setSelectedItem(null);
+//       showSuccessMessage('Stock deducted successfully!');
+//     } catch (err) {
+//       console.error('Error deducting stock:', err);
+//       setError(err.message || 'Failed to deduct stock');
+//     }
+//   };
+
+//   const handleAddSerial = async (serialNumber) => {
+//     try {
+//       console.log('Adding serial:', selectedItem.id, serialNumber);
+//       await apiCall(`/api/inventory/${selectedItem.id}/serials`, {
+//         method: 'POST',
+//         body: JSON.stringify({ serialNumber })
+//       });
+//       await fetchItems();
+//       showSuccessMessage('Serial added successfully!');
+//     } catch (err) {
+//       console.error('Error adding serial:', err);
+//       setError(err.message || 'Failed to add serial');
+//     }
+//   };
+
+//   // ✅ Enhanced bulk serial import with duplicate validation
+//   const handleBulkSerialImport = async (serialNumbers) => {
+//     try {
+//       // ✅ Get all existing serials across ALL items
+//       const allExistingSerials = items.flatMap(item => 
+//         (item.serials || []).map(s => s.serialNumber.toLowerCase().trim())
+//       );
+
+//       // ✅ Check for duplicates in existing database
+//       const duplicatesInDB = [];
+//       const duplicatesInInput = [];
+//       const seen = new Set();
+
+//       serialNumbers.forEach((serial) => {
+//         const trimmedSerial = serial.toLowerCase().trim();
+        
+//         // Check against existing database
+//         if (allExistingSerials.includes(trimmedSerial)) {
+//           duplicatesInDB.push(serial);
+//         }
+        
+//         // Check for duplicates within input
+//         if (seen.has(trimmedSerial)) {
+//           duplicatesInInput.push(serial);
+//         } else {
+//           seen.add(trimmedSerial);
+//         }
+//       });
+
+//       // ✅ Show error if duplicates found
+//       if (duplicatesInDB.length > 0 || duplicatesInInput.length > 0) {
+//         let errorMessage = '❌ Duplicate Serial Numbers Detected!\n\n';
+        
+//         if (duplicatesInDB.length > 0) {
+//           errorMessage += `Already in database (${duplicatesInDB.length}):\n`;
+//           errorMessage += duplicatesInDB.slice(0, 5).join(', ');
+//           if (duplicatesInDB.length > 5) {
+//             errorMessage += ` ... and ${duplicatesInDB.length - 5} more`;
+//           }
+//           errorMessage += '\n\n';
+//         }
+        
+//         if (duplicatesInInput.length > 0) {
+//           errorMessage += `Duplicates in your input (${duplicatesInInput.length}):\n`;
+//           errorMessage += duplicatesInInput.slice(0, 5).join(', ');
+//           if (duplicatesInInput.length > 5) {
+//             errorMessage += ` ... and ${duplicatesInInput.length - 5} more`;
+//           }
+//         }
+        
+//         alert(errorMessage);
+//         return;
+//       }
+
+//       console.log('Bulk importing serials:', selectedItem.id, serialNumbers.length);
+//       await apiCall(`/api/inventory/${selectedItem.id}/serials/bulk`, {
+//         method: 'POST',
+//         body: JSON.stringify({ serialNumbers })
+//       });
+//       await fetchItems();
+//       setShowBulkSerialModal(false);
+//       setSelectedItem(null);
+//       showSuccessMessage(`${serialNumbers.length} serials imported successfully!`);
+//     } catch (err) {
+//       console.error('Error bulk importing serials:', err);
+//       setError(err.message || 'Failed to import serials');
+//     }
+//   };
+
+//   const showSuccessMessage = (message) => {
+//     const msg = document.createElement('div');
+//     msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+//     msg.textContent = message;
+//     document.body.appendChild(msg);
+//     setTimeout(() => msg.remove(), 3000);
+//   };
+
+//   const getStockStatus = (item) => {
+//     if (item.quantity === 0) return { status: 'OUT_OF_STOCK', color: 'bg-red-100 text-red-800', label: 'Out of Stock' };
+//     if (item.quantity <= item.minThreshold) return { status: 'LOW_STOCK', color: 'bg-yellow-100 text-yellow-800', label: 'Low Stock' };
+//     return { status: 'IN_STOCK', color: 'bg-green-100 text-green-800', label: 'In Stock' };
+//   };
+
+//   const filteredItems = items.filter(item => {
+//     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//                           item.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    
+//     if (filterStatus === 'ALL') return matchesSearch;
+//     return matchesSearch && getStockStatus(item).status === filterStatus;
+//   });
+
+//   const displayedItems = filteredItems.slice(0, displayCount);
+
+//   const handleSeeMore = () => {
+//     setDisplayCount(prevCount => prevCount + 10);
+//   };
+
+//   const canShowMore = displayCount < filteredItems.length;
+
+//   if (!isAuthenticated) {
+//     return (
+//       <div className="flex justify-center items-center h-64">
+//         <div className="text-center">
+//           <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+//           </svg>
+//           <h3 className="text-lg font-medium text-gray-900 mb-2">Authentication Required</h3>
+//           <p className="text-gray-600">Please login to access inventory management</p>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="space-y-6 p-6">
+//       {/* Header */}
+//       <div className="flex justify-between items-center">
+//         <div>
+//           <h2 className="text-3xl font-bold text-gray-900">Inventory Management</h2>
+//           <p className="text-gray-600 mt-1">Manage inventory items, stock levels, and serials</p>
+//         </div>
+//         {/* ✅ SHOW ADD BUTTON FOR BOTH ADMIN AND USER */}
+//         <button
+//           onClick={() => setShowAddModal(true)}
+//           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+//         >
+//           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+//           </svg>
+//           <span>Add Item</span>
+//         </button>
+//       </div>
+
+//       {error && (
+//         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+//           <span>{error}</span>
+//           <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">
+//             ✕
+//           </button>
+//         </div>
+//       )}
+
+//       {/* Filters */}
+//       <div className="bg-white rounded-lg shadow p-4">
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+//             <input
+//               type="text"
+//               placeholder="Search by name or SKU..."
+//               value={searchTerm}
+//               onChange={(e) => setSearchTerm(e.target.value)}
+//               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+//             />
+//           </div>
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
+//             <select
+//               value={filterStatus}
+//               onChange={(e) => setFilterStatus(e.target.value)}
+//               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+//             >
+//               <option value="ALL">All Items</option>
+//               <option value="IN_STOCK">In Stock</option>
+//               <option value="LOW_STOCK">Low Stock</option>
+//               <option value="OUT_OF_STOCK">Out of Stock</option>
+//             </select>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* ✅ Delete Policy Info Box */}
+//       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+//         <div className="flex items-start">
+//           <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+//             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+//           </svg>
+//           <div className="flex-1">
+//             <h4 className="text-sm font-medium text-blue-900 mb-1">🗑️ Item Deletion Policy</h4>
+//             <p className="text-sm text-blue-700">
+//               Items can only be permanently deleted if:
+//             </p>
+//             <ul className="list-disc list-inside text-sm text-blue-700 mt-1 ml-4">
+//               <li>Stock quantity is <strong>0</strong> (no inventory remaining)</li>
+//               <li>Created within the <strong>last 24 hours</strong></li>
+//             </ul>
+//             <p className="text-xs text-blue-600 mt-2">
+//               💡 This prevents accidental deletion of established inventory items with transaction history.
+//             </p>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Items Table */}
+//       <div className="bg-white rounded-lg shadow overflow-hidden">
+//         {loading ? (
+//           <div className="flex justify-center items-center h-64">
+//             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+//           </div>
+//         ) : filteredItems.length === 0 ? (
+//           <div className="flex justify-center items-center h-64">
+//             <div className="text-center">
+//               <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+//               </svg>
+//               <h3 className="text-lg font-medium text-gray-900">No items found</h3>
+//               <p className="text-gray-600">Try adjusting your filters or add a new item</p>
+//             </div>
+//           </div>
+//         ) : (
+//           <>
+//             <div className="overflow-x-auto">
+//               <table className="min-w-full divide-y divide-gray-200">
+//                 <thead className="bg-gray-50">
+//                   <tr>
+//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serials</th>
+//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody className="bg-white divide-y divide-gray-200">
+//                   {displayedItems.map(item => {
+//                     const stockStatus = getStockStatus(item);
+//                     const availableSerials = item.serials?.filter(s => s.status === 'AVAILABLE') || [];
+//                     const soldSerials = item.serials?.filter(s => s.status === 'SOLD') || [];
+//                     const isDeletable = canDeleteItem(item);
+                    
+//                     return (
+//                       <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <div>
+//                             <p className="text-sm font-medium text-gray-900">{item.name}</p>
+//                             <p className="text-xs text-gray-500">{item.description?.substring(0, 50)}</p>
+//                             {item.hasSerialization && (
+//                               <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-800 rounded">
+//                                 Serialized
+//                               </span>
+//                             )}
+//                           </div>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.sku}</td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.category}</td>
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <div>
+//                             <p className={`text-sm font-medium ${item.quantity <= item.minThreshold ? 'text-red-600' : 'text-gray-900'}`}>
+//                               {item.quantity}
+//                             </p>
+//                             <p className="text-xs text-gray-500">Min: {item.minThreshold}</p>
+//                           </div>
+//                         </td>
+//                         {/* ✅ Serial Numbers Column */}
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           {item.hasSerialization ? (
+//                             <div className="text-xs">
+//                               <div className="flex items-center space-x-1">
+//                                 <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded font-medium">
+//                                   {availableSerials.length} Available
+//                                 </span>
+//                               </div>
+//                               {soldSerials.length > 0 && (
+//                                 <div className="flex items-center space-x-1 mt-1">
+//                                   <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+//                                     {soldSerials.length} Used
+//                                   </span>
+//                                 </div>
+//                               )}
+//                               {item.serials && item.serials.length > 0 && (
+//                                 <p className="text-gray-500 mt-1">
+//                                   Total: {item.serials.length}
+//                                 </p>
+//                               )}
+//                             </div>
+//                           ) : (
+//                             <span className="text-xs text-gray-400">N/A</span>
+//                           )}
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+//                           <div>
+//                             <p>Rs.{item.sellingPrice?.toFixed(2)}</p>
+//                             <p className="text-xs text-gray-500">Cost: Rs.{item.purchasePrice?.toFixed(2)}</p>
+//                           </div>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${stockStatus.color}`}>
+//                             {stockStatus.label}
+//                           </span>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm">
+//                           <div className="flex flex-col space-y-1">
+//                             <div className="flex space-x-2">
+//                               <button
+//                                 onClick={() => {
+//                                   setSelectedItem(item);
+//                                   setShowViewModal(true);
+//                                 }}
+//                                 className="text-blue-600 hover:text-blue-900 font-medium"
+//                               >
+//                                 View
+//                               </button>
+//                               {/* ✅ SHOW EDIT FOR BOTH ADMIN AND USER */}
+//                               <button
+//                                 onClick={() => {
+//                                   setSelectedItem(item);
+//                                   setShowEditModal(true);
+//                                 }}
+//                                 className="text-green-600 hover:text-green-900 font-medium"
+//                               >
+//                                 Edit
+//                               </button>
+//                               {/* ✅ Show delete button only for ADMIN and when item can be deleted */}
+//                               {isAdmin() && isDeletable && (
+//                                 <button
+//                                   onClick={() => handleDeleteItem(item)}
+//                                   className="text-red-600 hover:text-red-900 font-medium"
+//                                   title="Can delete - created within 24 hours and stock is 0"
+//                                 >
+//                                   Delete
+//                                 </button>
+//                               )}
+//                             </div>
+//                             {/* ✅ Stock buttons - HIDE "+ Stock" for serialized items */}
+//                             <div className="flex space-x-2">
+//                               {/* ✅ Only show "+ Stock" button if item is NOT serialized */}
+//                               {!item.hasSerialization && (
+//                                 <button
+//                                   onClick={() => {
+//                                     setSelectedItem(item);
+//                                     setShowAddStockModal(true);
+//                                   }}
+//                                   className="text-emerald-600 hover:text-emerald-900 font-medium text-xs"
+//                                 >
+//                                   + Stock
+//                                 </button>
+//                               )}
+//                               <button
+//                                 onClick={() => {
+//                                   setSelectedItem(item);
+//                                   setShowCorrectionModal(true);
+//                                 }}
+//                                 className="text-red-600 hover:text-red-900 font-medium text-xs"
+//                               >
+//                                 Deduct
+//                               </button>
+//                               {/* ✅ Only show "+ Serials" button if item HAS serialization */}
+//                               {item.hasSerialization && (
+//                                 <button
+//                                   onClick={() => {
+//                                     setSelectedItem(item);
+//                                     setShowBulkSerialModal(true);
+//                                   }}
+//                                   className="text-purple-600 hover:text-purple-900 font-medium text-xs"
+//                                 >
+//                                   + Serials
+//                                 </button>
+//                               )}
+//                             </div>
+//                           </div>
+//                         </td>
+//                       </tr>
+//                     );
+//                   })}
+//                 </tbody>
+//               </table>
+//             </div>
+
+//             {canShowMore && (
+//               <div className="flex justify-center py-4 border-t border-gray-200">
+//                 <button
+//                   onClick={handleSeeMore}
+//                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+//                 >
+//                   <span>See More</span>
+//                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+//                   </svg>
+//                 </button>
+//               </div>
+//             )}
+
+//             <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+//               <p className="text-sm text-gray-600">
+//                 Showing {displayedItems.length} of {filteredItems.length} items
+//                 {filteredItems.length > displayedItems.length && ` (${filteredItems.length - displayedItems.length} more available)`}
+//               </p>
+//             </div>
+//           </>
+//         )}
+//       </div>
+
+//       {/* Modals */}
+//       {showAddModal && (
+//         <AddInventoryModal
+//           onAdd={handleAddItem}
+//           onClose={() => setShowAddModal(false)}
+//           existingItems={items}
+//         />
+//       )}
+
+//       {showEditModal && selectedItem && (
+//         <EditInventoryModal
+//           item={selectedItem}
+//           onUpdate={handleUpdateItem}
+//           onClose={() => {
+//             setShowEditModal(false);
+//             setSelectedItem(null);
+//           }}
+//         />
+//       )}
+
+//       {showViewModal && selectedItem && (
+//         <ViewInventoryModal
+//           item={selectedItem}
+//           onAddSerial={handleAddSerial}
+//           onClose={() => {
+//             setShowViewModal(false);
+//             setSelectedItem(null);
+//           }}
+//         />
+//       )}
+
+//       {showDeductModal && selectedItem && (
+//         <DeductStockModal
+//           item={selectedItem}
+//           onDeduct={handleDeductStock}
+//           onClose={() => {
+//             setShowDeductModal(false);
+//             setSelectedItem(null);
+//           }}
+//         />
+//       )}
+
+//       {showBulkSerialModal && selectedItem && (
+//         <BulkSerialImportModal
+//           item={selectedItem}
+//           onImport={handleBulkSerialImport}
+//           onClose={() => {
+//             setShowBulkSerialModal(false);
+//             setSelectedItem(null);
+//           }}
+//           existingSerials={items.flatMap(item => item.serials || [])}
+//         />
+//       )}
+
+//       {showAddStockModal && selectedItem && (
+//         <AddStockModal
+//           item={selectedItem}
+//           onAdd={handleAddStock}
+//           onClose={() => {
+//             setShowAddStockModal(false);
+//             setSelectedItem(null);
+//           }}
+//         />
+//       )}
+
+//       {showCorrectionModal && selectedItem && (
+//         <StockCorrectionModal
+//           item={selectedItem}
+//           onCorrect={handleStockCorrection}
+//           onClose={() => {
+//             setShowCorrectionModal(false);
+//             setSelectedItem(null);
+//           }}
+//         />
+//       )}
+//     </div>
+//   );
+// };
+
+// export default InventoryManagement;
+
+
+
+
+
+
+
 import { useState, useEffect } from 'react';
 import { apiCall, API_ENDPOINTS } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
@@ -13,12 +709,17 @@ import StockCorrectionModal from './StockCorrectionModal';
 const InventoryManagement = () => {
   const { isAdmin, isAuthenticated, user } = useAuth();
   const [items, setItems] = useState([]);
+  const [hiddenItems, setHiddenItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [hiddenLoading, setHiddenLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [displayCount, setDisplayCount] = useState(10);
-  
+
+  // ✅ NEW: View mode toggle — 'active' shows visible items, 'hidden' shows the archive
+  const [viewMode, setViewMode] = useState('active');
+
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -29,56 +730,98 @@ const InventoryManagement = () => {
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
+  // ✅ Fetch visible items
   const fetchItems = async () => {
     if (!isAuthenticated) {
       setError('Please login to access inventory');
       return;
     }
-
     setLoading(true);
     setError('');
     try {
-      console.log('Fetching inventory items...');
       const data = await apiCall('/api/inventory');
       const sortedData = data.sort((a, b) => new Date(b.createdAt || b.id) - new Date(a.createdAt || a.id));
       setItems(sortedData);
-      console.log('Inventory items fetched successfully:', data.length);
     } catch (err) {
-      console.error('Error fetching inventory:', err);
       setError(err.message || 'Failed to fetch inventory items');
     }
     setLoading(false);
+  };
+
+  // ✅ Fetch hidden items
+  const fetchHiddenItems = async () => {
+    if (!isAuthenticated) return;
+    setHiddenLoading(true);
+    try {
+      const data = await apiCall('/api/inventory/hidden');
+      const sortedData = data.sort((a, b) => new Date(b.updatedAt || b.id) - new Date(a.updatedAt || a.id));
+      setHiddenItems(sortedData);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch hidden items');
+    }
+    setHiddenLoading(false);
   };
 
   useEffect(() => {
     fetchItems();
   }, [isAuthenticated]);
 
+  // ✅ Fetch hidden items when switching to hidden view
+  useEffect(() => {
+    if (viewMode === 'hidden') {
+      fetchHiddenItems();
+    }
+  }, [viewMode]);
+
+  // ✅ Hide an item
+  const handleHideItem = async (item) => {
+    if (!window.confirm(
+      `Hide "${item.name}"?\n\n` +
+      `This item will be removed from:\n` +
+      `  • Job Card item selection\n` +
+      `  • Invoice item selection\n\n` +
+      `It stays in the database for historical records and can be unhidden anytime.`
+    )) return;
+
+    try {
+      await apiCall(`/api/inventory/${item.id}/hide`, { method: 'PATCH' });
+      await fetchItems();
+      showSuccessMessage(`"${item.name}" hidden from active workflows.`);
+    } catch (err) {
+      setError(err.message || 'Failed to hide item');
+    }
+  };
+
+  // ✅ Unhide an item
+  const handleUnhideItem = async (item) => {
+    try {
+      await apiCall(`/api/inventory/${item.id}/unhide`, { method: 'PATCH' });
+      // Refresh both lists
+      await Promise.all([fetchItems(), fetchHiddenItems()]);
+      showSuccessMessage(`"${item.name}" is now visible across all workflows.`);
+    } catch (err) {
+      setError(err.message || 'Failed to unhide item');
+    }
+  };
+
   // ✅ Check if item can be deleted (quantity = 0 and created within 24 hours)
   const canDeleteItem = (item) => {
     if (item.quantity !== 0) return false;
-    
     const createdTime = new Date(item.createdAt).getTime();
     const currentTime = new Date().getTime();
     const hoursSinceCreation = (currentTime - createdTime) / (1000 * 60 * 60);
-    
     return hoursSinceCreation < 24;
   };
 
-  // ✅ Enhanced validation before adding item
   const handleAddItem = async (newItem) => {
     try {
-      // ✅ Check for duplicate item name (case-insensitive)
       const duplicateName = items.find(
         item => item.name.toLowerCase().trim() === newItem.name.toLowerCase().trim()
       );
-      
       if (duplicateName) {
         setError(`Item "${newItem.name}" already exists! Please use a different name.`);
         return;
       }
-
-      console.log('Adding new item:', newItem);
       const response = await apiCall('/api/inventory', {
         method: 'POST',
         body: JSON.stringify(newItem)
@@ -86,16 +829,14 @@ const InventoryManagement = () => {
       setItems([response, ...items]);
       setShowAddModal(false);
       showSuccessMessage('Item added successfully!');
-      await fetchItems(); // Refresh the list
+      await fetchItems();
     } catch (err) {
-      console.error('Error adding item:', err);
       setError(err.message || 'Failed to add item');
     }
   };
 
   const handleUpdateItem = async (updatedItem) => {
     try {
-      console.log('Updating item:', selectedItem.id, updatedItem);
       const response = await apiCall(`/api/inventory/${selectedItem.id}`, {
         method: 'PUT',
         body: JSON.stringify(updatedItem)
@@ -104,45 +845,32 @@ const InventoryManagement = () => {
       setShowEditModal(false);
       setSelectedItem(null);
       showSuccessMessage('Item updated successfully!');
-      await fetchItems(); // Refresh to get updated quantities
+      await fetchItems();
     } catch (err) {
-      console.error('Error updating item:', err);
       setError(err.message || 'Failed to update item');
     }
   };
 
-  // ✅ Enhanced delete with time and quantity validation
   const handleDeleteItem = async (item) => {
-    // ✅ Validate deletion criteria
     if (!canDeleteItem(item)) {
       const createdTime = new Date(item.createdAt).getTime();
       const currentTime = new Date().getTime();
       const hoursSinceCreation = Math.floor((currentTime - createdTime) / (1000 * 60 * 60));
-      
+
       if (item.quantity > 0) {
-        alert(`Cannot delete "${item.name}"!\n\n` +
-              `Reason: Item has stock (${item.quantity} units).\n\n` +
-              `You can only delete items with 0 stock within 24 hours of creation.`);
+        alert(`Cannot delete "${item.name}"!\n\nReason: Item has stock (${item.quantity} units).\n\nYou can only delete items with 0 stock within 24 hours of creation.`);
       } else {
-        alert(`Cannot delete "${item.name}"!\n\n` +
-              `Reason: Item was created ${hoursSinceCreation} hours ago.\n\n` +
-              `You can only delete items within 24 hours of creation when stock is 0.`);
+        alert(`Cannot delete "${item.name}"!\n\nReason: Item was created ${hoursSinceCreation} hours ago.\n\nYou can only delete items within 24 hours of creation when stock is 0.`);
       }
       return;
     }
 
-    if (window.confirm(`⚠️ PERMANENTLY DELETE "${item.name}"?\n\n` +
-                       `This action cannot be undone.\n` +
-                       `All associated data will be removed.`)) {
+    if (window.confirm(`⚠️ PERMANENTLY DELETE "${item.name}"?\n\nThis action cannot be undone.\nAll associated data will be removed.`)) {
       try {
-        console.log('Deleting item:', item.id);
-        await apiCall(`/api/inventory/${item.id}`, {
-          method: 'DELETE'
-        });
+        await apiCall(`/api/inventory/${item.id}`, { method: 'DELETE' });
         setItems(items.filter(i => i.id !== item.id));
         showSuccessMessage('Item deleted successfully!');
       } catch (err) {
-        console.error('Error deleting item:', err);
         setError(err.message || 'Failed to delete item');
       }
     }
@@ -150,7 +878,6 @@ const InventoryManagement = () => {
 
   const handleAddStock = async (stockData) => {
     try {
-      console.log('Adding stock:', selectedItem.id, stockData);
       await apiCall(`/api/inventory/${selectedItem.id}/add-stock`, {
         method: 'POST',
         body: JSON.stringify(stockData)
@@ -160,14 +887,12 @@ const InventoryManagement = () => {
       setSelectedItem(null);
       showSuccessMessage('Stock added successfully!');
     } catch (err) {
-      console.error('Error adding stock:', err);
       setError(err.message || 'Failed to add stock');
     }
   };
 
   const handleStockCorrection = async (correctionData) => {
     try {
-      console.log('Stock correction:', selectedItem.id, correctionData);
       await apiCall(`/api/inventory/${selectedItem.id}/correct-stock`, {
         method: 'POST',
         body: JSON.stringify(correctionData)
@@ -177,14 +902,12 @@ const InventoryManagement = () => {
       setSelectedItem(null);
       showSuccessMessage('Stock correction applied successfully!');
     } catch (err) {
-      console.error('Error applying stock correction:', err);
       setError(err.message || 'Failed to apply stock correction');
     }
   };
 
   const handleDeductStock = async (deductData) => {
     try {
-      console.log('Deducting stock:', selectedItem.id, deductData);
       await apiCall(`/api/inventory/${selectedItem.id}/deduct-stock`, {
         method: 'POST',
         body: JSON.stringify(deductData)
@@ -194,14 +917,12 @@ const InventoryManagement = () => {
       setSelectedItem(null);
       showSuccessMessage('Stock deducted successfully!');
     } catch (err) {
-      console.error('Error deducting stock:', err);
       setError(err.message || 'Failed to deduct stock');
     }
   };
 
   const handleAddSerial = async (serialNumber) => {
     try {
-      console.log('Adding serial:', selectedItem.id, serialNumber);
       await apiCall(`/api/inventory/${selectedItem.id}/serials`, {
         method: 'POST',
         body: JSON.stringify({ serialNumber })
@@ -209,66 +930,44 @@ const InventoryManagement = () => {
       await fetchItems();
       showSuccessMessage('Serial added successfully!');
     } catch (err) {
-      console.error('Error adding serial:', err);
       setError(err.message || 'Failed to add serial');
     }
   };
 
-  // ✅ Enhanced bulk serial import with duplicate validation
   const handleBulkSerialImport = async (serialNumbers) => {
     try {
-      // ✅ Get all existing serials across ALL items
-      const allExistingSerials = items.flatMap(item => 
+      const allExistingSerials = items.flatMap(item =>
         (item.serials || []).map(s => s.serialNumber.toLowerCase().trim())
       );
 
-      // ✅ Check for duplicates in existing database
       const duplicatesInDB = [];
       const duplicatesInInput = [];
       const seen = new Set();
 
       serialNumbers.forEach((serial) => {
         const trimmedSerial = serial.toLowerCase().trim();
-        
-        // Check against existing database
-        if (allExistingSerials.includes(trimmedSerial)) {
-          duplicatesInDB.push(serial);
-        }
-        
-        // Check for duplicates within input
-        if (seen.has(trimmedSerial)) {
-          duplicatesInInput.push(serial);
-        } else {
-          seen.add(trimmedSerial);
-        }
+        if (allExistingSerials.includes(trimmedSerial)) duplicatesInDB.push(serial);
+        if (seen.has(trimmedSerial)) duplicatesInInput.push(serial);
+        else seen.add(trimmedSerial);
       });
 
-      // ✅ Show error if duplicates found
       if (duplicatesInDB.length > 0 || duplicatesInInput.length > 0) {
         let errorMessage = '❌ Duplicate Serial Numbers Detected!\n\n';
-        
         if (duplicatesInDB.length > 0) {
           errorMessage += `Already in database (${duplicatesInDB.length}):\n`;
           errorMessage += duplicatesInDB.slice(0, 5).join(', ');
-          if (duplicatesInDB.length > 5) {
-            errorMessage += ` ... and ${duplicatesInDB.length - 5} more`;
-          }
+          if (duplicatesInDB.length > 5) errorMessage += ` ... and ${duplicatesInDB.length - 5} more`;
           errorMessage += '\n\n';
         }
-        
         if (duplicatesInInput.length > 0) {
           errorMessage += `Duplicates in your input (${duplicatesInInput.length}):\n`;
           errorMessage += duplicatesInInput.slice(0, 5).join(', ');
-          if (duplicatesInInput.length > 5) {
-            errorMessage += ` ... and ${duplicatesInInput.length - 5} more`;
-          }
+          if (duplicatesInInput.length > 5) errorMessage += ` ... and ${duplicatesInInput.length - 5} more`;
         }
-        
         alert(errorMessage);
         return;
       }
 
-      console.log('Bulk importing serials:', selectedItem.id, serialNumbers.length);
       await apiCall(`/api/inventory/${selectedItem.id}/serials/bulk`, {
         method: 'POST',
         body: JSON.stringify({ serialNumbers })
@@ -278,14 +977,13 @@ const InventoryManagement = () => {
       setSelectedItem(null);
       showSuccessMessage(`${serialNumbers.length} serials imported successfully!`);
     } catch (err) {
-      console.error('Error bulk importing serials:', err);
       setError(err.message || 'Failed to import serials');
     }
   };
 
   const showSuccessMessage = (message) => {
     const msg = document.createElement('div');
-    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 text-sm font-medium';
     msg.textContent = message;
     document.body.appendChild(msg);
     setTimeout(() => msg.remove(), 3000);
@@ -300,18 +998,31 @@ const InventoryManagement = () => {
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    
     if (filterStatus === 'ALL') return matchesSearch;
     return matchesSearch && getStockStatus(item).status === filterStatus;
   });
 
+  const filteredHiddenItems = hiddenItems.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const displayedItems = filteredItems.slice(0, displayCount);
+  const displayedHiddenItems = filteredHiddenItems.slice(0, displayCount);
 
-  const handleSeeMore = () => {
-    setDisplayCount(prevCount => prevCount + 10);
+  const handleSeeMore = () => setDisplayCount(prev => prev + 10);
+  const canShowMore = viewMode === 'active'
+    ? displayCount < filteredItems.length
+    : displayCount < filteredHiddenItems.length;
+
+  // Reset display count when switching modes or search changes
+  const handleViewModeSwitch = (mode) => {
+    setViewMode(mode);
+    setDisplayCount(10);
+    setSearchTerm('');
+    setFilterStatus('ALL');
+    setError('');
   };
-
-  const canShowMore = displayCount < filteredItems.length;
 
   if (!isAuthenticated) {
     return (
@@ -329,34 +1040,97 @@ const InventoryManagement = () => {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Inventory Management</h2>
-          <p className="text-gray-600 mt-1">Manage inventory items, stock levels, and serials</p>
+          <p className="text-gray-600 mt-1">
+            {viewMode === 'active'
+              ? 'Manage inventory items, stock levels, and serials'
+              : 'Hidden items archive — restore items to make them available again'}
+          </p>
         </div>
-        {/* ✅ SHOW ADD BUTTON FOR BOTH ADMIN AND USER */}
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Add Item</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {/* ✅ Hidden Archive toggle */}
+          <button
+            onClick={() => handleViewModeSwitch(viewMode === 'active' ? 'hidden' : 'active')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm border-2 transition-all ${
+              viewMode === 'hidden'
+                ? 'bg-slate-700 border-slate-700 text-white shadow-md'
+                : 'bg-white border-slate-300 text-slate-600 hover:border-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {viewMode === 'hidden' ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                ← Back to Active Items
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+                Hidden Archive
+                {hiddenItems.length > 0 && (
+                  <span className="bg-slate-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {hiddenItems.length}
+                  </span>
+                )}
+              </>
+            )}
+          </button>
+
+          {/* Only show Add Item in active view */}
+          {viewMode === 'active' && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Add Item</span>
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Error banner */}
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">
-            ✕
-          </button>
+          <button onClick={() => setError('')} className="text-red-700 hover:text-red-900 font-bold">✕</button>
         </div>
       )}
 
-      {/* Filters */}
+      {/* ── Hidden Archive Banner ───────────────────────────────────────── */}
+      {viewMode === 'hidden' && (
+        <div className="bg-slate-800 text-white rounded-xl p-4 flex items-start gap-3">
+          <div className="flex-shrink-0 mt-0.5">
+            <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm">Hidden Items Archive</h4>
+            <p className="text-slate-300 text-sm mt-0.5">
+              These items are hidden from Job Card and Invoice workflows. They remain in the database for historical records.
+              Click <strong>Unhide</strong> to restore an item to all active workflows.
+            </p>
+          </div>
+          <div className="ml-auto flex-shrink-0">
+            <span className="bg-slate-600 text-white text-sm font-bold px-3 py-1 rounded-full">
+              {hiddenItems.length} hidden
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filters ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -365,250 +1139,360 @@ const InventoryManagement = () => {
               type="text"
               placeholder="Search by name or SKU..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setDisplayCount(10); }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">All Items</option>
-              <option value="IN_STOCK">In Stock</option>
-              <option value="LOW_STOCK">Low Stock</option>
-              <option value="OUT_OF_STOCK">Out of Stock</option>
-            </select>
-          </div>
+          {/* Stock Status filter only makes sense in active view */}
+          {viewMode === 'active' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => { setFilterStatus(e.target.value); setDisplayCount(10); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="ALL">All Items</option>
+                <option value="IN_STOCK">In Stock</option>
+                <option value="LOW_STOCK">Low Stock</option>
+                <option value="OUT_OF_STOCK">Out of Stock</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ✅ Delete Policy Info Box */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start">
-          <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-          </svg>
-          <div className="flex-1">
-            <h4 className="text-sm font-medium text-blue-900 mb-1">🗑️ Item Deletion Policy</h4>
-            <p className="text-sm text-blue-700">
-              Items can only be permanently deleted if:
-            </p>
-            <ul className="list-disc list-inside text-sm text-blue-700 mt-1 ml-4">
-              <li>Stock quantity is <strong>0</strong> (no inventory remaining)</li>
-              <li>Created within the <strong>last 24 hours</strong></li>
-            </ul>
-            <p className="text-xs text-blue-600 mt-2">
-              💡 This prevents accidental deletion of established inventory items with transaction history.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Items Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="text-center">
-              <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-900">No items found</h3>
-              <p className="text-gray-600">Try adjusting your filters or add a new item</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serials</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {displayedItems.map(item => {
-                    const stockStatus = getStockStatus(item);
-                    const availableSerials = item.serials?.filter(s => s.status === 'AVAILABLE') || [];
-                    const soldSerials = item.serials?.filter(s => s.status === 'SOLD') || [];
-                    const isDeletable = canDeleteItem(item);
-                    
-                    return (
-                      <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                            <p className="text-xs text-gray-500">{item.description?.substring(0, 50)}</p>
-                            {item.hasSerialization && (
-                              <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-800 rounded">
-                                Serialized
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.sku}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.category}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <p className={`text-sm font-medium ${item.quantity <= item.minThreshold ? 'text-red-600' : 'text-gray-900'}`}>
-                              {item.quantity}
-                            </p>
-                            <p className="text-xs text-gray-500">Min: {item.minThreshold}</p>
-                          </div>
-                        </td>
-                        {/* ✅ Serial Numbers Column */}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {item.hasSerialization ? (
-                            <div className="text-xs">
-                              <div className="flex items-center space-x-1">
-                                <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded font-medium">
-                                  {availableSerials.length} Available
-                                </span>
-                              </div>
-                              {soldSerials.length > 0 && (
-                                <div className="flex items-center space-x-1 mt-1">
-                                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-                                    {soldSerials.length} Used
-                                  </span>
-                                </div>
-                              )}
-                              {item.serials && item.serials.length > 0 && (
-                                <p className="text-gray-500 mt-1">
-                                  Total: {item.serials.length}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">N/A</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div>
-                            <p>Rs.{item.sellingPrice?.toFixed(2)}</p>
-                            <p className="text-xs text-gray-500">Cost: Rs.{item.purchasePrice?.toFixed(2)}</p>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${stockStatus.color}`}>
-                            {stockStatus.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex flex-col space-y-1">
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedItem(item);
-                                  setShowViewModal(true);
-                                }}
-                                className="text-blue-600 hover:text-blue-900 font-medium"
-                              >
-                                View
-                              </button>
-                              {/* ✅ SHOW EDIT FOR BOTH ADMIN AND USER */}
-                              <button
-                                onClick={() => {
-                                  setSelectedItem(item);
-                                  setShowEditModal(true);
-                                }}
-                                className="text-green-600 hover:text-green-900 font-medium"
-                              >
-                                Edit
-                              </button>
-                              {/* ✅ Show delete button only for ADMIN and when item can be deleted */}
-                              {isAdmin() && isDeletable && (
-                                <button
-                                  onClick={() => handleDeleteItem(item)}
-                                  className="text-red-600 hover:text-red-900 font-medium"
-                                  title="Can delete - created within 24 hours and stock is 0"
-                                >
-                                  Delete
-                                </button>
-                              )}
-                            </div>
-                            {/* ✅ Stock buttons - HIDE "+ Stock" for serialized items */}
-                            <div className="flex space-x-2">
-                              {/* ✅ Only show "+ Stock" button if item is NOT serialized */}
-                              {!item.hasSerialization && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedItem(item);
-                                    setShowAddStockModal(true);
-                                  }}
-                                  className="text-emerald-600 hover:text-emerald-900 font-medium text-xs"
-                                >
-                                  + Stock
-                                </button>
-                              )}
-                              <button
-                                onClick={() => {
-                                  setSelectedItem(item);
-                                  setShowCorrectionModal(true);
-                                }}
-                                className="text-red-600 hover:text-red-900 font-medium text-xs"
-                              >
-                                Deduct
-                              </button>
-                              {/* ✅ Only show "+ Serials" button if item HAS serialization */}
-                              {item.hasSerialization && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedItem(item);
-                                    setShowBulkSerialModal(true);
-                                  }}
-                                  className="text-purple-600 hover:text-purple-900 font-medium text-xs"
-                                >
-                                  + Serials
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {canShowMore && (
-              <div className="flex justify-center py-4 border-t border-gray-200">
-                <button
-                  onClick={handleSeeMore}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
-                >
-                  <span>See More</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-            )}
-
-            <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
-              <p className="text-sm text-gray-600">
-                Showing {displayedItems.length} of {filteredItems.length} items
-                {filteredItems.length > displayedItems.length && ` (${filteredItems.length - displayedItems.length} more available)`}
+      {/* ── Delete Policy Info (active view only) ──────────────────────── */}
+      {viewMode === 'active' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-blue-900 mb-1">🗑️ Item Deletion Policy</h4>
+              <p className="text-sm text-blue-700">Items can only be permanently deleted if:</p>
+              <ul className="list-disc list-inside text-sm text-blue-700 mt-1 ml-4">
+                <li>Stock quantity is <strong>0</strong> (no inventory remaining)</li>
+                <li>Created within the <strong>last 24 hours</strong></li>
+              </ul>
+              <p className="text-xs text-blue-600 mt-2">
+                💡 To remove an item from active workflows without deleting it, use the <strong>Hide</strong> button instead.
               </p>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
-      {/* Modals */}
+      {/* ── Active Items Table ──────────────────────────────────────────── */}
+      {viewMode === 'active' && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-center">
+                <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900">No items found</h3>
+                <p className="text-gray-600">Try adjusting your filters or add a new item</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serials</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {displayedItems.map(item => {
+                      const stockStatus = getStockStatus(item);
+                      const availableSerials = item.serials?.filter(s => s.status === 'AVAILABLE') || [];
+                      const soldSerials = item.serials?.filter(s => s.status === 'SOLD') || [];
+                      const isDeletable = canDeleteItem(item);
+
+                      return (
+                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                              <p className="text-xs text-gray-500">{item.description?.substring(0, 50)}</p>
+                              {item.hasSerialization && (
+                                <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-800 rounded">
+                                  Serialized
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.sku}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.category}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <p className={`text-sm font-medium ${item.quantity <= item.minThreshold ? 'text-red-600' : 'text-gray-900'}`}>
+                                {item.quantity}
+                              </p>
+                              <p className="text-xs text-gray-500">Min: {item.minThreshold}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {item.hasSerialization ? (
+                              <div className="text-xs">
+                                <div className="flex items-center space-x-1">
+                                  <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded font-medium">
+                                    {availableSerials.length} Available
+                                  </span>
+                                </div>
+                                {soldSerials.length > 0 && (
+                                  <div className="flex items-center space-x-1 mt-1">
+                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                      {soldSerials.length} Used
+                                    </span>
+                                  </div>
+                                )}
+                                {item.serials && item.serials.length > 0 && (
+                                  <p className="text-gray-500 mt-1">Total: {item.serials.length}</p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div>
+                              <p>Rs.{item.sellingPrice?.toFixed(2)}</p>
+                              <p className="text-xs text-gray-500">Cost: Rs.{item.purchasePrice?.toFixed(2)}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${stockStatus.color}`}>
+                              {stockStatus.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="flex flex-col space-y-1">
+                              {/* Row 1: View / Edit / Delete / Hide */}
+                              <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                                <button
+                                  onClick={() => { setSelectedItem(item); setShowViewModal(true); }}
+                                  className="text-blue-600 hover:text-blue-900 font-medium"
+                                >
+                                  View
+                                </button>
+                                <button
+                                  onClick={() => { setSelectedItem(item); setShowEditModal(true); }}
+                                  className="text-green-600 hover:text-green-900 font-medium"
+                                >
+                                  Edit
+                                </button>
+                                {/* Delete — admin only, within 24h, zero stock */}
+                                {isAdmin() && isDeletable && (
+                                  <button
+                                    onClick={() => handleDeleteItem(item)}
+                                    className="text-red-600 hover:text-red-900 font-medium"
+                                    title="Delete (within 24h, zero stock)"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+                                {/* ✅ Hide button — always visible */}
+                                <button
+                                  onClick={() => handleHideItem(item)}
+                                  title="Hide from Job Card & Invoice dropdowns"
+                                  className="flex items-center gap-1 text-slate-500 hover:text-slate-800 font-medium text-xs border border-slate-300 hover:border-slate-500 rounded px-1.5 py-0.5 transition-colors"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                  </svg>
+                                  Hide
+                                </button>
+                              </div>
+
+                              {/* Row 2: Stock actions */}
+                              <div className="flex space-x-2">
+                                {!item.hasSerialization && (
+                                  <button
+                                    onClick={() => { setSelectedItem(item); setShowAddStockModal(true); }}
+                                    className="text-emerald-600 hover:text-emerald-900 font-medium text-xs"
+                                  >
+                                    + Stock
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => { setSelectedItem(item); setShowCorrectionModal(true); }}
+                                  className="text-red-600 hover:text-red-900 font-medium text-xs"
+                                >
+                                  Deduct
+                                </button>
+                                {item.hasSerialization && (
+                                  <button
+                                    onClick={() => { setSelectedItem(item); setShowBulkSerialModal(true); }}
+                                    className="text-purple-600 hover:text-purple-900 font-medium text-xs"
+                                  >
+                                    + Serials
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {canShowMore && (
+                <div className="flex justify-center py-4 border-t border-gray-200">
+                  <button
+                    onClick={handleSeeMore}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+                  >
+                    <span>See More</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                <p className="text-sm text-gray-600">
+                  Showing {displayedItems.length} of {filteredItems.length} items
+                  {filteredItems.length > displayedItems.length && ` (${filteredItems.length - displayedItems.length} more available)`}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Hidden Items Table ──────────────────────────────────────────── */}
+      {viewMode === 'hidden' && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {hiddenLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600"></div>
+            </div>
+          ) : filteredHiddenItems.length === 0 ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-center">
+                <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-700">No hidden items</h3>
+                <p className="text-gray-500 text-sm mt-1">
+                  {searchTerm ? 'No hidden items match your search.' : 'All inventory items are currently visible.'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Item Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">SKU</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Stock</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Price</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Hidden Since</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {displayedHiddenItems.map(item => (
+                      <tr key={item.id} className="hover:bg-slate-50 transition-colors opacity-80">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            {/* Hidden indicator */}
+                            <span className="flex-shrink-0 w-2 h-2 rounded-full bg-slate-400"></span>
+                            <div>
+                              <p className="text-sm font-medium text-gray-700">{item.name}</p>
+                              <p className="text-xs text-gray-400">{item.description?.substring(0, 50)}</p>
+                              {item.hasSerialization && (
+                                <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded border border-purple-200">
+                                  Serialized
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{item.sku}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.category}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <p className="text-sm text-gray-600">{item.quantity}</p>
+                          <p className="text-xs text-gray-400">Min: {item.minThreshold}</p>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <p>Rs.{item.sellingPrice?.toFixed(2)}</p>
+                          <p className="text-xs text-gray-400">Cost: Rs.{item.purchasePrice?.toFixed(2)}</p>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-400">
+                          {item.updatedAt
+                            ? new Date(item.updatedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+                            : '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {/* ✅ Unhide button */}
+                          <button
+                            onClick={() => handleUnhideItem(item)}
+                            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Unhide
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {canShowMore && (
+                <div className="flex justify-center py-4 border-t border-gray-200">
+                  <button
+                    onClick={handleSeeMore}
+                    className="bg-slate-700 hover:bg-slate-800 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+                  >
+                    <span>See More</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              <div className="px-6 py-3 bg-slate-50 border-t border-gray-200">
+                <p className="text-sm text-slate-600">
+                  Showing {displayedHiddenItems.length} of {filteredHiddenItems.length} hidden items
+                  {filteredHiddenItems.length > displayedHiddenItems.length &&
+                    ` (${filteredHiddenItems.length - displayedHiddenItems.length} more)`}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Modals (unchanged) ─────────────────────────────────────────── */}
       {showAddModal && (
         <AddInventoryModal
           onAdd={handleAddItem}
@@ -621,10 +1505,7 @@ const InventoryManagement = () => {
         <EditInventoryModal
           item={selectedItem}
           onUpdate={handleUpdateItem}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedItem(null);
-          }}
+          onClose={() => { setShowEditModal(false); setSelectedItem(null); }}
         />
       )}
 
@@ -632,10 +1513,7 @@ const InventoryManagement = () => {
         <ViewInventoryModal
           item={selectedItem}
           onAddSerial={handleAddSerial}
-          onClose={() => {
-            setShowViewModal(false);
-            setSelectedItem(null);
-          }}
+          onClose={() => { setShowViewModal(false); setSelectedItem(null); }}
         />
       )}
 
@@ -643,10 +1521,7 @@ const InventoryManagement = () => {
         <DeductStockModal
           item={selectedItem}
           onDeduct={handleDeductStock}
-          onClose={() => {
-            setShowDeductModal(false);
-            setSelectedItem(null);
-          }}
+          onClose={() => { setShowDeductModal(false); setSelectedItem(null); }}
         />
       )}
 
@@ -654,10 +1529,7 @@ const InventoryManagement = () => {
         <BulkSerialImportModal
           item={selectedItem}
           onImport={handleBulkSerialImport}
-          onClose={() => {
-            setShowBulkSerialModal(false);
-            setSelectedItem(null);
-          }}
+          onClose={() => { setShowBulkSerialModal(false); setSelectedItem(null); }}
           existingSerials={items.flatMap(item => item.serials || [])}
         />
       )}
@@ -666,10 +1538,7 @@ const InventoryManagement = () => {
         <AddStockModal
           item={selectedItem}
           onAdd={handleAddStock}
-          onClose={() => {
-            setShowAddStockModal(false);
-            setSelectedItem(null);
-          }}
+          onClose={() => { setShowAddStockModal(false); setSelectedItem(null); }}
         />
       )}
 
@@ -677,10 +1546,7 @@ const InventoryManagement = () => {
         <StockCorrectionModal
           item={selectedItem}
           onCorrect={handleStockCorrection}
-          onClose={() => {
-            setShowCorrectionModal(false);
-            setSelectedItem(null);
-          }}
+          onClose={() => { setShowCorrectionModal(false); setSelectedItem(null); }}
         />
       )}
     </div>
